@@ -42,4 +42,31 @@ function readBody(event) {
   }
 }
 
-module.exports = { json, getSupabase, isConfigured, readBody, CORS_HEADERS };
+/**
+ * Send a transactional email through Resend.
+ * Requires RESEND_API_KEY env var (optional — sending is skipped when absent).
+ */
+async function sendEmail({ to, subject, html, from }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { skipped: true };
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + apiKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: from || process.env.MAIL_FROM || 'Hanna & Nour <onboarding@resend.dev>',
+      to: [to],
+      subject,
+      html
+    })
+  });
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    throw new Error('Resend error ' + res.status + ': ' + errBody.slice(0, 300));
+  }
+  return { ok: true };
+}
+
+module.exports = { json, getSupabase, isConfigured, readBody, sendEmail, CORS_HEADERS };

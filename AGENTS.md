@@ -18,6 +18,7 @@ Supabase catalog, Stripe Checkout payments, API served by Netlify Functions (`ne
 - `/api/products`, `/api/products?slug=`, `/api/checkout`, `/api/orders?session_id=` or `?email=`, `/api/newsletter`, `/api/reviews`, `/api/stripe-webhook` (all proxied from `/.netlify/functions/*` via netlify.toml).
 - Checkout creates a pending order, redirects to Stripe; webhook marks `paid` / `abandoned`. Orders render as `HN-<hex>`.
 - `orders.js` returns `{order}` for `session_id` and `{orders}` for `email`.
+- Order confirmation emails: `stripe-webhook.js` sends a recap via Resend when payment becomes `paid` (best-effort, skipped if `RESEND_API_KEY` is unset). Email template lives in `buildOrderEmail()` inside `stripe-webhook.js`; sending helper is `sendEmail()` in `shared.js`.
 
 ## Business rules (MUST stay in sync client & server)
 - Tax 7 % (`checkout.js`/`cart-page.js` client; `TAX_RATE` server). Shipping: free ≥ `FREE_SHIPPING_THRESHOLD_CENTS` (7500 ¢), else standard 699 ¢, express 1200 ¢, next-day 2500 ¢.

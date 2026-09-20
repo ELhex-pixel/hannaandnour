@@ -61,6 +61,20 @@ Copiez `.env.example` en `.env` pour `netlify dev`, et définissez les mêmes va
 | `SHIPPING_STANDARD_CENTS` | frais standard en centimes, ex. `699` |
 | `SHIPPING_EXPRESS_CENTS` | frais express en centimes, ex. `1200` |
 | `SHIPPING_NEXTDAY_CENTS` | frais J+1 en centimes, ex. `2500` |
+| `RESEND_API_KEY` | clé API Resend (optionnel) pour l'email de confirmation de commande |
+| `MAIL_FROM` | expéditeur des emails (optionnel), ex. `Hanna & Nour <no-reply@votre-domaine.com>` |
+
+## 4bis. Emails de confirmation (Resend, optionnel)
+
+Envoie automatiquement un récap de commande à l'acheteur quand le webhook Stripe confirme le paiement.
+
+1. Créez un compte gratuit sur https://resend.com (l'email d'inscription recevra les tests).
+2. **API Keys > Create API Key** → copiez la clé `re_...` → variable `RESEND_API_KEY`.
+3. Le domaine n'est pas obligatoire pour tester : en **sandbox** (`onboarding@resend.dev`),
+   Resend n'envoie qu'à votre propre email d'inscription. Pour un vrai domaine :
+   **Domains > Add** → vérifiez les DNS → utilisez `no-reply@votre-domaine.com` dans `MAIL_FROM`.
+4. En mode test, payez avec la carte `4242 4242 4242 4242` en saisissant **votre email** dans le
+   formulaire → vous recevez l'email de confirmation.
 
 ## 5. Déployer
 
