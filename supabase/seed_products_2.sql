@@ -123,7 +123,7 @@ insert into products (
   '["غسل يدوي بماء بارد أو تنظيف جاف","تجددي بالبخار"]',
   '["Gold","Bronze","Espresso"]',
   '["One Size"]', '["Silk"]', '["Eid","Work"]',
-  'images/silk-hijab.jpg',
+'images/silk-hijab.jpg',
   '[{"src":"images/silk-hijab.jpg","label":"Main view"},{"src":"images/hero.jpg","label":"Detail view"}]',
-  4.8, 25, null, true, false, true
-);
+   4.8, 25, null, true, false, true
+) on conflict (slug) do nothing;

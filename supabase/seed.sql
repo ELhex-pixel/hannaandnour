@@ -126,7 +126,7 @@ insert into products (
   '["تنظيف جاف فقط","يُحفظ على شماعة مبطنة"]',
   '["Burgundy","Espresso","Black"]',
   '["S","M","L","XL"]', '["Velvet"]', '["Eid","Wedding"]',
-  'images/velvet-abaya.jpg',
+'images/velvet-abaya.jpg',
   '[{"src":"images/velvet-abaya.jpg","label":"Main view"},{"src":"images/hero.jpg","label":"Detail view"}]',
-  4.9, 67, 'Premium', true, true, true
-);
+   4.9, 67, 'Premium', true, true, true
+) on conflict (slug) do nothing;

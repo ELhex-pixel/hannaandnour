@@ -10,6 +10,6 @@
  */
 window.HN_CONFIG = {
   API_BASE: '',
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: ''
+  SUPABASE_URL: 'https://rqgoawbzbgzuvpxnzxsu.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_p1xBi1XMMqCnhUxLiAkE-Q_QVzjzK4x'
 };
