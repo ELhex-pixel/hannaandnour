@@ -191,7 +191,7 @@
         <div class="tabs-nav">
           <button class="tab-btn active" type="button" data-tab="description" data-i18n="tabDescription">Description</button>
           <button class="tab-btn" type="button" data-tab="fabric" data-i18n="tabFabric">Fabric &amp; Care</button>
-          <button class="tab-btn" type="button" data-tab="reviews" data-i18n="tabReviews">Reviews (128)</button>
+          <button class="tab-btn" type="button" data-tab="reviews">Reviews</button>
         </div>
 
         <!-- Description Tab -->
@@ -244,7 +244,7 @@
             <div class="reviews-average">
               <p class="reviews-number">4.8</p>
               <div class="stars" style="justify-content: center; margin-top: var(--spacing-xs);">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-              <p class="reviews-total" data-i18n="reviewSummary">Based on 128 reviews</p>
+              <p class="reviews-total">Based on reviews</p>
             </div>
             <div class="reviews-bars">
               <div class="review-bar">
@@ -276,6 +276,7 @@
           </div>
 
           <!-- Review Cards -->
+          <div id="reviewList">
           <div class="review-card">
             <div class="review-header">
               <div class="review-author">
@@ -316,6 +317,7 @@
               <span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
             </div>
             <p class="review-text" data-i18n="rt3">"Beautiful quality fabric, arrived quickly and packaged beautifully. The gold color is stunning. Highly recommend Hanna &amp; Nour!"</p>
+          </div>
           </div>
 
           <!-- Write a Review -->
@@ -449,7 +451,10 @@
 
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
+  <script src="js/config.js"></script>
   <script src="js/i18n.js"></script>
+  <script src="js/store.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/product.js"></script>
 </body>
 </html>

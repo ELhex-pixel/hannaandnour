@@ -112,124 +112,24 @@
         <div class="account-content">
           <div class="account-content-header">
             <h2 class="account-content-title" id="orders" data-i18n="orderHistory">Order History</h2>
-            <button class="btn btn-secondary btn-sm" data-i18n="viewAll">View All</button>
           </div>
 
-          <!-- Order 1 -->
-          <div class="order-card">
-            <div class="order-header">
-              <div>
-                <p class="order-number" data-i18n="orderNumber">Order #10024</p>
-                <p class="order-date" data-i18n="placedOn">Placed on March 15, 2026</p>
-              </div>
-              <span class="order-status delivered" data-i18n="delivered">Delivered</span>
-            </div>
-            <div class="order-items">
-              <div class="order-item">
-                <div class="order-item-image">
-                  <img src="images/silk-hijab.jpg" alt="Silk Blend Hijab">
-                </div>
-                <div class="order-item-info">
-                  <p class="order-item-name">Silk Blend Hijab - Emerald</p>
-                  <p class="order-item-variant">One Size &bull; Qty: 2</p>
-                </div>
-                <span class="order-item-price">$70.00</span>
-              </div>
-              <div class="order-item">
-                <div class="order-item-image">
-                  <img src="images/prayer-wear.jpg" alt="Luxury Prayer Set">
-                </div>
-                <div class="order-item-info">
-                  <p class="order-item-name">Luxury Prayer Set - Sage</p>
-                  <p class="order-item-variant">One Size &bull; Qty: 1</p>
-                </div>
-                <span class="order-item-price">$65.00</span>
-              </div>
-              <div class="order-item">
-                <div style="flex: 1;"></div>
-                <div class="order-item-info" style="text-align: right; flex: none;">
-                  <p class="order-item-name" data-i18n="orderTotal">Total</p>
-                  <p class="order-item-variant" data-i18n="freeShipping">Free shipping</p>
-                </div>
-                <span class="order-item-price">$135.00</span>
-              </div>
-            </div>
-          </div>
+          <form id="accountOrderForm" style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg);">
+            <input type="email" class="form-input" id="accountEmail" name="email" placeholder="you@example.com" required data-i18n-placeholder="emailPlaceholder2">
+            <button type="submit" class="btn btn-primary" data-i18n="findOrders">Find My Orders</button>
+          </form>
 
-          <!-- Order 2 -->
-          <div class="order-card">
-            <div class="order-header">
-              <div>
-                <p class="order-number" data-i18n="orderNumber2">Order #10018</p>
-                <p class="order-date" data-i18n="placedOn2">Placed on February 8, 2026</p>
-              </div>
-              <span class="order-status delivered" data-i18n="delivered">Delivered</span>
-            </div>
-            <div class="order-items">
-              <div class="order-item">
-                <div class="order-item-image">
-                  <img src="images/eid-abaya.jpg" alt="Flowing Abaya">
-                </div>
-                <div class="order-item-info">
-                  <p class="order-item-name">Flowing Abaya - Charcoal</p>
-                  <p class="order-item-variant">Size: M &bull; Qty: 1</p>
-                </div>
-                <span class="order-item-price">$89.00</span>
-              </div>
-              <div class="order-item">
-                <div style="flex: 1;"></div>
-                <div class="order-item-info" style="text-align: right; flex: none;">
-                  <p class="order-item-name" data-i18n="orderTotal">Total</p>
-                  <p class="order-item-variant" data-i18n="freeShipping">Free shipping</p>
-                </div>
-                <span class="order-item-price">$89.00</span>
-              </div>
-            </div>
+          <div id="accountOrders">
+            <p style="color: var(--color-gray); padding: var(--spacing-lg) 0;" data-i18n="findOrdersHint">Enter the email you used at checkout to see your orders.</p>
           </div>
 
           <!-- Wishlist Section -->
           <div id="wishlist" style="margin-top: var(--spacing-3xl);">
             <div class="account-content-header">
               <h2 class="account-content-title" data-i18n="myWishlist">My Wishlist</h2>
-              <span style="font-size: 0.875rem; color: var(--color-gray);">5 items</span>
+              <span id="wishlistCount" style="font-size: 0.875rem; color: var(--color-gray);">0 items</span>
             </div>
-            <div class="products-grid" style="grid-template-columns: repeat(3, 1fr); gap: var(--spacing-lg);">
-              <div class="product-card">
-                <div class="product-card-image" style="aspect-ratio: 3/4;">
-                  <img src="images/velvet-abaya.jpg" alt="Velvet Abaya">
-                </div>
-                <div class="product-card-info">
-                  <span class="product-card-category">Abayas</span>
-                  <h3 class="product-card-title" data-i18n="velvetAbaya">Velvet Abaya</h3>
-                  <div class="product-card-price"><span class="product-price-current">$129.00</span></div>
-                  <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: var(--spacing-sm);" data-i18n="addToCart">Add to Cart</button>
-                  <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: var(--spacing-xs);" data-i18n="removeProduct">Remove</button>
-                </div>
-              </div>
-              <div class="product-card">
-                <div class="product-card-image" style="aspect-ratio: 3/4;">
-                  <img src="images/hero.jpg" alt="Chiffon Wedding Hijab">
-                </div>
-                <div class="product-card-info">
-                  <span class="product-card-category">Hijabs</span>
-                  <h3 class="product-card-title" data-i18n="chiffonWedding">Chiffon Wedding Hijab</h3>
-                  <div class="product-card-price"><span class="product-price-current">$48.00</span></div>
-                  <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: var(--spacing-sm);" data-i18n="addToCart">Add to Cart</button>
-                  <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: var(--spacing-xs);" data-i18n="removeProduct">Remove</button>
-                </div>
-              </div>
-              <div class="product-card">
-                <div class="product-card-image" style="aspect-ratio: 3/4;">
-                  <img src="images/pearl-brooch.jpg" alt="Pearl Brooch Set">
-                </div>
-                <div class="product-card-info">
-                  <span class="product-card-category">Accessories</span>
-                  <h3 class="product-card-title" data-i18n="pearlBrooch">Pearl Brooch Set</h3>
-                  <div class="product-card-price"><span class="product-price-current">$18.00</span></div>
-                  <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: var(--spacing-sm);" data-i18n="addToCart">Add to Cart</button>
-                  <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: var(--spacing-xs);" data-i18n="removeProduct">Remove</button>
-                </div>
-              </div>
+            <div class="products-grid" id="wishlistGrid" style="grid-template-columns: repeat(3, 1fr); gap: var(--spacing-lg);">
             </div>
           </div>
 
@@ -316,7 +216,10 @@
   </footer>
 
   <div class="toast-container" id="toastContainer"></div>
+  <script src="js/config.js"></script>
   <script src="js/i18n.js"></script>
+  <script src="js/store.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/account.js"></script>
 </body>
 </html>

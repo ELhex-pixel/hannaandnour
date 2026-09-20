@@ -1,0 +1,17 @@
+{
+  "name": "hanna-nour",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hanna & Nour - modest fashion e-commerce (static site + Netlify Functions + Stripe + Supabase)",
+  "scripts": {
+    "dev": "netlify dev",
+    "deploy": "netlify deploy --prod"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "stripe": "^16.12.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.37.1"
+  }
+}

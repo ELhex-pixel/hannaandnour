@@ -1,0 +1,84 @@
+# Hanna & Nour — Configuration (Supabase + Stripe + Netlify)
+
+Ce site statique est devenu un e-commerce complet : catalogue stocké dans **Supabase**,
+paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Functions**.
+
+> Le projet fonctionne **sans configuration** en pur front-end (catalogue démo en dur,
+> totaux, ajouts au panier persistés en localStorage). Pour activer le backend,
+> suivez ce guide.
+
+---
+
+## 1. Créer le projet Supabase
+
+1. Créez un compte/projet sur https://supabase.com.
+2. Dans **SQL Editor**, exécutez dans l'ordre :
+   - `supabase/schema.sql` (tables + RLS + trigger)
+   - `supabase/seed.sql` (6 produits + promo `WELCOME15`)
+   - `supabase/seed_products_2.sql` (6 produits supplémentaires)
+3. Récupérez dans **Settings > API** :
+   - `Project URL` → `SUPABASE_URL`
+   - `anon public key` → à mettre dans `js/config.js` (client)
+   - `service_role secret` → `SUPABASE_SERVICE_ROLE_KEY` (serveur, **jamais** dans le navigateur)
+
+## 2. Configurer le client
+
+Éditez `js/config.js` :
+
+```js
+window.HN_CONFIG = {
+  API_BASE: '',               // vide : appels via /.netlify/functions/...
+  SUPABASE_URL: 'https://xxxx.supabase.co',
+  SUPABASE_ANON_KEY: 'xxxx-anon-public-key'
+};
+```
+
+## 3. Créer le compte Stripe
+
+1. Sur https://dashboard.stripe.com, récupérez une clé **test** `sk_test_...`.
+2. Déployez le site (ou lancez `netlify dev`) puis créez le webhook :
+   - **Stripe > Developers > Webhooks > Add endpoint**
+   - URL : `https://VOTRE-DOMAINE/api/stripe-webhook`
+   - Événements à écouter : `checkout.session.completed` et `checkout.session.expired`
+   - Copiez le **Signing secret** `whsec_...` → `STRIPE_WEBHOOK_SECRET`
+3. Testez le paiement avec la carte  `4242 4242 4242 4242`.
+
+## 4. Variables d'environnement Netlify
+
+Copiez `.env.example` en `.env` pour `netlify dev`, et définissez les mêmes variables dans
+**Netlify > Site settings > Environment variables** :
+
+| Variable | Description |
+| --- | --- |
+| `SUPABASE_URL` | URL du projet Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | clé `service_role` (serveur uniquement) |
+| `STRIPE_SECRET_KEY` | clé secrète Stripe |
+| `STRIPE_WEBHOOK_SECRET` | signing secret du webhook |
+| `STRIPE_PRICE_CURRENCY` | devise, ex. `usd` |
+| `SITE_URL` | URL publique du site (sans `/` final), ex. `https://votre-site.netlify.app` |
+| `TAX_RATE` | taux de taxe décimal, ex. `0.07` |
+| `FREE_SHIPPING_THRESHOLD_CENTS` | seuil livraison gratuite en centimes, ex. `7500` |
+| `SHIPPING_STANDARD_CENTS` | frais standard en centimes, ex. `699` |
+| `SHIPPING_EXPRESS_CENTS` | frais express en centimes, ex. `1200` |
+| `SHIPPING_NEXTDAY_CENTS` | frais J+1 en centimes, ex. `2500` |
+
+## 5. Déployer
+
+```bash
+npm install
+netlify login
+netlify deploy --prod
+```
+
+## Règles métier (à garder cohérentes entre client et serveur)
+
+- Taxe : 7 % (client `js/checkout.js`, `js/cart-page.js` ; serveur `checkout.js`, dépliable via `TAX_RATE`).
+- Livraison standard : gratuite ≥ 7500 ¢ sinon 699 ¢ ; express 1200 ¢ ; J+1 2500 ¢.
+- Code promo : `WELCOME15` → −15 % (table `promo_codes`, client `PROMO_LOCAL` en fallback visuel).
+- Tout changement de prix/taxe/frais doit être répercuté dans le JS client **et** les fonctions Netlify, sinon le total affiché ≠ total facturé.
+
+## Commandes de dev
+
+```bash
+netlify dev          # site + fonctions en local (port 8888)
+```

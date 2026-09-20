@@ -1,19 +1,34 @@
 # AGENTS.md
 
-Static multi-page e-commerce site (Hanna & Nour, modest fashion). Vanilla HTML/CSS/JS only — no framework, no build step, no package.json, no tests, no CI.
+E-commerce site (Hanna & Nour, modest fashion). Vanilla HTML/CSS/JS front-end + real backend:
+Supabase catalog, Stripe Checkout payments, API served by Netlify Functions (`netlify/functions/*`).
+
+## Setup
+- The site works fully static (demo catalog, localStorage cart/wishlist, no backend).
+- To activate the real backend, follow `SETUP.md` (Supabase project, env vars, Stripe webhook). All secrets live in Netlify env vars — never commit `.env` or real keys.
 
 ## Working with the site
-- Preview by opening any `*.html` directly in a browser (no server needed).
-- `js/main.js` is loaded by all 9 pages. It is an IIFE that guards every element lookup, so it runs safely everywhere.
-- `js/i18n.js` is loaded by all 9 pages (before `main.js`). Every page's `.lang-switcher` is functional.
-- Images are stored locally in `images/` (`hero.jpg`, `silk-hijab.jpg`, `eid-abaya.jpg`, `everyday-hijab.jpg`, `velvet-abaya.jpg`, `prayer-wear.jpg`, `pearl-brooch.jpg`, `craftsmanship.jpg`, plus `favicon.svg`). Reference a local path directly if an image is missing; do not hot-link Unsplash.
-- `collections/` is empty (unused).
+- Open any `*.html` directly in a browser for offline preview (API calls fall back to static markup).
+- Every page loads, in order: `js/config.js` → `js/i18n.js` → `js/store.js` → `js/main.js` (+ a page script for shop/product/cart/checkout/account; `404.html` uses absolute `/js/...` paths and no page script).
+- `js/store.js` exposes `window.HN` (IIFE, ES5 style): `api`, `tr`, `money`, `lang`, `productName`, `loadProducts`, `getProduct`, `products()`, `cart.{list,add,update,remove,clear,count}`, `wishlist.{list,toggle,has,count}`, `quickAdd`, `refreshBadge`, `updateWishlistHearts`, `isAuthConfigured`. Cart key: `localStorage['hn-cart']`, wishlist: `localStorage['hn-wishlist']` (slugs), lang: `localStorage['hn-lang']`, promo `WELCOME15`: `sessionStorage['hn-promo']`.
+- Page scripts are self-contained: `shop.js`, `product.js`, `cart-page.js`, `checkout.js`, `account.js`. `main.js` only handles shared UI (header, toasts, modals, tabs, newsletter form, wishlist/quick-add delegation, qty/gallery/color/size on product page).
+- Images live in `images/`. Reference local files; do not hot-link Unsplash. `collections/` is unused.
+
+## API (Netlify Functions)
+- `/api/products`, `/api/products?slug=`, `/api/checkout`, `/api/orders?session_id=` or `?email=`, `/api/newsletter`, `/api/reviews`, `/api/stripe-webhook` (all proxied from `/.netlify/functions/*` via netlify.toml).
+- Checkout creates a pending order, redirects to Stripe; webhook marks `paid` / `abandoned`. Orders render as `HN-<hex>`.
+- `orders.js` returns `{order}` for `session_id` and `{orders}` for `email`.
+
+## Business rules (MUST stay in sync client & server)
+- Tax 7 % (`checkout.js`/`cart-page.js` client; `TAX_RATE` server). Shipping: free ≥ `FREE_SHIPPING_THRESHOLD_CENTS` (7500 ¢), else standard 699 ¢, express 1200 ¢, next-day 2500 ¢.
+- Always mirror price/tax/shipping changes in the client JS AND the Netlify functions, or the displayed total won't match the charged total.
+- Static product cards on index/shop/collections/cart carry `data-slug`/`data-price-cents`/`data-name`/`data-image` and link to `product.html?slug=...`; JS re-renders them from the API when available. Product slugs must match `seed.sql`/`seed_products_2.sql`.
 
 ## i18n
-- i18n.js exposes `window.I18n`, supports `en`/`fr`/`ar`, persists choice in `localStorage['hn-lang']`, and switches page `dir` for RTL.
-- Translate text with `data-i18n="key"` and placeholders with `data-i18n-placeholder="key"`; add new keys to all three languages in the `DICT`.
+- `js/i18n.js` (ES5 IIFE) exposes `window.I18n` (`en`/`fr`/`ar`), persists `localStorage['hn-lang']`, switches page `dir` for RTL. Confirm all slugs you add in `tr()` land in all three languages.
 
 ## Conventions
-- i18n.js is ES5-style (`var`, IIFE). Match that style when editing.
-- Add CSS via the custom properties (design tokens) in `:root` of `css/styles.css`. Color names are misleading: `--color-sage`, `--color-emerald`, and `--color-burgundy` are gold/beige tones, not their literal colors.
-- Cart/wishlist logic in main.js is in-memory toast feedback only — no persistence, no real checkout.
+- i18n.js and store.js are ES5-style (`var`, IIFE). Match that style when editing them.
+- Add CSS via design tokens in `:root` of `css/styles.css`. `--color-sage`/`--color-emerald`/`--color-burgundy` are gold/beige tones, not literal colors.
+- Netlify functions are CommonJS (`require`/`module.exports`), Node 20. Use `shared.js` helpers (`json`, `getSupabase`, `isConfigured`, `readBody`).
+- No test suite or CI. Sanity-check with `node --check <file>` on JS edits.

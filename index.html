@@ -200,7 +200,7 @@
         
         <div class="products-grid">
           <!-- Product 1 -->
-          <div class="product-card">
+          <div class="product-card" data-slug="silk-hijab" data-price-cents="3500" data-name="Silk Blend Hijab" data-image="images/silk-hijab.jpg">
             <div class="product-card-image">
               <img src="images/silk-hijab.jpg" alt="Silk Blend Hijab">
               <span class="product-badge">Bestseller</span>
@@ -213,7 +213,7 @@
             </div>
             <div class="product-card-info">
               <span class="product-card-category" data-i18n="catHijabs">Hijabs</span>
-              <h3 class="product-card-title" data-i18n="silkHijab">Silk Blend Hijab</h3>
+              <h3 class="product-card-title" data-i18n="silkHijab"><a href="product.html?slug=silk-hijab">Silk Blend Hijab</a></h3>
               <div class="product-card-price">
                 <span class="product-price-current">$35.00</span>
               </div>
@@ -231,7 +231,7 @@
           </div>
           
           <!-- Product 2 -->
-          <div class="product-card">
+          <div class="product-card" data-slug="flowing-abaya" data-price-cents="8900" data-name="Flowing Abaya" data-image="images/eid-abaya.jpg">
             <div class="product-card-image">
               <img src="images/eid-abaya.jpg" alt="Flowing Abaya">
               <button class="product-wishlist" aria-label="Add to wishlist">
@@ -243,7 +243,7 @@
             </div>
             <div class="product-card-info">
               <span class="product-card-category" data-i18n="catAbayas">Abayas</span>
-              <h3 class="product-card-title" data-i18n="flowingAbaya">Flowing Abaya</h3>
+              <h3 class="product-card-title" data-i18n="flowingAbaya"><a href="product.html?slug=flowing-abaya">Flowing Abaya</a></h3>
               <div class="product-card-price">
                 <span class="product-price-current">$89.00</span>
               </div>
@@ -261,7 +261,7 @@
           </div>
           
           <!-- Product 3 -->
-          <div class="product-card">
+          <div class="product-card" data-slug="prayer-set" data-price-cents="5500" data-name="Prayer Set" data-image="images/prayer-wear.jpg">
             <div class="product-card-image">
               <img src="images/prayer-wear.jpg" alt="Prayer Set">
               <span class="product-badge" style="background-color: var(--color-sage);">New</span>
@@ -274,7 +274,7 @@
             </div>
             <div class="product-card-info">
               <span class="product-card-category" data-i18n="catPrayerWear">Prayer Wear</span>
-              <h3 class="product-card-title" data-i18n="prayerSet">Prayer Set</h3>
+              <h3 class="product-card-title" data-i18n="prayerSet"><a href="product.html?slug=prayer-set">Prayer Set</a></h3>
               <div class="product-card-price">
                 <span class="product-price-current">$55.00</span>
               </div>
@@ -292,7 +292,7 @@
           </div>
           
           <!-- Product 4 -->
-          <div class="product-card">
+          <div class="product-card" data-slug="modest-dress" data-price-cents="7500" data-name="Modest Maxi Dress" data-image="images/hero.jpg">
             <div class="product-card-image">
               <img src="images/hero.jpg" alt="Modest Dress">
               <button class="product-wishlist" aria-label="Add to wishlist">
@@ -304,7 +304,7 @@
             </div>
             <div class="product-card-info">
               <span class="product-card-category" data-i18n="catDresses">Dresses</span>
-              <h3 class="product-card-title" data-i18n="modestDress">Modest Maxi Dress</h3>
+              <h3 class="product-card-title" data-i18n="modestDress"><a href="product.html?slug=modest-dress">Modest Maxi Dress</a></h3>
               <div class="product-card-price">
                 <span class="product-price-current">$75.00</span>
                 <span class="product-price-original">$95.00</span>
@@ -475,7 +475,9 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
+  <script src="js/config.js"></script>
   <script src="js/i18n.js"></script>
+  <script src="js/store.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
