@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <meta name="description" content="Your shopping cart at Hanna &amp; Nour - modest fashion for the modern woman.">
+
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://REPLACE-WITH-YOUR-DOMAIN/cart.html">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:site_name" content="Hanna &amp; Nour">
+  <meta property="og:title" content="Cart | Hanna &amp; Nour">
+  <meta property="og:description" content="Your cart - Hanna &amp; Nour.">
+  <title>Shopping Cart | Hanna &amp; Nour</title>
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="header" id="header">
+    <div class="header-top"><p data-i18n="announce">Free shipping on orders over $75 | Use code WELCOME15 for 15% off</p></div>
+    <div class="header-main">
+      <div class="container">
+        <div class="header-inner">
+          <button class="menu-toggle" id="menuToggle" aria-label="Open menu"><span></span><span></span><span></span></button>
+          <a href="index.html" class="logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+          <nav class="nav-desktop">
+            <a href="index.html" class="nav-link" data-i18n="navHome">Home</a>
+            <a href="shop.html" class="nav-link" data-i18n="navShop">Shop</a>
+            <a href="collections.html" class="nav-link" data-i18n="navCollections">Collections</a>
+            <a href="about.html" class="nav-link" data-i18n="navStory">Our Story</a>
+            <a href="blog.html" class="nav-link" data-i18n="navBlog">Blog</a>
+          </nav>
+          <div class="header-actions">
+            <select class="lang-switcher" name="lang" aria-label="Language">
+              <option value="en">EN</option>
+              <option value="fr">FR</option>
+              <option value="ar">AR</option>
+            </select>
+            <button class="header-action-btn" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg></button>
+            <a href="account.html" class="header-action-btn" aria-label="Account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></a>
+            <button class="header-action-btn" aria-label="Wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+            <a href="cart.html" class="header-action-btn"><span class="sr-only">Cart</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg><span class="cart-count">3</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav class="nav-mobile" id="navMobile">
+      <div class="nav-mobile-header">
+        <a href="index.html" class="logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+        <button class="nav-mobile-close" id="navClose" aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+      <div class="nav-mobile-links">
+        <a href="index.html" class="nav-mobile-link" data-i18n="navHome">Home</a>
+        <a href="shop.html" class="nav-mobile-link" data-i18n="navShop">Shop</a>
+        <a href="collections.html" class="nav-mobile-link" data-i18n="navCollections">Collections</a>
+        <a href="about.html" class="nav-mobile-link" data-i18n="navStory">Our Story</a>
+        <a href="blog.html" class="nav-mobile-link" data-i18n="navBlog">Blog</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-header">
+      <div class="container">
+        <h1 class="page-header-title" data-i18n="cartTitle">Shopping Cart</h1>
+        <div class="page-header-breadcrumb">
+          <a href="index.html" data-i18n="navHome">Home</a><span>/</span><span data-i18n="crumbCart">Cart</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="container">
+      <div class="cart-layout">
+
+        <!-- Cart Items -->
+        <div class="cart-items">
+
+          <div class="cart-item">
+            <div class="cart-item-image">
+              <img src="images/silk-hijab.jpg" alt="Silk Blend Hijab">
+            </div>
+            <div class="cart-item-info">
+              <a href="product.html"><h2 class="cart-item-title" data-i18n="silkHijab">Silk Blend Hijab</h2></a>
+              <span class="cart-item-variant" data-i18n="cartVariantSilk">Color: Emerald | Size: One Size</span>
+              <span class="cart-item-price">$35.00</span>
+            </div>
+            <div class="cart-item-actions">
+              <div class="quantity-selector">
+                <button class="quantity-btn cart-qty-minus" aria-label="Decrease quantity" data-i18n-aria-label="a11yQtyDec">&minus;</button>
+                <input type="number" class="quantity-input cart-qty-input" name="qty" value="1" min="1" max="10" aria-label="Quantity" data-i18n-aria-label="a11yQty">
+                <button class="quantity-btn cart-qty-plus" aria-label="Increase quantity" data-i18n-aria-label="a11yQtyInc">+</button>
+              </div>
+              <button class="cart-item-remove" data-remove-cart data-i18n="remove">&#10005; Remove</button>
+            </div>
+          </div>
+
+          <div class="cart-item">
+            <div class="cart-item-image">
+              <img src="images/eid-abaya.jpg" alt="Flowing Abaya">
+            </div>
+            <div class="cart-item-info">
+              <a href="product.html"><h2 class="cart-item-title" data-i18n="flowingAbaya">Flowing Abaya</h2></a>
+              <span class="cart-item-variant" data-i18n="cartVariantAbaya">Color: Charcoal | Size: M</span>
+              <span class="cart-item-price">$89.00</span>
+            </div>
+            <div class="cart-item-actions">
+              <div class="quantity-selector">
+                <button class="quantity-btn cart-qty-minus" aria-label="Decrease quantity" data-i18n-aria-label="a11yQtyDec">&minus;</button>
+                <input type="number" class="quantity-input cart-qty-input" name="qty" value="1" min="1" max="10" aria-label="Quantity" data-i18n-aria-label="a11yQty">
+                <button class="quantity-btn cart-qty-plus" aria-label="Increase quantity" data-i18n-aria-label="a11yQtyInc">+</button>
+              </div>
+              <button class="cart-item-remove" data-remove-cart data-i18n="remove">&#10005; Remove</button>
+            </div>
+          </div>
+
+          <div class="cart-item">
+            <div class="cart-item-image">
+              <img src="images/prayer-wear.jpg" alt="Prayer Set">
+            </div>
+            <div class="cart-item-info">
+              <a href="product.html"><h2 class="cart-item-title" data-i18n="prayerSet">Luxury Prayer Set</h2></a>
+              <span class="cart-item-variant" data-i18n="cartVariantPrayer">Color: Sage | Size: One Size</span>
+              <span class="cart-item-price">$65.00</span>
+            </div>
+            <div class="cart-item-actions">
+              <div class="quantity-selector">
+                <button class="quantity-btn cart-qty-minus" aria-label="Decrease quantity" data-i18n-aria-label="a11yQtyDec">&minus;</button>
+                <input type="number" class="quantity-input cart-qty-input" name="qty" value="1" min="1" max="10" aria-label="Quantity" data-i18n-aria-label="a11yQty">
+                <button class="quantity-btn cart-qty-plus" aria-label="Increase quantity" data-i18n-aria-label="a11yQtyInc">+</button>
+              </div>
+              <button class="cart-item-remove" data-remove-cart data-i18n="remove">&#10005; Remove</button>
+            </div>
+          </div>
+
+          <!-- Continue Shopping -->
+          <div style="margin-top: var(--spacing-lg);">
+            <a href="shop.html" class="btn btn-outline" data-i18n="continueShopping">&larr; Continue Shopping</a>
+          </div>
+        </div>
+
+        <!-- Cart Summary -->
+        <div class="cart-summary">
+          <h2 class="cart-summary-title" data-i18n="orderSummary">Order Summary</h2>
+          <div class="cart-summary-row">
+            <span data-i18n="sumSubtotal">Subtotal (3 items)</span>
+            <span>$189.00</span>
+          </div>
+          <div class="cart-summary-row">
+            <span data-i18n="sumShipping">Shipping</span>
+            <span class="cart-summary-shipping" data-i18n="free">Free</span>
+          </div>
+          <div class="cart-summary-row">
+            <span data-i18n="sumTax">Tax (est.)</span>
+            <span>$13.23</span>
+          </div>
+          <div class="cart-summary-row total">
+            <span data-i18n="sumTotal">Total</span>
+            <span>$202.23</span>
+          </div>
+
+          <div class="cart-promo">
+            <input type="text" class="form-input" name="promo" placeholder="Promo code" id="promoInput" aria-label="Promo code" data-i18n-placeholder="promoPlaceholder">
+            <button class="btn btn-secondary btn-sm" id="applyPromo" data-i18n="apply">Apply</button>
+          </div>
+
+          <div class="cart-checkout">
+            <a href="checkout.html" class="btn btn-primary btn-lg" data-i18n="proceedToCheckout">Proceed to Checkout</a>
+            <p class="cart-secure">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <span data-i18n="secureEncrypted">Demo checkout - no payment is collected</span>
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="footer-logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+          <p class="footer-description" data-i18n="footerTagline">Empowering modern Muslim women through elegant, modest fashion that celebrates faith and style.</p>
+        </div>
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerShop">Shop</h3>
+          <ul class="footer-links">
+            <li><a href="shop.html" class="footer-link" data-i18n="linkAllProducts">All Products</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkHijabs">Hijabs</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkAbayas">Abayas</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkDresses">Dresses</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkPrayerWear">Prayer Wear</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkAccessories">Accessories</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerHelp">Help</h3>
+          <ul class="footer-links">
+            <li><a href="mailto:care@hannaandnour.com" class="footer-link" data-i18n="linkContact">Contact Us</a></li>
+                                                          </ul>
+        </div>
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerAbout">About</h3>
+          <ul class="footer-links">
+            <li><a href="about.html" class="footer-link" data-i18n="linkOurStory">Our Story</a></li>
+            <li><a href="blog.html" class="footer-link" data-i18n="linkBlog">Blog</a></li>
+                        <li><a href="privacy.html" class="footer-link" data-i18n="linkPrivacy">Privacy Policy</a></li>
+            <li><a href="terms.html" class="footer-link" data-i18n="linkTerms">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p class="footer-copyright" data-i18n="footerCopyright">&copy; 2026 Hanna &amp; Nour. All rights reserved.</p>
+        <div class="footer-payments">
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Visa</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Mastercard</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">PayPal</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Apple Pay</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="js/i18n.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

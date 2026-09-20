@@ -1,0 +1,13 @@
+# Tooling (never publish)
+.agents/
+skills-lock.json
+collections/
+
+# Netlify
+.netlify/
+
+# OS
+.DS_Store
+
+# Git
+*.orig

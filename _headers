@@ -1,0 +1,26 @@
+/*
+  Content-Security-Policy: default-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: connect-src 'self'
+  Content-Security-Policy: font-src 'self'
+  Content-Security-Policy: img-src 'self' data:
+  Content-Security-Policy: script-src 'self'
+  Content-Security-Policy: style-src 'self' 'unsafe-inline'
+  Content-Security-Policy: object-src 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(),
+  Cross-Origin-Opener-Policy: same-origin
+  Strict-Transport-Security: max-age=63072000; includeSubDomains;
+
+/.well-known/security.txt
+  Content-Type: text/plain
+
+/robots.txt
+  Content-Type: text/plain
+
+/sitemap.xml
+  Content-Type: application/xml
+
+*.woff2
+  Content-Type: font/woff2

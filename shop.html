@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <meta name="description" content="Shop all modest fashion at Hanna &amp; Nour - hijabs, abayas, dresses, prayer wear, and accessories.">
+
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://REPLACE-WITH-YOUR-DOMAIN/shop.html">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:site_name" content="Hanna &amp; Nour">
+  <meta property="og:title" content="Shop | Hanna &amp; Nour">
+  <meta property="og:description" content="Shop our collection - Hanna &amp; Nour.">
+  <title>Shop | Hanna &amp; Nour</title>
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header" id="header">
+    <div class="header-top">
+      <p data-i18n="announce">Free shipping on orders over $75 | Use code WELCOME15 for 15% off your first order</p>
+    </div>
+    <div class="header-main">
+      <div class="container">
+        <div class="header-inner">
+          <button class="menu-toggle" id="menuToggle" aria-label="Open menu">
+            <span></span><span></span><span></span>
+          </button>
+          <a href="index.html" class="logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+          <nav class="nav-desktop">
+            <a href="index.html" class="nav-link" data-i18n="navHome">Home</a>
+            <a href="shop.html" class="nav-link active" data-i18n="navShop">Shop</a>
+            <a href="collections.html" class="nav-link" data-i18n="navCollections">Collections</a>
+            <a href="about.html" class="nav-link" data-i18n="navStory">Our Story</a>
+            <a href="blog.html" class="nav-link" data-i18n="navBlog">Blog</a>
+          </nav>
+          <div class="header-actions">
+            <select class="lang-switcher" name="lang" aria-label="Language">
+              <option value="en">EN</option>
+              <option value="fr">FR</option>
+              <option value="ar">AR</option>
+            </select>
+            <button class="header-action-btn" aria-label="Search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+            </button>
+            <a href="account.html" class="header-action-btn" aria-label="Account">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </a>
+            <button class="header-action-btn" aria-label="Wishlist">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </button>
+            <a href="cart.html" class="header-action-btn"><span class="sr-only">Cart</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+              <span class="cart-count">3</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav-mobile" id="navMobile">
+      <div class="nav-mobile-header">
+        <a href="index.html" class="logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+        <button class="nav-mobile-close" id="navClose" aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="nav-mobile-links">
+        <a href="index.html" class="nav-mobile-link" data-i18n="navHome">Home</a>
+        <a href="shop.html" class="nav-mobile-link" data-i18n="navShop">Shop</a>
+        <a href="collections.html" class="nav-mobile-link" data-i18n="navCollections">Collections</a>
+        <a href="about.html" class="nav-mobile-link" data-i18n="navStory">Our Story</a>
+        <a href="blog.html" class="nav-mobile-link" data-i18n="navBlog">Blog</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-header">
+      <div class="container">
+        <h1 class="page-header-title" data-i18n="shopTitle">Shop All</h1>
+        <div class="page-header-breadcrumb">
+          <a href="index.html" data-i18n="navHome">Home</a>
+          <span>/</span>
+          <span data-i18n="crumbShop">Shop</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="container">
+      <div class="shop-layout">
+
+        <!-- Sidebar Filters -->
+        <aside class="shop-sidebar" id="shopSidebar">
+          <div class="filter-group">
+            <h2 class="filter-title"><span data-i18n="filterTitleCategory">Category</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
+            <div class="filter-options">
+              <label class="filter-option active"><span class="filter-checkbox"></span> <span data-i18n="allProducts">All Products</span> <span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">142</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="catHijabs">Hijabs</span> <span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">42</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="catAbayas">Abayas</span> <span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">28</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="catDresses">Dresses</span> <span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">24</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="catPrayerWear">Prayer Wear</span> <span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">18</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="catAccessories">Accessories</span> <span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">30</span></label>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <h2 class="filter-title"><span data-i18n="filterTitleColor">Color</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
+            <div class="color-options">
+              <span class="color-swatch" style="background-color: #A67C00;" title="Gold"></span>
+              <span class="color-swatch" style="background-color: #D9CCB2;" title="Beige"></span>
+              <span class="color-swatch" style="background-color: #F1E7D3;" title="Cream"></span>
+              <span class="color-swatch" style="background-color: #6E5A1C;" title="Bronze"></span>
+              <span class="color-swatch" style="background-color: #3B362E;" title="Espresso"></span>
+              <span class="color-swatch" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="White"></span>
+              <span class="color-swatch" style="background-color: #C9A227;" title="Champagne"></span>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <h2 class="filter-title"><span data-i18n="filterTitleSize">Size</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
+            <div class="filter-options">
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="sizeXS">XS</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="sizeS">S</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="sizeM">M</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="sizeL">L</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="sizeXL">XL</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="sizeOne">One Size</span></label>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <h2 class="filter-title"><span data-i18n="filterTitleFabric">Fabric</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
+            <div class="filter-options">
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="fabricCotton">Cotton</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="fabricSilk">Silk</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="fabricChiffon">Chiffon</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="fabricJersey">Jersey</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="fabricCrepe">Crepe</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="fabricVelvet">Velvet</span></label>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <h2 class="filter-title"><span data-i18n="filterTitleOccasion">Occasion</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
+            <div class="filter-options">
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="occEveryday">Everyday</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="occEid">Eid</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="occWedding">Wedding</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="occPrayer">Prayer</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="occWork">Work</span></label>
+              <label class="filter-option"><span class="filter-checkbox"></span> <span data-i18n="occTravel">Travel</span></label>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <h2 class="filter-title"><span data-i18n="filterTitlePrice">Price Range</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
+            <div class="price-range">
+              <input type="number" class="price-input" name="minPrice" placeholder="Min" min="0" aria-label="Minimum price" data-i18n-placeholder="minPrice">
+              <span class="price-range-divider">&mdash;</span>
+              <input type="number" class="price-input" name="maxPrice" placeholder="Max" min="0" aria-label="Maximum price" data-i18n-placeholder="maxPrice">
+            </div>
+          </div>
+        </aside>
+
+        <!-- Shop Content -->
+        <div class="shop-content">
+          <button class="btn btn-secondary btn-sm" id="filterToggle" style="margin-bottom: var(--spacing-lg); display: none;" data-i18n="filtersBtn">Filters</button>
+
+          <div class="active-filters" id="activeFilters">
+            <span class="filter-tag">All Products <button class="filter-tag-remove">&times;</button></span>
+          </div>
+
+          <div class="shop-toolbar">
+            <span class="shop-results">Showing 1-8 of 142 products</span>
+            <div class="shop-sort">
+              <label for="sortSelect" data-i18n="sortBy">Sort by:</label>
+              <select id="sortSelect" name="sort">
+                <option value="featured" data-i18n="sortFeatured">Featured</option>
+                <option value="price-asc" data-i18n="sortPriceAsc">Price: Low to High</option>
+                <option value="price-desc" data-i18n="sortPriceDesc">Price: High to Low</option>
+                <option value="rating" data-i18n="sortRating">Top Rated</option>
+                <option value="newest" data-i18n="sortNewest">Newest</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="products-grid" id="productsGrid">
+
+            <!-- Product 1: Silk Blend Hijab -->
+            <div class="product-card" data-category="hijabs" data-price="35" data-rating="4.8">
+              <a href="product.html" class="product-card-image" style="display:block;">
+                <img src="images/silk-hijab.jpg" alt="Silk Blend Hijab">
+                <span class="product-badge">Bestseller</span>
+              </a>
+              <button class="product-wishlist" aria-label="Add to wishlist"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+              <div class="product-card-quick-add"><button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button></div>
+              <div class="product-card-info">
+                <span class="product-card-category" data-i18n="catHijabs">Hijabs</span>
+                <a href="product.html"><h3 class="product-card-title" data-i18n="silkHijab">Silk Blend Hijab</h3></a>
+                <div class="product-card-price"><span class="product-price-current">$35.00</span></div>
+                <div class="product-card-rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="rating-count">(128)</span></div>
+              </div>
+            </div>
+
+            <!-- Product 2: Flowing Abaya -->
+            <div class="product-card" data-category="abayas" data-price="89" data-rating="4.7">
+              <a href="product.html" class="product-card-image" style="display:block;">
+                <img src="images/eid-abaya.jpg" alt="Flowing Abaya">
+              </a>
+              <button class="product-wishlist" aria-label="Add to wishlist"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+              <div class="product-card-quick-add"><button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button></div>
+              <div class="product-card-info">
+                <span class="product-card-category" data-i18n="catAbayas">Abayas</span>
+                <a href="product.html"><h3 class="product-card-title" data-i18n="flowingAbaya">Flowing Abaya</h3></a>
+                <div class="product-card-price"><span class="product-price-current">$89.00</span></div>
+                <div class="product-card-rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="rating-count">(96)</span></div>
+              </div>
+            </div>
+
+            <!-- Product 3: Prayer Set -->
+            <div class="product-card" data-category="prayer" data-price="55" data-rating="4.9">
+              <a href="product.html" class="product-card-image" style="display:block;">
+                <img src="images/prayer-wear.jpg" alt="Prayer Set">
+                <span class="product-badge" style="background-color: var(--color-sage);">New</span>
+              </a>
+              <button class="product-wishlist" aria-label="Add to wishlist"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+              <div class="product-card-quick-add"><button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button></div>
+              <div class="product-card-info">
+                <span class="product-card-category" data-i18n="catPrayerWear">Prayer Wear</span>
+                <a href="product.html"><h3 class="product-card-title" data-i18n="prayerSet">Prayer Set</h3></a>
+                <div class="product-card-price"><span class="product-price-current">$55.00</span></div>
+                <div class="product-card-rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="rating-count">(74)</span></div>
+              </div>
+            </div>
+
+            <!-- Product 4: Modest Maxi Dress -->
+            <div class="product-card" data-category="dresses" data-price="75" data-rating="4.6">
+              <a href="product.html" class="product-card-image" style="display:block;">
+                <img src="images/hero.jpg" alt="Modest Dress">
+              </a>
+              <button class="product-wishlist" aria-label="Add to wishlist"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+              <div class="product-card-quick-add"><button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button></div>
+              <div class="product-card-info">
+                <span class="product-card-category" data-i18n="catDresses">Dresses</span>
+                <a href="product.html"><h3 class="product-card-title" data-i18n="modestDress">Modest Maxi Dress</h3></a>
+                <div class="product-card-price"><span class="product-price-current">$75.00</span><span class="product-price-original">$95.00</span></div>
+                <div class="product-card-rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="rating-count">(52)</span></div>
+              </div>
+            </div>
+
+            <!-- Product 5: Pearl Brooch -->
+            <div class="product-card" data-category="accessories" data-price="18" data-rating="4.5">
+              <a href="product.html" class="product-card-image" style="display:block;">
+                <img src="images/pearl-brooch.jpg" alt="Pearl Brooch">
+              </a>
+              <button class="product-wishlist" aria-label="Add to wishlist"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+              <div class="product-card-quick-add"><button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button></div>
+              <div class="product-card-info">
+                <span class="product-card-category" data-i18n="catAccessories">Accessories</span>
+                <a href="product.html"><h3 class="product-card-title" data-i18n="pearlBrooch">Pearl Brooch</h3></a>
+                <div class="product-card-price"><span class="product-price-current">$18.00</span></div>
+                <div class="product-card-rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="rating-count">(38)</span></div>
+              </div>
+            </div>
+
+            <!-- Product 6: Velvet Abaya -->
+            <div class="product-card" data-category="abayas" data-price="129" data-rating="4.9">
+              <a href="product.html" class="product-card-image" style="display:block;">
+                <img src="images/velvet-abaya.jpg" alt="Velvet Abaya">
+                <span class="product-badge">Premium</span>
+              </a>
+              <button class="product-wishlist" aria-label="Add to wishlist"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+              <div class="product-card-quick-add"><button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button></div>
+              <div class="product-card-info">
+                <span class="product-card-category" data-i18n="catAbayas">Abayas</span>
+                <a href="product.html"><h3 class="product-card-title" data-i18n="velvetAbaya">Velvet Abaya</h3></a>
+                <div class="product-card-price"><span class="product-price-current">$129.00</span></div>
+                <div class="product-card-rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="rating-count">(67)</span></div>
+              </div>
+            </div>
+
+            <!-- Product 7: Everyday Cotton Hijabs -->
+            <div class="product-card" data-category="hijabs" data-price="22" data-rating="4.4">
+              <a href="product.html" class="product-card-image" style="display:block;">
+                <img src="images/everyday-hijab.jpg" alt="Everyday Cotton Hijab">
+              </a>
+              <button class="product-wishlist" aria-label="Add to wishlist"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+              <div class="product-card-quick-add"><button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button></div>
+              <div class="product-card-info">
+                <span class="product-card-category" data-i18n="catHijabs">Hijabs</span>
+                <a href="product.html"><h3 class="product-card-title" data-i18n="everydayHijab">Everyday Cotton Hijab</h3></a>
+                <div class="product-card-price"><span class="product-price-current">$22.00</span></div>
+                <div class="product-card-rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="rating-count">(213)</span></div>
+              </div>
+            </div>
+
+            <!-- Product 8: Chiffon Wedding Hijab -->
+            <div class="product-card" data-category="hijabs" data-price="48" data-rating="4.9">
+              <a href="product.html" class="product-card-image" style="display:block;">
+                <img src="images/hero.jpg" alt="Chiffon Wedding Hijab">
+                <span class="product-badge" style="background-color: var(--color-blush); color: var(--color-burgundy);">Limited</span>
+              </a>
+              <button class="product-wishlist" aria-label="Add to wishlist"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+              <div class="product-card-quick-add"><button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button></div>
+              <div class="product-card-info">
+                <span class="product-card-category" data-i18n="catHijabs">Hijabs</span>
+                <a href="product.html"><h3 class="product-card-title" data-i18n="chiffonWedding">Chiffon Wedding Hijab</h3></a>
+                <div class="product-card-price"><span class="product-price-current">$48.00</span></div>
+                <div class="product-card-rating"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span class="rating-count">(45)</span></div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="text-center" style="margin-top: var(--spacing-2xl);">
+            <button class="btn btn-secondary" id="loadMore" data-i18n="loadMore">Load More Products</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="footer-logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+          <p class="footer-description" data-i18n="footerTagline">Empowering modern Muslim women through elegant, modest fashion that celebrates faith and style.</p>
+        </div>
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerShop">Shop</h3>
+          <ul class="footer-links">
+            <li><a href="shop.html" class="footer-link" data-i18n="linkAllProducts">All Products</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkHijabs">Hijabs</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkAbayas">Abayas</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkDresses">Dresses</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkPrayerWear">Prayer Wear</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkAccessories">Accessories</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerHelp">Help</h3>
+          <ul class="footer-links">
+            <li><a href="mailto:care@hannaandnour.com" class="footer-link" data-i18n="linkContact">Contact Us</a></li>
+                                                          </ul>
+        </div>
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerAbout">About</h3>
+          <ul class="footer-links">
+            <li><a href="about.html" class="footer-link" data-i18n="linkOurStory">Our Story</a></li>
+            <li><a href="blog.html" class="footer-link" data-i18n="linkBlog">Blog</a></li>
+                        <li><a href="privacy.html" class="footer-link" data-i18n="linkPrivacy">Privacy Policy</a></li>
+            <li><a href="terms.html" class="footer-link" data-i18n="linkTerms">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p class="footer-copyright" data-i18n="footerCopyright">&copy; 2026 Hanna &amp; Nour. All rights reserved.</p>
+        <div class="footer-payments">
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Visa</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Mastercard</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">PayPal</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Apple Pay</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="js/i18n.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

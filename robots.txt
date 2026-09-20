@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+# Nothing sensitive is blocked; the site is fully static.

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <meta name="description" content="Your account at Hanna &amp; Nour - orders, wishlist, and profile.">
+
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://REPLACE-WITH-YOUR-DOMAIN/account.html">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:site_name" content="Hanna &amp; Nour">
+  <meta property="og:title" content="My Account | Hanna &amp; Nour">
+  <meta property="og:description" content="Your account - Hanna &amp; Nour.">
+  <title>My Account | Hanna &amp; Nour</title>
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="header" id="header">
+    <div class="header-top"><p data-i18n="announce">Free shipping on orders over $75 | Use code WELCOME15 for 15% off</p></div>
+    <div class="header-main">
+      <div class="container">
+        <div class="header-inner">
+          <button class="menu-toggle" id="menuToggle" aria-label="Open menu"><span></span><span></span><span></span></button>
+          <a href="index.html" class="logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+          <nav class="nav-desktop">
+            <a href="index.html" class="nav-link" data-i18n="navHome">Home</a>
+            <a href="shop.html" class="nav-link" data-i18n="navShop">Shop</a>
+            <a href="collections.html" class="nav-link" data-i18n="navCollections">Collections</a>
+            <a href="about.html" class="nav-link" data-i18n="navStory">Our Story</a>
+            <a href="blog.html" class="nav-link" data-i18n="navBlog">Blog</a>
+          </nav>
+          <div class="header-actions">
+            <select class="lang-switcher" name="lang" aria-label="Language">
+              <option value="en">EN</option>
+              <option value="fr">FR</option>
+              <option value="ar">AR</option>
+            </select>
+            <button class="header-action-btn" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg></button>
+            <a href="account.html" class="header-action-btn" aria-label="Account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></a>
+            <button class="header-action-btn" aria-label="Wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+            <a href="cart.html" class="header-action-btn"><span class="sr-only">Cart</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg><span class="cart-count">3</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav class="nav-mobile" id="navMobile">
+      <div class="nav-mobile-header">
+        <a href="index.html" class="logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+        <button class="nav-mobile-close" id="navClose" aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+      <div class="nav-mobile-links">
+        <a href="index.html" class="nav-mobile-link" data-i18n="navHome">Home</a>
+        <a href="shop.html" class="nav-mobile-link" data-i18n="navShop">Shop</a>
+        <a href="collections.html" class="nav-mobile-link" data-i18n="navCollections">Collections</a>
+        <a href="about.html" class="nav-mobile-link" data-i18n="navStory">Our Story</a>
+        <a href="blog.html" class="nav-mobile-link" data-i18n="navBlog">Blog</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-header">
+      <div class="container">
+        <h1 class="page-header-title" data-i18n="accountTitle">My Account</h1>
+        <div class="page-header-breadcrumb">
+          <a href="index.html" data-i18n="navHome">Home</a><span>/</span><span data-i18n="crumbAccount">Account</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="container">
+      <div class="account-layout">
+        <!-- Sidebar -->
+        <aside class="account-sidebar">
+          <div class="account-user">
+            <div class="account-avatar">A</div>
+            <p class="account-name">Amina Hassan</p>
+            <p class="account-email">amina@email.com</p>
+          </div>
+          <nav class="account-nav">
+            <a href="#orders" class="account-nav-link active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line></svg>
+              <span data-i18n="navOrders">Orders</span>
+            </a>
+            <a href="#wishlist" class="account-nav-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              <span data-i18n="navWishlist">Wishlist</span>
+            </a>
+            <a href="#profile" class="account-nav-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <span data-i18n="navProfile">Profile Settings</span>
+            </a>
+            <a href="#profile" class="account-nav-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              <span data-i18n="navAddresses">Addresses</span>
+            </a>
+            <a href="#profile" class="account-nav-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <span data-i18n="navPassword">Change Password</span>
+            </a>
+            <a href="index.html" class="account-nav-link" style="color: var(--color-burgundy);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+              <span data-i18n="navLogout">Logout</span>
+            </a>
+          </nav>
+        </aside>
+
+        <!-- Account Content -->
+        <div class="account-content">
+          <div class="account-content-header">
+            <h2 class="account-content-title" id="orders" data-i18n="orderHistory">Order History</h2>
+            <button class="btn btn-secondary btn-sm" data-i18n="viewAll">View All</button>
+          </div>
+
+          <!-- Order 1 -->
+          <div class="order-card">
+            <div class="order-header">
+              <div>
+                <p class="order-number" data-i18n="orderNumber">Order #10024</p>
+                <p class="order-date" data-i18n="placedOn">Placed on March 15, 2026</p>
+              </div>
+              <span class="order-status delivered" data-i18n="delivered">Delivered</span>
+            </div>
+            <div class="order-items">
+              <div class="order-item">
+                <div class="order-item-image">
+                  <img src="images/silk-hijab.jpg" alt="Silk Blend Hijab">
+                </div>
+                <div class="order-item-info">
+                  <p class="order-item-name">Silk Blend Hijab - Emerald</p>
+                  <p class="order-item-variant">One Size &bull; Qty: 2</p>
+                </div>
+                <span class="order-item-price">$70.00</span>
+              </div>
+              <div class="order-item">
+                <div class="order-item-image">
+                  <img src="images/prayer-wear.jpg" alt="Luxury Prayer Set">
+                </div>
+                <div class="order-item-info">
+                  <p class="order-item-name">Luxury Prayer Set - Sage</p>
+                  <p class="order-item-variant">One Size &bull; Qty: 1</p>
+                </div>
+                <span class="order-item-price">$65.00</span>
+              </div>
+              <div class="order-item">
+                <div style="flex: 1;"></div>
+                <div class="order-item-info" style="text-align: right; flex: none;">
+                  <p class="order-item-name" data-i18n="orderTotal">Total</p>
+                  <p class="order-item-variant" data-i18n="freeShipping">Free shipping</p>
+                </div>
+                <span class="order-item-price">$135.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order 2 -->
+          <div class="order-card">
+            <div class="order-header">
+              <div>
+                <p class="order-number" data-i18n="orderNumber2">Order #10018</p>
+                <p class="order-date" data-i18n="placedOn2">Placed on February 8, 2026</p>
+              </div>
+              <span class="order-status delivered" data-i18n="delivered">Delivered</span>
+            </div>
+            <div class="order-items">
+              <div class="order-item">
+                <div class="order-item-image">
+                  <img src="images/eid-abaya.jpg" alt="Flowing Abaya">
+                </div>
+                <div class="order-item-info">
+                  <p class="order-item-name">Flowing Abaya - Charcoal</p>
+                  <p class="order-item-variant">Size: M &bull; Qty: 1</p>
+                </div>
+                <span class="order-item-price">$89.00</span>
+              </div>
+              <div class="order-item">
+                <div style="flex: 1;"></div>
+                <div class="order-item-info" style="text-align: right; flex: none;">
+                  <p class="order-item-name" data-i18n="orderTotal">Total</p>
+                  <p class="order-item-variant" data-i18n="freeShipping">Free shipping</p>
+                </div>
+                <span class="order-item-price">$89.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Wishlist Section -->
+          <div id="wishlist" style="margin-top: var(--spacing-3xl);">
+            <div class="account-content-header">
+              <h2 class="account-content-title" data-i18n="myWishlist">My Wishlist</h2>
+              <span style="font-size: 0.875rem; color: var(--color-gray);">5 items</span>
+            </div>
+            <div class="products-grid" style="grid-template-columns: repeat(3, 1fr); gap: var(--spacing-lg);">
+              <div class="product-card">
+                <div class="product-card-image" style="aspect-ratio: 3/4;">
+                  <img src="images/velvet-abaya.jpg" alt="Velvet Abaya">
+                </div>
+                <div class="product-card-info">
+                  <span class="product-card-category">Abayas</span>
+                  <h3 class="product-card-title" data-i18n="velvetAbaya">Velvet Abaya</h3>
+                  <div class="product-card-price"><span class="product-price-current">$129.00</span></div>
+                  <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: var(--spacing-sm);" data-i18n="addToCart">Add to Cart</button>
+                  <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: var(--spacing-xs);" data-i18n="removeProduct">Remove</button>
+                </div>
+              </div>
+              <div class="product-card">
+                <div class="product-card-image" style="aspect-ratio: 3/4;">
+                  <img src="images/hero.jpg" alt="Chiffon Wedding Hijab">
+                </div>
+                <div class="product-card-info">
+                  <span class="product-card-category">Hijabs</span>
+                  <h3 class="product-card-title" data-i18n="chiffonWedding">Chiffon Wedding Hijab</h3>
+                  <div class="product-card-price"><span class="product-price-current">$48.00</span></div>
+                  <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: var(--spacing-sm);" data-i18n="addToCart">Add to Cart</button>
+                  <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: var(--spacing-xs);" data-i18n="removeProduct">Remove</button>
+                </div>
+              </div>
+              <div class="product-card">
+                <div class="product-card-image" style="aspect-ratio: 3/4;">
+                  <img src="images/pearl-brooch.jpg" alt="Pearl Brooch Set">
+                </div>
+                <div class="product-card-info">
+                  <span class="product-card-category">Accessories</span>
+                  <h3 class="product-card-title" data-i18n="pearlBrooch">Pearl Brooch Set</h3>
+                  <div class="product-card-price"><span class="product-price-current">$18.00</span></div>
+                  <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: var(--spacing-sm);" data-i18n="addToCart">Add to Cart</button>
+                  <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: var(--spacing-xs);" data-i18n="removeProduct">Remove</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Profile Settings -->
+          <div id="profile" style="margin-top: var(--spacing-3xl);">
+            <div class="account-content-header">
+              <h2 class="account-content-title" data-i18n="profileSettings">Profile Settings</h2>
+            </div>
+            <form>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="firstName" data-i18n="firstName">First Name</label>
+                  <input type="text" class="form-input" id="firstName" name="firstName" value="Amina">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="lastName" data-i18n="lastName">Last Name</label>
+                  <input type="text" class="form-input" id="lastName" name="lastName" value="Hassan">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <input type="email" class="form-input" id="email" name="email" value="amina@email.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="phone">Phone Number</label>
+                <input type="tel" class="form-input" id="phone" name="phone" value="+1 (555) 123-4567">
+              </div>
+              <button type="submit" class="btn btn-primary" data-i18n="saveChanges">Save Changes</button>
+            </form>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="footer-logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+          <p class="footer-description" data-i18n="footerTagline">Empowering modern Muslim women through elegant, modest fashion that celebrates faith and style.</p>
+        </div>
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerShop">Shop</h3>
+          <ul class="footer-links">
+            <li><a href="shop.html" class="footer-link" data-i18n="linkAllProducts">All Products</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkHijabs">Hijabs</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkAbayas">Abayas</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkDresses">Dresses</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkPrayerWear">Prayer Wear</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkAccessories">Accessories</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerHelp">Help</h3>
+          <ul class="footer-links">
+            <li><a href="mailto:care@hannaandnour.com" class="footer-link" data-i18n="linkContact">Contact Us</a></li>
+                                                          </ul>
+        </div>
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerAbout">About</h3>
+          <ul class="footer-links">
+            <li><a href="about.html" class="footer-link" data-i18n="linkOurStory">Our Story</a></li>
+            <li><a href="blog.html" class="footer-link" data-i18n="linkBlog">Blog</a></li>
+                        <li><a href="privacy.html" class="footer-link" data-i18n="linkPrivacy">Privacy Policy</a></li>
+            <li><a href="terms.html" class="footer-link" data-i18n="linkTerms">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p class="footer-copyright" data-i18n="footerCopyright">&copy; 2026 Hanna &amp; Nour. All rights reserved.</p>
+        <div class="footer-payments">
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Visa</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Mastercard</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">PayPal</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Apple Pay</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="js/i18n.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

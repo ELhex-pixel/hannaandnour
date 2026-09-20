@@ -1,0 +1,5 @@
+Contact: mailto:care@hannaandnour.com
+Encryption: https://www.hannaandnour.com/.well-known/security.txt
+Preferred-Languages: en, fr, ar
+Expires: 2027-09-20T00:00:00.000Z
+Policy: This is a demonstration website. Please report any vulnerability to the contact address above.

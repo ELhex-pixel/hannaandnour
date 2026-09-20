@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <meta name="description" content="Hanna &amp; Nour - Elegant modest fashion for the modern Muslim woman. Discover hijabs, abayas, prayer wear, and more.">
+
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://REPLACE-WITH-YOUR-DOMAIN/index.html">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:site_name" content="Hanna &amp; Nour">
+  <meta property="og:title" content="Hanna &amp; Nour | Modest Fashion for the Modern Woman">
+  <meta property="og:description" content="Elegant modest fashion - Hanna &amp; Nour.">
+  <title>Hanna &amp; Nour | Modest Fashion for the Modern Woman</title>
+  
+  <!-- Local Fonts (self-hosted) -->
+  <link rel="stylesheet" href="fonts/fonts.css">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header" id="header">
+    <div class="header-top">
+      <p data-i18n="announce">Free shipping on orders over $75 | Use code WELCOME15 for 15% off your first order</p>
+    </div>
+    <div class="header-main">
+      <div class="container">
+        <div class="header-inner">
+          <!-- Mobile Menu Toggle -->
+          <button class="menu-toggle" id="menuToggle" aria-label="Open menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          
+          <!-- Logo -->
+          <a href="index.html" class="logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+          
+          <!-- Desktop Navigation -->
+          <nav class="nav-desktop">
+            <a href="index.html" class="nav-link active" data-i18n="navHome">Home</a>
+            <a href="shop.html" class="nav-link" data-i18n="navShop">Shop</a>
+            <a href="collections.html" class="nav-link" data-i18n="navCollections">Collections</a>
+            <a href="about.html" class="nav-link" data-i18n="navStory">Our Story</a>
+            <a href="blog.html" class="nav-link" data-i18n="navBlog">Blog</a>
+          </nav>
+          
+          <!-- Header Actions -->
+          <div class="header-actions">
+            <select class="lang-switcher" name="lang" aria-label="Language">
+              <option value="en">EN</option>
+              <option value="fr">FR</option>
+              <option value="ar">AR</option>
+            </select>
+            <!-- Search -->
+            <button class="header-action-btn" aria-label="Search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+            </button>
+            
+            <!-- Account -->
+            <a href="account.html" class="header-action-btn" aria-label="Account">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </a>
+            
+            <!-- Wishlist -->
+            <button class="header-action-btn" aria-label="Wishlist">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </button>
+            
+            <!-- Cart -->
+            <a href="cart.html" class="header-action-btn"><span class="sr-only">Cart</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
+              </svg>
+              <span class="cart-count">3</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Mobile Navigation -->
+    <nav class="nav-mobile" id="navMobile">
+      <div class="nav-mobile-header">
+        <a href="index.html" class="logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+        <button class="nav-mobile-close" id="navClose" aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="nav-mobile-links">
+        <a href="index.html" class="nav-mobile-link" data-i18n="navHome">Home</a>
+        <a href="shop.html" class="nav-mobile-link" data-i18n="navShop">Shop</a>
+        <a href="collections.html" class="nav-mobile-link" data-i18n="navCollections">Collections</a>
+        <a href="about.html" class="nav-mobile-link" data-i18n="navStory">Our Story</a>
+        <a href="blog.html" class="nav-mobile-link" data-i18n="navBlog">Blog</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-content">
+          <span class="hero-subtitle" data-i18n="heroBadge">New Collection 2026</span>
+          <h1 class="hero-title"><span data-i18n="heroPre">Elegance in</span> <em data-i18n="heroWord">Modesty</em></h1>
+          <p class="hero-description" data-i18n="heroDesc">Discover timeless pieces that celebrate your faith and your style. Crafted with care for the modern Muslim woman who refuses to compromise.</p>
+          <div class="hero-actions">
+            <a href="shop.html" class="btn btn-primary btn-lg" data-i18n="shopNow">Shop Now</a>
+            <a href="collections.html" class="btn btn-secondary btn-lg" data-i18n="viewCollections">View Collections</a>
+          </div>
+        </div>
+      </div>
+      <div class="hero-image">
+        <img src="images/hero.jpg" alt="Confident woman wearing elegant hijab">
+      </div>
+      <div class="hero-scroll">
+        <span>Scroll</span>
+        <div class="hero-scroll-line"></div>
+      </div>
+    </section>
+
+    <!-- Featured Banner -->
+    <section class="featured-banner">
+      <div class="container">
+        <div class="featured-banner-content">
+          <div class="featured-banner-text">
+            <span class="subtitle" style="color: rgba(255,255,255,0.8);" data-i18n="featuredSubtitle">Limited Edition</span>
+            <h2 class="featured-banner-title" data-i18n="eidTitle">Eid Collection 2026</h2>
+            <p data-i18n="eidDesc">Celebrate in style with our curated Eid collection. Luxurious fabrics, intricate details, and timeless elegance for your most special occasions.</p>
+            <a href="collections.html" class="btn btn-white" data-i18n="exploreCollection">Explore Collection</a>
+          </div>
+          <div class="featured-banner-image" style="width: 400px; height: 300px; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <img src="images/eid-abaya.jpg" alt="Eid Collection" style="border-radius: 12px;">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Collections -->
+    <section class="section">
+      <div class="container">
+        <div class="text-center" style="margin-bottom: var(--spacing-2xl);">
+          <span class="subtitle" data-i18n="curatedForYou">Curated for You</span>
+          <h2 class="heading-section" data-i18n="shopByCollection">Shop by Collection</h2>
+        </div>
+        
+        <div class="collections-grid">
+          <a href="collections.html" class="collection-card">
+            <img src="images/everyday-hijab.jpg" alt="Everyday Hijabs">
+            <div class="collection-card-overlay">
+              <h3 class="collection-card-title" data-i18n="collectionEveryday">Everyday Hijabs</h3>
+              <p class="collection-card-count" data-i18n="products42">42 Products</p>
+            </div>
+          </a>
+          
+          <a href="collections.html" class="collection-card">
+            <img src="images/velvet-abaya.jpg" alt="Elegant Abayas">
+            <div class="collection-card-overlay">
+              <h3 class="collection-card-title" data-i18n="collectionAbayas">Elegant Abayas</h3>
+              <p class="collection-card-count" data-i18n="products28">28 Products</p>
+            </div>
+          </a>
+          
+          <a href="collections.html" class="collection-card">
+            <img src="images/prayer-wear.jpg" alt="Prayer Wear">
+            <div class="collection-card-overlay">
+              <h3 class="collection-card-title" data-i18n="collectionPrayer">Prayer Sets</h3>
+              <p class="collection-card-count" data-i18n="products18">18 Products</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bestsellers -->
+    <section class="section" style="background-color: var(--color-white);">
+      <div class="container">
+        <div class="text-center" style="margin-bottom: var(--spacing-2xl);">
+          <span class="subtitle" data-i18n="mostLoved">Most Loved</span>
+          <h2 class="heading-section" data-i18n="bestsellers">Bestsellers</h2>
+        </div>
+        
+        <div class="products-grid">
+          <!-- Product 1 -->
+          <div class="product-card">
+            <div class="product-card-image">
+              <img src="images/silk-hijab.jpg" alt="Silk Blend Hijab">
+              <span class="product-badge">Bestseller</span>
+              <button class="product-wishlist" aria-label="Add to wishlist">
+                <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              </button>
+              <div class="product-card-quick-add">
+                <button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button>
+              </div>
+            </div>
+            <div class="product-card-info">
+              <span class="product-card-category" data-i18n="catHijabs">Hijabs</span>
+              <h3 class="product-card-title" data-i18n="silkHijab">Silk Blend Hijab</h3>
+              <div class="product-card-price">
+                <span class="product-price-current">$35.00</span>
+              </div>
+              <div class="product-card-rating">
+                <div class="stars">
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </div>
+                <span class="rating-count">(128)</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Product 2 -->
+          <div class="product-card">
+            <div class="product-card-image">
+              <img src="images/eid-abaya.jpg" alt="Flowing Abaya">
+              <button class="product-wishlist" aria-label="Add to wishlist">
+                <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              </button>
+              <div class="product-card-quick-add">
+                <button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button>
+              </div>
+            </div>
+            <div class="product-card-info">
+              <span class="product-card-category" data-i18n="catAbayas">Abayas</span>
+              <h3 class="product-card-title" data-i18n="flowingAbaya">Flowing Abaya</h3>
+              <div class="product-card-price">
+                <span class="product-price-current">$89.00</span>
+              </div>
+              <div class="product-card-rating">
+                <div class="stars">
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </div>
+                <span class="rating-count">(96)</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Product 3 -->
+          <div class="product-card">
+            <div class="product-card-image">
+              <img src="images/prayer-wear.jpg" alt="Prayer Set">
+              <span class="product-badge" style="background-color: var(--color-sage);">New</span>
+              <button class="product-wishlist" aria-label="Add to wishlist">
+                <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              </button>
+              <div class="product-card-quick-add">
+                <button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button>
+              </div>
+            </div>
+            <div class="product-card-info">
+              <span class="product-card-category" data-i18n="catPrayerWear">Prayer Wear</span>
+              <h3 class="product-card-title" data-i18n="prayerSet">Prayer Set</h3>
+              <div class="product-card-price">
+                <span class="product-price-current">$55.00</span>
+              </div>
+              <div class="product-card-rating">
+                <div class="stars">
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </div>
+                <span class="rating-count">(74)</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Product 4 -->
+          <div class="product-card">
+            <div class="product-card-image">
+              <img src="images/hero.jpg" alt="Modest Dress">
+              <button class="product-wishlist" aria-label="Add to wishlist">
+                <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              </button>
+              <div class="product-card-quick-add">
+                <button class="btn btn-primary btn-sm" data-i18n="quickAdd">Quick Add</button>
+              </div>
+            </div>
+            <div class="product-card-info">
+              <span class="product-card-category" data-i18n="catDresses">Dresses</span>
+              <h3 class="product-card-title" data-i18n="modestDress">Modest Maxi Dress</h3>
+              <div class="product-card-price">
+                <span class="product-price-current">$75.00</span>
+                <span class="product-price-original">$95.00</span>
+              </div>
+              <div class="product-card-rating">
+                <div class="stars">
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </div>
+                <span class="rating-count">(52)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-center" style="margin-top: var(--spacing-2xl);">
+          <a href="shop.html" class="btn btn-secondary" data-i18n="viewAllProducts">View All Products</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="section testimonials">
+      <div class="container">
+        <div class="text-center" style="margin-bottom: var(--spacing-2xl);">
+          <span class="subtitle" data-i18n="whatOurSistersSay">What Our Sisters Say</span>
+          <h2 class="heading-section" data-i18n="customerLove">Customer Love</h2>
+        </div>
+        <p class="text-center" style="max-width: 600px; margin: -var(--spacing-lg) auto var(--spacing-2xl);" data-i18n="testimonialsNote">Illustrative testimonials only - shown for demonstration purposes.</p>
+        
+        <div class="testimonials-grid">
+          <div class="testimonial-card">
+            <div class="testimonial-stars">
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </div>
+            <p class="testimonial-text" data-i18n="t1">"The quality is absolutely stunning. I've never felt more confident and beautiful in modest fashion. Hanna &amp; Nour understands what we want."</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar">A</div>
+              <div>
+                <p class="testimonial-name">Aisha M.</p>
+                <p class="testimonial-location" data-i18n="tLoc1">London, UK</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="testimonial-card">
+            <div class="testimonial-stars">
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </div>
+            <p class="testimonial-text" data-i18n="t2">"Fast shipping, beautiful packaging, and the abaya fits perfectly. This is my go-to store for all my modest fashion needs now."</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar" style="background-color: var(--color-blush);">F</div>
+              <div>
+                <p class="testimonial-name">Fatima K.</p>
+                <p class="testimonial-location" data-i18n="tLoc2">Toronto, Canada</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="testimonial-card">
+            <div class="testimonial-stars">
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </div>
+            <p class="testimonial-text" data-i18n="t3">"I love how Hanna &amp; Nour celebrates modesty while staying on-trend. The prayer set is so comfortable and beautiful for daily worship."</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar" style="background-color: var(--color-emerald);">S</div>
+              <div>
+                <p class="testimonial-name">Sara L.</p>
+                <p class="testimonial-location" data-i18n="tLoc3">Paris, France</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Newsletter -->
+    <section class="section newsletter">
+      <div class="container">
+        <div class="newsletter-content">
+          <div class="newsletter-text">
+            <span class="subtitle" data-i18n="stayConnected">Stay Connected</span>
+            <h2 class="newsletter-title" data-i18n="joinCommunity">Join Our Community</h2>
+            <p data-i18n="newsletterDesc">Subscribe for exclusive offers, styling tips, and early access to new collections. Be the first to know.</p>
+          </div>
+          <form class="newsletter-form" id="newsletterForm">
+            <div class="newsletter-form-group">
+              <div class="input-group">
+                <input type="email" name="email" placeholder="Enter your email address" aria-label="Email address" data-i18n-placeholder="emailPlaceholder" required>
+              </div>
+              <button type="submit" class="btn btn-primary" data-i18n="subscribe">Subscribe</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="footer-logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+          <p class="footer-description" data-i18n="footerTagline">Empowering modern Muslim women through elegant, modest fashion that celebrates faith and style.</p>
+        </div>
+        
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerShop">Shop</h3>
+          <ul class="footer-links">
+            <li><a href="shop.html" class="footer-link" data-i18n="linkAllProducts">All Products</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkHijabs">Hijabs</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkAbayas">Abayas</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkDresses">Dresses</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkPrayerWear">Prayer Wear</a></li>
+            <li><a href="collections.html" class="footer-link" data-i18n="linkAccessories">Accessories</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerHelp">Help</h3>
+          <ul class="footer-links">
+            <li><a href="mailto:care@hannaandnour.com" class="footer-link" data-i18n="linkContact">Contact Us</a></li>
+                                                          </ul>
+        </div>
+        
+        <div class="footer-column">
+          <h3 class="footer-title" data-i18n="footerAbout">About</h3>
+          <ul class="footer-links">
+            <li><a href="about.html" class="footer-link" data-i18n="linkOurStory">Our Story</a></li>
+            <li><a href="blog.html" class="footer-link" data-i18n="linkBlog">Blog</a></li>
+                        <li><a href="privacy.html" class="footer-link" data-i18n="linkPrivacy">Privacy Policy</a></li>
+            <li><a href="terms.html" class="footer-link" data-i18n="linkTerms">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p class="footer-copyright" data-i18n="footerCopyright">&copy; 2026 Hanna &amp; Nour. All rights reserved.</p>
+        <div class="footer-payments">
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Visa</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Mastercard</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">PayPal</span>
+          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Apple Pay</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="js/i18n.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
