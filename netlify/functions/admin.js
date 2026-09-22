@@ -216,12 +216,13 @@ exports.handler = async function (event) {
         return json(200, { orders: data || [] });
       }
 
-      case 'getOrder': {
-        if (!body.id) return json(400, { error: 'Missing id' });
+case 'getOrder': {
+        const oid = String(body.id || (event.queryStringParameters && event.queryStringParameters.id) || '').trim();
+        if (!oid) return json(400, { error: 'Missing id' });
         const { data, error } = await sb
           .from('orders')
           .select('*, order_items(*)')
-          .eq('id', body.id)
+          .eq('id', oid)
           .maybeSingle();
         if (error) throw error;
         return json(200, { order: data || null });

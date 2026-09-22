@@ -142,7 +142,11 @@
       return;
     }
 
-    fetch(API + '/admin?action=getOrder&id=' + encodeURIComponent(orderId) + '&token=' + encodeURIComponent(token()))
+    fetch(API + '/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token() },
+      body: JSON.stringify({ action: 'getOrder', id: orderId })
+    })
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (!data.order) throw new Error('Commande introuvable');
