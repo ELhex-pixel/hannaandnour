@@ -64,6 +64,7 @@ Copiez `.env.example` en `.env` pour `netlify dev`, et définissez les mêmes va
 | `SHIPPING_NEXTDAY_CENTS` | frais J+1 en centimes, ex. `2500` |
 | `RESEND_API_KEY` | clé API Resend (optionnel) pour l'email de confirmation de commande |
 | `MAIL_FROM` | expéditeur des emails (optionnel), ex. `Hanna & Nour <no-reply@votre-domaine.com>` |
+| `CONTACT_EMAIL` | destinataire des messages du formulaire de contact (optionnel, défaut `care@hannaandnour.com`) |
 | `ADMIN_PASSWORD` | mot de passe de l'espace admin (`/admin`) — le définir obligatoirement |
 
 ## 4ter. Espace administrateur (`/admin`)
@@ -80,6 +81,17 @@ Accédez au site sur `/admin`, entrez le mot de passe `ADMIN_PASSWORD`.
 - **Paramètres** : frais de livraison (standard/express/J+1/point relais), seuil de livraison
   gratuite et taux de taxe — sans redéployer, inscrits dans la table `settings` (priorité sur les
   variables d'environnement).
+- **Messages** : les messages envoyés via `/contact` (table `contact_messages`, RLS activée) y sont
+  listés — lecture, masquage lu/non lu, suppression. Le formulaire les transmet aussi par email
+  (best-effort) vers `CONTACT_EMAIL` si `RESEND_API_KEY` est défini.
+
+## 4equiv. Formulaire de contact (`/contact`)
+
+Page `contact.html` + `js/contact.js` : POST vers `/api/contact`
+(`netlify/functions/contact.js`), qui valide nom/email/message, enregistre dans
+`contact_messages` et tente un email vers `CONTACT_EMAIL`.
+Aucune colonne Supabase supplémentaire n'est requise : la table est créée par la migration
+(`supabase/migration_variants_admin.sql`).
 
 ## 4bis. Emails de confirmation (Resend, optionnel)
 

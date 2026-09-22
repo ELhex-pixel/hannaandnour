@@ -49,7 +49,19 @@ begin
 end;
 $$;
 
+-- ---------- CONTACT MESSAGES (customer -> admin inbox) ----------
+create table if not exists contact_messages (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text not null,
+  subject text,
+  message text not null,
+  read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
 -- ---------- RLS ----------
 alter table product_variants enable row level security;
 alter table settings enable row level security;
+alter table contact_messages enable row level security;
 -- No public policies: only Netlify functions (service_role) can access them.

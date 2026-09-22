@@ -14,8 +14,10 @@
  *   listOrders         { status?, shipping_status? }                   -> { orders }
  *   getOrder           { id }                                      -> { order }
  *   updateOrder        { id, tracking_number?, shipping_status?, delivery_type?, pickup_point? } -> { ok }
- *   getSettings        {}                                          -> { settings }
+*   getSettings        {}                                          -> { settings }
  *   saveSettings       { shipping }                                -> { ok }
+ *   listMessages       {}                                          -> { messages }
+ *   deleteMessage      { id }                                      -> { ok }
  */
 const { json, getSupabase, isConfigured, readBody, CORS_HEADERS,
   signToken, verifyToken, requireAdmin, getSetting, intEnv, floatEnv } = require('./shared');
@@ -301,6 +303,35 @@ case 'getOrder': {
         const { error } = await sb.from('settings').upsert({ key: 'shipping', value, updated_at: new Date().toISOString() });
         if (error) throw error;
         return json(200, { ok: true, settings: value });
+      }
+
+case 'deleteMessage': {
+        const id = String(body.id || (event.queryStringParameters && event.queryStringParameters.id) || '').trim();
+        if (!id) return json(400, { error: 'Missing id' });
+        const { error } = await sb.from('contact_messages').delete().eq('id', id);
+        if (error) throw error;
+        return json(200, { ok: true });
+      }
+
+      case 'updateMessage': {
+        const id = String(body.id || '').trim();
+        if (!id) return json(400, { error: 'Missing id' });
+        const fields = {};
+        if (typeof body.read === 'boolean') fields.read = body.read;
+        if (Object.keys(fields).length === 0) return json(400, { error: 'Nothing to update' });
+        const { error } = await sb.from('contact_messages').update(fields).eq('id', id);
+        if (error) throw error;
+        return json(200, { ok: true });
+      }
+
+      case 'listMessages': {
+        const { data, error } = await sb
+          .from('contact_messages')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(200);
+        if (error) throw error;
+        return json(200, { messages: data || [] });
       }
 
       default:

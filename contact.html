@@ -3,18 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="index, follow">
+  <title>Contact Us | Hanna &amp; Nour</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <meta name="description" content="Terms of Service of Hanna &amp; Nour. Rules of use for this demonstration store.">
-
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://hannaandnour.netlify.app/terms.html">
-  <meta property="og:type" content="website">
-  <meta property="og:locale" content="en_US">
-  <meta property="og:site_name" content="Hanna &amp; Nour">
-  <meta property="og:title" content="Terms of Service | Hanna &amp; Nour">
-  <meta property="og:description" content="Terms of Service - Hanna &amp; Nour.">
-  <title>Terms of Service | Hanna &amp; Nour</title>
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -41,6 +31,7 @@
             </select>
             <button class="header-action-btn" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg></button>
             <a href="account.html" class="header-action-btn" aria-label="Account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></a>
+            <button class="header-action-btn" aria-label="Wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
             <a href="cart.html" class="header-action-btn"><span class="sr-only">Cart</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg><span class="cart-count">3</span></a>
           </div>
         </div>
@@ -64,30 +55,44 @@
   <main>
     <section class="page-header">
       <div class="container">
-        <h1 class="page-header-title">Terms of Service</h1>
+        <h1 class="page-header-title" data-i18n="contactTitle">Contact Us</h1>
         <div class="page-header-breadcrumb">
-          <a href="index.html" data-i18n="navHome">Home</a><span>/</span><span>Terms of Service</span>
+          <a href="index.html" data-i18n="navHome">Home</a><span>/</span><span data-i18n="contactTitle">Contact Us</span>
         </div>
       </div>
     </section>
 
-    <section class="container" style="max-width: 800px; padding-top: var(--spacing-2xl); padding-bottom: var(--spacing-3xl);">
-      <p><strong>Last updated:</strong> 20 September 2026</p>
+    <section class="contact-section">
+      <div class="container">
+        <div class="contact-grid">
+          <div class="contact-info">
+            <h2 data-i18n="contactInfo">Get in touch</h2>
+            <p data-i18n="contactSub">A question about an order, your size, or care instructions? We usually answer within 24 hours.</p>
+            <p><strong data-i18n="contactEmail">Email :</strong> <a href="mailto:care@hannaandnour.com">care@hannaandnour.com</a></p>
+          </div>
 
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">1. Demonstration purpose</h2>
-      <p>Hanna &amp; Nour is a demonstration website. Product images, prices, testimonials and reviews are illustrative and do not represent an offer to sell. No order you submit here will be fulfilled, and no payment will be taken.</p>
-
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">2. Intellectual property</h2>
-      <p>All content on this site (text, design, images, logo) is provided for demonstration. You may not reproduce, redistribute or reuse it for commercial purposes without written permission.</p>
-
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">3. Disclaimer</h2>
-      <p>The site is provided "as is" without warranties of any kind. To the maximum extent permitted by law, we disclaim liability for any loss arising from use of this site, its content, or any demonstration feature.</p>
-
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">4. Testimonial notice</h2>
-      <p>Testimonials and product reviews shown on this site are fictitious examples created to illustrate the interface. No real customer endorsement is implied.</p>
-
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">5. Governing law</h2>
-      <p>These terms are governed by the laws applicable to the operator's location. For any question, contact <a href="mailto:care@hannaandnour.com">care@hannaandnour.com</a>.</p>
+          <form id="contactForm" class="contact-form" novalidate>
+            <div class="form-group">
+              <label class="form-label" for="cName" data-i18n="contactName">Name *</label>
+              <input type="text" class="form-input" id="cName" name="name" required data-i18n-placeholder="contactNamePh">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cEmail" data-i18n="contactMail">Email *</label>
+              <input type="email" class="form-input" id="cEmail" name="email" required data-i18n-placeholder="contactMailPh">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cSubject" data-i18n="contactSubject">Subject</label>
+              <input type="text" class="form-input" id="cSubject" name="subject" data-i18n-placeholder="contactSubjectPh">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cMessage" data-i18n="contactMessage">Message *</label>
+              <textarea class="form-input" id="cMessage" name="message" rows="5" required data-i18n-placeholder="contactMessagePh"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" id="contactSubmitBtn" data-i18n="contactSend">Send message</button>
+            <p class="contact-status" id="contactStatus" role="status"></p>
+          </form>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -144,5 +149,6 @@
   <script src="js/i18n.js"></script>
   <script src="js/store.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/contact.js"></script>
 </body>
 </html>

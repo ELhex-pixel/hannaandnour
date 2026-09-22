@@ -103,6 +103,7 @@
         panel.classList.add('active');
         if (id === 'panel-products') loadProducts();
         if (id === 'panel-orders') loadOrders();
+        if (id === 'panel-messages') loadMessages();
         if (id === 'panel-settings') loadSettings();
       });
     });
@@ -568,6 +569,57 @@
     });
   }
 
+  /* ---------------- Messages (contact form inbox) ---------------- */
+
+  function loadMessages() {
+    return call('listMessages').then(function (res) {
+      renderMessages(res.messages || []);
+    }).catch(function (e) {
+      document.getElementById('messagesList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+    });
+  }
+
+  function renderMessages(list) {
+    var box = document.getElementById('messagesList');
+    if (!box) return;
+    if (!list.length) { box.innerHTML = '<p class="empty">Aucun message.</p>'; return; }
+    box.innerHTML = list.map(function (m) {
+      return '<div class="card" style="margin-bottom:10px; ' + (m.read ? 'opacity:.65;' : '') + '">' +
+        '<div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">' +
+        '<div><strong>' + esc(m.name) + '</strong> &lt;<a href="mailto:' + esc(m.email) + '">' + esc(m.email) + '</a>&gt;' +
+        (m.subject ? '<br><em>' + esc(m.subject) + '</em>' : '') + '</div>' +
+        '<div style="text-align:right; color:#8a7d66; font-size:12px;">' + fmtDate(m.created_at) + '<br>' +
+        '<button class="btn btn-secondary btn-small msg-read" data-id="' + m.id + '" data-read="' + (m.read ? 1 : 0) + '">' + (m.read ? 'Non lu' : 'Marquer lu') + '</button> ' +
+        '<button class="btn btn-secondary btn-small msg-del" data-id="' + m.id + '">Supprimer</button></div>' +
+        '</div>' +
+        '<p style="margin:10px 0 0; white-space:pre-wrap;">' + esc(m.message) + '</p>' +
+        '</div>';
+    }).join('');
+  }
+
+  function wireMessages() {
+    document.getElementById('refreshMessagesBtn').addEventListener('click', loadMessages);
+    document.addEventListener('click', function (e) {
+      var del = e.target.closest('.msg-del');
+      if (del) {
+        if (!confirm('Supprimer ce message ?')) return;
+        call('deleteMessage', { id: del.getAttribute('data-id') })
+          .then(loadMessages)
+          .catch(function (err) { toast(err.message, 'err'); });
+        return;
+      }
+      var read = e.target.closest('.msg-read');
+      if (read) {
+        var id = read.getAttribute('data-id');
+        var markRead = read.getAttribute('data-read') !== '1';
+        call('updateMessage', { id: id, read: markRead })
+          .then(loadMessages)
+          .catch(function (err) { toast(err.message, 'err'); });
+        return;
+      }
+    });
+  }
+
   /* ---------------- Filters ---------------- */
 
   function wireFilters() {
@@ -585,6 +637,7 @@
   wireTabs();
   wireEditor();
   wireOrders();
+  wireMessages();
   wireSettings();
   wireFilters();
 

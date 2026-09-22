@@ -109,6 +109,7 @@
     <div class="admin-tabs">
       <button class="admin-tab active" data-tab="products">Produits</button>
       <button class="admin-tab" data-tab="orders">Commandes</button>
+      <button class="admin-tab" data-tab="messages">Messages</button>
       <button class="admin-tab" data-tab="settings">Param&egrave;tres</button>
     </div>
 
@@ -148,6 +149,15 @@
         <button class="btn btn-secondary" id="refreshOrdersBtn">Actualiser</button>
       </div>
       <div class="card" id="ordersList"><p class="empty">Chargement...</p></div>
+    </div>
+
+    <!-- MESSAGES (client contact form) -->
+    <div class="admin-panel" id="panel-messages">
+      <div class="toolbar">
+        <span style="color:#8a7d66;">Messages du formulaire de contact du site</span>
+        <button class="btn btn-secondary" id="refreshMessagesBtn">Actualiser</button>
+      </div>
+      <div class="card" id="messagesList"><p class="empty">Chargement...</p></div>
     </div>
 
     <!-- SETTINGS -->
