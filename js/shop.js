@@ -14,16 +14,13 @@
     items: [],
     source: 'api', // 'api' | 'static'
     categories: [],
-    colors: [],
     sizes: [],
-    fabrics: [],
     occasions: [],
     minCents: null,
     maxCents: null,
     sort: 'featured',
     page: 1,
-    filtersOpen: false,
-    catalogColors: []
+    filtersOpen: false
   };
 
   var grid = document.getElementById('productsGrid');
@@ -49,29 +46,11 @@
     });
   }
 
-  /* Shared helpers: keep filter options in sync with the real catalog, so
-     anything the admin stores in colors/sizes/fabrics/occasions appears here. */
+/* Shared helpers: keep filter options in sync with the real catalog, so
+      anything the admin stores in sizes/occasions appears here. */
 
   function escAttr(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  var COLOR_PALETTE = {
-    white: '#FFFFFF', cream: '#F1E7D3', beige: '#D9CCB2', gold: '#A67C00',
-    bronze: '#6E5A1C', espresso: '#3B362E', black: '#1A1A1A', champagne: '#C9A227',
-    ivory: '#FFFFF0', charcoal: '#404040', emerald: '#3D7A5C', blush: '#E8B4B8',
-    nude: '#D2A58F', sage: '#8A9A7B', navy: '#1B2A4A', grey: '#808080',
-    gray: '#808080', silver: '#C0C0C0', pink: '#F2B5C0', rose: '#E7A2B4',
-    lavender: '#C3B5E0', purple: '#6B4F8A', mint: '#B9DCC9', sky: '#A8CBE0',
-    sand: '#D8C7A6', taupe: '#8C7B66', brown: '#7A4E2D', red: '#B03A2E',
-    green: '#4E7A52', blue: '#3A5B8C'
-  };
-  var COLOR_FALLBACK = ['#A67C00', '#6E5A1C', '#3B362E', '#D9CCB2', '#C9A227', '#8A9A7B', '#3D7A5C', '#404040', '#1B2A4A', '#7C3E2A', '#B45309', '#6B4F8A'];
-
-  function colorHex(name, seed) {
-    var n = String(name || '').toLowerCase();
-    if (COLOR_PALETTE[n]) return COLOR_PALETTE[n];
-    return COLOR_FALLBACK[(seed || 0) % COLOR_FALLBACK.length];
   }
 
   var DEFAULT_COLORS = ['Gold', 'Beige', 'Cream', 'Bronze', 'Espresso', 'White', 'Champagne'];
@@ -123,38 +102,6 @@
 
   function buildFilterOptions() {
     var items = state.items;
-
-    // Colors: admin catalog first (ordered), then any product colors missing
-    // from it. Case-insensitive dedupe, whitespace trimmed.
-    var colors = [];
-    var seen = {};
-    function addColor(name) {
-      var s = String(name || '').trim();
-      if (!s) return;
-      var low = s.toLowerCase();
-      if (seen[low]) return;
-      seen[low] = true;
-      colors.push(s);
-    }
-    (state.catalogColors || []).forEach(addColor);
-    var extras = [];
-    collectValues(items, 'colors').forEach(function (c) {
-      var s = String(c || '').trim();
-      if (!s || seen[s.toLowerCase()]) return;
-      extras.push(s);
-    });
-    extras.sort(function (a, b) { return String(a).toLowerCase().localeCompare(String(b).toLowerCase()); });
-    var colorsAll = colors.concat(extras);
-    var colorEl = document.getElementById('colorOptions');
-    if (colorEl) {
-      colorEl.innerHTML = colorsAll.map(function (c, i) {
-        var active = state.colors.indexOf(c) >= 0;
-        return '<span class="color-swatch-wrap' + (active ? ' active' : '') + '" data-color="' + escAttr(c) + '" title="' + escAttr(c) + '">' +
-          '<span class="color-swatch" style="background-color:' + colorHex(c, i) + ';' + (String(c).toLowerCase() === 'white' ? ' border:1px solid #ccc;' : '') + '"></span>' +
-          '<span class="color-swatch-name">' + escAttr(c) + '</span>' +
-          '</span>';
-      }).join('');
-    }
 
     var sizes = canonicalSort(collectValues(items, 'sizes'), SIZE_ORDER);
     var sizeEl = document.getElementById('sizeOptions');
@@ -243,13 +190,6 @@
     }).catch(function () {
       state.items = itemsFromStaticCards();
       state.source = 'static';
-    }).then(function () {
-      // Admin-managed color list (used first in the filter, order matters).
-      return fetch(HN.api('config')).then(function (res) { return res.json(); }).then(function (data) {
-        state.catalogColors = data && data.catalog && Array.isArray(data.catalog.colors) ? data.catalog.colors.slice() : [];
-      }).catch(function () {
-        state.catalogColors = [];
-      });
     });
   }
 
@@ -259,9 +199,7 @@
     var minCents = state.minCents, maxCents = state.maxCents;
     var list = state.items.filter(function (p) {
       if (state.categories.length && state.categories.indexOf(p.category) === -1) return false;
-      if (state.colors.length && !state.colors.some(function (c) { return readValue(p.colors, c); })) return false;
       if (state.sizes.length && !state.sizes.some(function (s) { return readValue(p.sizes, s); })) return false;
-      if (state.fabrics.length && !state.fabrics.some(function (f) { return readValue(p.fabrics, f); })) return false;
       if (state.occasions.length && !state.occasions.some(function (o) { return readValue(p.occasions, o); })) return false;
       if (minCents !== null && (p.price_cents || 0) < minCents) return false;
       if (maxCents !== null && (p.price_cents || 0) > maxCents) return false;
@@ -311,10 +249,8 @@
     state.categories.forEach(function (c) {
       tags.push({ text: tr(catKey(c)), remove: function () { state.categories = []; setFilterControls(); render(); } });
     });
-    state.fabrics.forEach(function (f) { tags.push({ text: f, remove: function () { state.fabrics = []; setFilterControls(); render(); } }); });
     state.occasions.forEach(function (o) { tags.push({ text: o, remove: function () { state.occasions = []; setFilterControls(); render(); } }); });
     state.sizes.forEach(function (s) { tags.push({ text: s, remove: function () { state.sizes = []; setFilterControls(); render(); } }); });
-    state.colors.forEach(function (c) { tags.push({ text: c, remove: function () { state.colors = []; setFilterControls(); render(); } }); });
 
     activeFiltersEl.textContent = '';
     if (!tags.length) {
@@ -352,17 +288,8 @@
       var active = false;
       if (group === 'category') active = state.categories.indexOf(val) >= 0;
       if (group === 'size') active = state.sizes.indexOf(val) >= 0;
-      if (group === 'fabric') active = state.fabrics.indexOf(val) >= 0;
       if (group === 'occasion') active = state.occasions.indexOf(val) >= 0;
       opt.classList.toggle('active', active);
-    });
-
-    // Color swatches (plain fallback swatches and dynamic wrap labels).
-    document.querySelectorAll('.color-swatch-wrap[data-color]').forEach(function (w) {
-      w.classList.toggle('active', state.colors.indexOf(w.getAttribute('data-color')) >= 0);
-    });
-    document.querySelectorAll('.color-swatch[data-color]').forEach(function (s) {
-      s.classList.toggle('active', state.colors.indexOf(s.getAttribute('data-color')) >= 0);
     });
   }
 
@@ -394,21 +321,11 @@
         } else if (group === 'category') {
           toggleIn(state.categories, val);
         } else if (group === 'size') { toggleIn(state.sizes, val); }
-        else if (group === 'fabric') { toggleIn(state.fabrics, val); }
         else if (group === 'occasion') { toggleIn(state.occasions, val); }
         state.page = 1;
         setFilterControls();
         render();
         return;
-      }
-
-      var sw = e.target.closest ? (e.target.closest('.color-swatch-wrap[data-color]') || e.target.closest('.color-swatch[data-color]')) : null;
-      if (sw) {
-        var color = sw.getAttribute('data-color') || '';
-        toggleIn(state.colors, color);
-        sw.classList.toggle('active', state.colors.indexOf(color) >= 0);
-        state.page = 1;
-        render();
       }
     });
 

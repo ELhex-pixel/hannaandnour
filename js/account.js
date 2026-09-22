@@ -144,7 +144,8 @@
     var products = [];
     slugs.forEach(function (s) {
       var p = HN.getProduct(s);
-      if (p) products.push(p);
+      if (!p) p = { slug: s, name_en: s, image: '' };
+      products.push(p);
     });
 
     if (!products.length) {

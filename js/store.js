@@ -78,7 +78,7 @@
       })
       .then(function (data) {
         productsList = data.products || [];
-        try { window.sessionStorage.setItem(PROD_CACHE_KEY, JSON.stringify(productsList)); } catch (e) {}
+        writeLS(PROD_CACHE_KEY, productsList);
         return productsList;
       })
       .catch(function (err) {
@@ -92,13 +92,12 @@
     for (var i = 0; i < productsList.length; i++) {
       if (productsList[i].slug === slug) return productsList[i];
     }
-    // Try the sessionStorage cache even if the fetch failed.
+    // Try the localStorage cache even if the fetch failed (survives tabs).
     try {
-      var cached = window.sessionStorage.getItem(PROD_CACHE_KEY);
-      if (cached) {
-        var arr = JSON.parse(cached);
-        for (var j = 0; j < arr.length; j++) {
-          if (arr[j].slug === slug) return arr[j];
+      var cached = readLS(PROD_CACHE_KEY);
+      if (cached && Array.isArray(cached)) {
+        for (var j = 0; j < cached.length; j++) {
+          if (cached[j].slug === slug) return cached[j];
         }
       }
     } catch (e) {}
