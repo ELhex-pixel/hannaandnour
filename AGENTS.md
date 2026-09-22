@@ -27,7 +27,7 @@ Supabase catalog, Stripe Checkout payments, API served by Netlify Functions (`ne
 
 ## Business rules (MUST stay in sync client & server)
 - Tax 7 % (`checkout.js`/`cart-page.js` client; `TAX_RATE` server). Shipping: free ≥ `FREE_SHIPPING_THRESHOLD_CENTS` (7500 ¢), else standard 699 ¢, express 1200 ¢, next-day 2500 ¢.
-- **Admin-editable**: the `settings` table (key `shipping`) can override tax/shipping/free-threshold/pickup rates via the `/admin` page — it takes precedence over env vars. The client fetches them from `/api/config`.
+- **Admin-editable**: the `settings` table (key `shipping`) can override tax/shipping/free-threshold/pickup rates via the `/admin` page — it takes precedence over env vars. The client fetches them from `/api/config`. Key `catalog` stores the admin-managed shop filter colors (`{ colors: [...] }`), returned in `/api/config` and used by `shop.js` (admin list first, then product colors, deduped).
 - A product **with `product_variants` rows = managed stock** (each color×size has its own stock; missing combo is blocked; size buttons are disabled when out of stock). A product **without variant rows = unlimited legacy product**. Cart items carry `variantId`.
 - Always mirror price/tax/shipping changes in the client JS AND the Netlify functions, or the displayed total won't match the charged total.
 - Static product cards on index/shop/collections/cart carry `data-slug`/`data-price-cents`/`data-name`/`data-image` and link to `product.html?slug=...`; JS re-renders them from the API when available. Product slugs must match `seed.sql`/`seed_products_2.sql`.

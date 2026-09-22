@@ -75,11 +75,6 @@
       <div class="account-layout">
         <!-- Sidebar -->
         <aside class="account-sidebar">
-          <div class="account-user">
-            <div class="account-avatar">A</div>
-            <p class="account-name">Amina Hassan</p>
-            <p class="account-email">amina@email.com</p>
-          </div>
           <nav class="account-nav">
             <a href="#orders" class="account-nav-link active">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line></svg>
@@ -88,22 +83,6 @@
             <a href="#wishlist" class="account-nav-link">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
               <span data-i18n="navWishlist">Wishlist</span>
-            </a>
-            <a href="#profile" class="account-nav-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-              <span data-i18n="navProfile">Profile Settings</span>
-            </a>
-            <a href="#profile" class="account-nav-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              <span data-i18n="navAddresses">Addresses</span>
-            </a>
-            <a href="#profile" class="account-nav-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              <span data-i18n="navPassword">Change Password</span>
-            </a>
-            <a href="index.html" class="account-nav-link" style="color: var(--color-burgundy);">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-              <span data-i18n="navLogout">Logout</span>
             </a>
           </nav>
         </aside>
@@ -129,36 +108,8 @@
               <h2 class="account-content-title" data-i18n="myWishlist">My Wishlist</h2>
               <span id="wishlistCount" style="font-size: 0.875rem; color: var(--color-gray);">0 items</span>
             </div>
-            <div class="products-grid" id="wishlistGrid" style="grid-template-columns: repeat(3, 1fr); gap: var(--spacing-lg);">
+            <div class="products-grid" id="wishlistGrid">
             </div>
-          </div>
-
-          <!-- Profile Settings -->
-          <div id="profile" style="margin-top: var(--spacing-3xl);">
-            <div class="account-content-header">
-              <h2 class="account-content-title" data-i18n="profileSettings">Profile Settings</h2>
-            </div>
-            <form>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label" for="firstName" data-i18n="firstName">First Name</label>
-                  <input type="text" class="form-input" id="firstName" name="firstName" value="Amina">
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="lastName" data-i18n="lastName">Last Name</label>
-                  <input type="text" class="form-input" id="lastName" name="lastName" value="Hassan">
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="email">Email Address</label>
-                <input type="email" class="form-input" id="email" name="email" value="amina@email.com">
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="phone">Phone Number</label>
-                <input type="tel" class="form-input" id="phone" name="phone" value="+1 (555) 123-4567">
-              </div>
-              <button type="submit" class="btn btn-primary" data-i18n="saveChanges">Save Changes</button>
-            </form>
           </div>
 
         </div>

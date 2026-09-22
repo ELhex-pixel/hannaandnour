@@ -9,11 +9,10 @@
   var tr = HN.tr;
 
   function statusText(status) {
-    var map = { paid: 'Delivered', pending: 'Processing', abandoned: 'Abandoned', refunded: 'Refunded' };
     var key = {
       paid: 'orderPaid', pending: 'orderPending', abandoned: 'orderAbandoned', refunded: 'orderRefunded'
     }[status];
-    return key ? tr(key) : (map[status] || status);
+    return key ? tr(key) : status;
   }
 
   function shippingText(s) {
@@ -97,39 +96,23 @@
 
   function wishlistCard(p) {
     var name = HN.productName(p);
+    var url = 'product.html?slug=' + encodeURIComponent(p.slug);
     return '<div class="product-card" data-slug="' + p.slug + '">' +
-      '  <div class="product-card-image" style="aspect-ratio: 3/4;">' +
+      '  <a class="product-card-image" href="' + url + '" style="display:block; aspect-ratio: 3/4;">' +
       '    <img src="' + (p.image || 'images/hero.jpg') + '" alt="' + name.replace(/"/g, '&quot;') + '">' +
-      '  </div>' +
+      '  </a>' +
       '  <div class="product-card-info">' +
-      '    <h3 class="product-card-title">' + name + '</h3>' +
+      '    <a href="' + url + '"><h3 class="product-card-title">' + name + '</h3></a>' +
       '    <div class="product-card-price"><span class="product-price-current">' + HN.money(p.price_cents) + '</span></div>' +
-      '    <button class="btn btn-primary btn-sm wishlist-add btn-sm" style="width: 100%; margin-top: var(--spacing-sm);">' + tr('addToCart') + '</button>' +
-      '    <button class="btn btn-secondary btn-sm wishlist-remove btn-sm" style="width: 100%; margin-top: var(--spacing-xs);">' + tr('removeProduct') + '</button>' +
+      '    <button class="btn btn-primary btn-sm wishlist-add" style="width: 100%; margin-top: var(--spacing-sm);">' + tr('addToCart') + '</button>' +
+      '    <button class="btn btn-secondary btn-sm wishlist-remove" style="width: 100%; margin-top: var(--spacing-xs);">' + tr('removeProduct') + '</button>' +
       '  </div>' +
       '</div>';
   }
 
-  function renderWishlist() {
+  function wireWishlistGrid() {
     var grid = document.getElementById('wishlistGrid');
-    var countEl = document.getElementById('wishlistCount');
     if (!grid) return;
-
-    var slugs = HN.wishlist.list();
-    if (countEl) countEl.textContent = slugs.length + ' ' + (slugs.length <= 1 ? 'item' : 'items');
-
-    var products = [];
-    slugs.forEach(function (s) {
-      var p = HN.getProduct(s);
-      if (p) products.push(p);
-    });
-
-    if (!products.length) {
-      grid.innerHTML = '<p style="color: var(--color-gray); grid-column: 1/-1;">' + tr('wishlistEmpty') + '</p>';
-      return;
-    }
-    grid.innerHTML = products.map(wishlistCard).join('');
-
     grid.addEventListener('click', function (e) {
       var remove = e.target.closest('.wishlist-remove');
       var add = e.target.closest('.wishlist-add');
@@ -150,8 +133,30 @@
     });
   }
 
+  function renderWishlist() {
+    var grid = document.getElementById('wishlistGrid');
+    var countEl = document.getElementById('wishlistCount');
+    if (!grid) return;
+
+    var slugs = HN.wishlist.list();
+    if (countEl) countEl.textContent = slugs.length + ' ' + tr(slugs.length <= 1 ? 'wishItem' : 'wishItems');
+
+    var products = [];
+    slugs.forEach(function (s) {
+      var p = HN.getProduct(s);
+      if (p) products.push(p);
+    });
+
+    if (!products.length) {
+      grid.innerHTML = '<p style="color: var(--color-gray); grid-column: 1/-1;">' + tr('wishlistEmpty') + '</p>';
+      return;
+    }
+    grid.innerHTML = products.map(wishlistCard).join('');
+  }
+
   function init() {
     wireOrderLookup();
+    wireWishlistGrid();
     HN.loadProducts().then(function () {
       renderWishlist();
     }).catch(function () {

@@ -549,11 +549,15 @@
       setVal('setFree', dollars(s.free_threshold_cents));
       setVal('setTax', (parseFloat(s.tax_rate) || 0) * 100);
       document.getElementById('setPickupEnabled').checked = s.pickup_enabled !== false;
+      var colors = (res.catalog && res.catalog.colors) || [];
+      document.getElementById('setCatalogColors').value = colors.join(', ');
     }).catch(function (e) { toast(e.message, 'err'); });
   }
 
   function wireSettings() {
     document.getElementById('saveSettingsBtn').addEventListener('click', function () {
+      var colorsVal = getVal('setCatalogColors');
+      var colors = colorsVal ? colorsVal.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
       call('saveSettings', {
         shipping: {
           standard_cents: toCents(getVal('setStd')),
@@ -563,7 +567,8 @@
           free_threshold_cents: toCents(getVal('setFree')),
           tax_rate: (parseFloat(getVal('setTax')) || 0) / 100,
           pickup_enabled: document.getElementById('setPickupEnabled').checked
-        }
+        },
+        catalog: { colors: colors }
       }).then(function () { toast('Paramètres enregistrés', 'ok'); })
         .catch(function (e) { toast(e.message, 'err'); });
     });

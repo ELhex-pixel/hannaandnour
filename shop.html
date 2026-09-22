@@ -110,7 +110,7 @@
 
           <div class="filter-group">
             <h2 class="filter-title"><span data-i18n="filterTitleColor">Color</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
-            <div class="color-options">
+            <div class="color-options" id="colorOptions">
               <span class="color-swatch" data-color="Gold" style="background-color: #A67C00;" title="Gold"></span>
               <span class="color-swatch" data-color="Beige" style="background-color: #D9CCB2;" title="Beige"></span>
               <span class="color-swatch" data-color="Cream" style="background-color: #F1E7D3;" title="Cream"></span>
@@ -123,38 +123,12 @@
 
           <div class="filter-group">
             <h2 class="filter-title"><span data-i18n="filterTitleSize">Size</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
-            <div class="filter-options">
-              <label class="filter-option" data-group="size" data-value="xs"><span class="filter-checkbox"></span> <span data-i18n="sizeXS">XS</span></label>
-              <label class="filter-option" data-group="size" data-value="s"><span class="filter-checkbox"></span> <span data-i18n="sizeS">S</span></label>
-              <label class="filter-option" data-group="size" data-value="m"><span class="filter-checkbox"></span> <span data-i18n="sizeM">M</span></label>
-              <label class="filter-option" data-group="size" data-value="l"><span class="filter-checkbox"></span> <span data-i18n="sizeL">L</span></label>
-              <label class="filter-option" data-group="size" data-value="xl"><span class="filter-checkbox"></span> <span data-i18n="sizeXL">XL</span></label>
-              <label class="filter-option" data-group="size" data-value="one size"><span class="filter-checkbox"></span> <span data-i18n="sizeOne">One Size</span></label>
-            </div>
-          </div>
-
-          <div class="filter-group">
-            <h2 class="filter-title"><span data-i18n="filterTitleFabric">Fabric</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
-            <div class="filter-options">
-              <label class="filter-option" data-group="fabric" data-value="cotton"><span class="filter-checkbox"></span> <span data-i18n="fabricCotton">Cotton</span></label>
-              <label class="filter-option" data-group="fabric" data-value="silk"><span class="filter-checkbox"></span> <span data-i18n="fabricSilk">Silk</span></label>
-              <label class="filter-option" data-group="fabric" data-value="chiffon"><span class="filter-checkbox"></span> <span data-i18n="fabricChiffon">Chiffon</span></label>
-              <label class="filter-option" data-group="fabric" data-value="jersey"><span class="filter-checkbox"></span> <span data-i18n="fabricJersey">Jersey</span></label>
-              <label class="filter-option" data-group="fabric" data-value="crepe"><span class="filter-checkbox"></span> <span data-i18n="fabricCrepe">Crepe</span></label>
-              <label class="filter-option" data-group="fabric" data-value="velvet"><span class="filter-checkbox"></span> <span data-i18n="fabricVelvet">Velvet</span></label>
-            </div>
+            <div class="filter-options" id="sizeOptions"></div>
           </div>
 
           <div class="filter-group">
             <h2 class="filter-title"><span data-i18n="filterTitleOccasion">Occasion</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
-            <div class="filter-options">
-              <label class="filter-option" data-group="occasion" data-value="everyday"><span class="filter-checkbox"></span> <span data-i18n="occEveryday">Everyday</span></label>
-              <label class="filter-option" data-group="occasion" data-value="eid"><span class="filter-checkbox"></span> <span data-i18n="occEid">Eid</span></label>
-              <label class="filter-option" data-group="occasion" data-value="wedding"><span class="filter-checkbox"></span> <span data-i18n="occWedding">Wedding</span></label>
-              <label class="filter-option" data-group="occasion" data-value="prayer"><span class="filter-checkbox"></span> <span data-i18n="occPrayer">Prayer</span></label>
-              <label class="filter-option" data-group="occasion" data-value="work"><span class="filter-checkbox"></span> <span data-i18n="occWork">Work</span></label>
-              <label class="filter-option" data-group="occasion" data-value="travel"><span class="filter-checkbox"></span> <span data-i18n="occTravel">Travel</span></label>
-            </div>
+            <div class="filter-options" id="occasionOptions"></div>
           </div>
 
           <div class="filter-group">

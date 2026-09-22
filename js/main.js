@@ -163,6 +163,15 @@
      Wishlist toggle (persisted by store.js)
      ============================================== */
 
+  // Header wishlist icon: if it's still a <button>, make it open the wishlist page.
+  document.addEventListener('click', function(e) {
+    const hb = e.target.closest('.header-action-btn[aria-label="Wishlist"]');
+    if (hb && hb.tagName === 'BUTTON' && hb.classList.contains('header-action-btn') && !hb.closest('.product-wishlist')) {
+      e.preventDefault();
+      window.location.href = 'account.html#wishlist';
+    }
+  });
+
   document.addEventListener('click', function(e) {
     const wishlistBtn = e.target.closest('.product-wishlist');
     if (!wishlistBtn) return;
@@ -175,7 +184,7 @@
       const res = window.HN.wishlist.toggle(slug);
       wishlistBtn.classList.toggle('active', res.active);
       showToast(res.active ? tr('wishAdd') : tr('wishRemove'),
-        card && card.querySelector('.product-card-title') ? card.querySelector('.product-card-title').textContent : tr('productFallback'),
+        card && (card.querySelector('.product-card-title') || card.querySelector('.product-title')) ? (card.querySelector('.product-card-title') || card.querySelector('.product-title')).textContent : tr('productFallback'),
         'success');
     } else {
       wishlistBtn.classList.toggle('active');

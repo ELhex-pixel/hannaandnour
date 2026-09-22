@@ -6,7 +6,7 @@
  * Values come from the `settings` table (admin-editable) and fall back to
  * Netlify env vars / defaults when unset.
  */
-const { json, getSupabase, isConfigured, getSetting, intEnv, floatEnv } = require('./shared');
+const { json, getSupabase, isConfigured, getSetting, defaultCatalog, intEnv, floatEnv } = require('./shared');
 
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
@@ -34,7 +34,13 @@ exports.handler = async function (event) {
     };
     if (row) Object.assign(settings, row);
 
-    return json(200, { settings });
+    let catalog = defaultCatalog();
+    try {
+      const cat = await getSetting(sb, 'catalog', null);
+      if (cat && Array.isArray(cat.colors)) catalog = { colors: cat.colors };
+    } catch (e) { /* keep default */ }
+
+    return json(200, { settings, catalog });
   } catch (err) {
     console.error('config.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

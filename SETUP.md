@@ -80,7 +80,9 @@ Accédez au site sur `/admin`, entrez le mot de passe `ADMIN_PASSWORD`.
   navigateur → PDF).
 - **Paramètres** : frais de livraison (standard/express/J+1/point relais), seuil de livraison
   gratuite et taux de taxe — sans redéployer, inscrits dans la table `settings` (priorité sur les
-  variables d'environnement).
+  variables d'environnement). S'y ajoute la **liste des couleurs du filtre boutique** (clé
+  `catalog` dans `settings`) : affichées dans cet ordre sur `/shop`, complétées automatiquement
+  par les couleurs présentes sur les produits (dédupliquées).
 - **Messages** : les messages envoyés via `/contact` (table `contact_messages`, RLS activée) y sont
   listés — lecture, masquage lu/non lu, suppression. Le formulaire les transmet aussi par email
   (best-effort) vers `CONTACT_EMAIL` si `RESEND_API_KEY` est défini.

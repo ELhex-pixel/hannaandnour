@@ -22,7 +22,8 @@
     maxCents: null,
     sort: 'featured',
     page: 1,
-    filtersOpen: false
+    filtersOpen: false,
+    catalogColors: []
   };
 
   var grid = document.getElementById('productsGrid');
@@ -46,6 +47,134 @@
     return list.some(function (v) {
       return String(v || '').toLowerCase() === String(value || '').toLowerCase();
     });
+  }
+
+  /* Shared helpers: keep filter options in sync with the real catalog, so
+     anything the admin stores in colors/sizes/fabrics/occasions appears here. */
+
+  function escAttr(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var COLOR_PALETTE = {
+    white: '#FFFFFF', cream: '#F1E7D3', beige: '#D9CCB2', gold: '#A67C00',
+    bronze: '#6E5A1C', espresso: '#3B362E', black: '#1A1A1A', champagne: '#C9A227',
+    ivory: '#FFFFF0', charcoal: '#404040', emerald: '#3D7A5C', blush: '#E8B4B8',
+    nude: '#D2A58F', sage: '#8A9A7B', navy: '#1B2A4A', grey: '#808080',
+    gray: '#808080', silver: '#C0C0C0', pink: '#F2B5C0', rose: '#E7A2B4',
+    lavender: '#C3B5E0', purple: '#6B4F8A', mint: '#B9DCC9', sky: '#A8CBE0',
+    sand: '#D8C7A6', taupe: '#8C7B66', brown: '#7A4E2D', red: '#B03A2E',
+    green: '#4E7A52', blue: '#3A5B8C'
+  };
+  var COLOR_FALLBACK = ['#A67C00', '#6E5A1C', '#3B362E', '#D9CCB2', '#C9A227', '#8A9A7B', '#3D7A5C', '#404040', '#1B2A4A', '#7C3E2A', '#B45309', '#6B4F8A'];
+
+  function colorHex(name, seed) {
+    var n = String(name || '').toLowerCase();
+    if (COLOR_PALETTE[n]) return COLOR_PALETTE[n];
+    return COLOR_FALLBACK[(seed || 0) % COLOR_FALLBACK.length];
+  }
+
+  var DEFAULT_COLORS = ['Gold', 'Beige', 'Cream', 'Bronze', 'Espresso', 'White', 'Champagne'];
+  var DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'One Size'];
+  var DEFAULT_FABRICS = ['Cotton', 'Silk', 'Chiffon', 'Jersey', 'Crepe', 'Velvet'];
+  var DEFAULT_OCCASIONS = ['Everyday', 'Eid', 'Wedding', 'Prayer', 'Work', 'Travel'];
+
+  function collectValues(items, field) {
+    var out = [];
+    items.forEach(function (p) {
+      var list = p[field];
+      if (typeof list === 'string') list = [list];
+      if (!Array.isArray(list)) return;
+      list.forEach(function (v) {
+        var s = String(v || '').trim();
+        if (!s) return;
+        var low = s.toLowerCase();
+        for (var i = 0; i < out.length; i++) {
+          if (out[i].toLowerCase() === low) return;
+        }
+        out.push(s);
+      });
+    });
+    return out;
+  }
+
+  function countValue(items, field, value) {
+    var n = 0;
+    items.forEach(function (p) {
+      if (readValue(p[field], value)) n++;
+    });
+    return n;
+  }
+
+  // Canonical orders so the options stay tidy even with mixed admin data.
+  var SIZE_ORDER = ['xs', 's', 'm', 'l', 'xl', 'one size'];
+  var OCC_ORDER = ['everyday', 'eid', 'wedding', 'prayer', 'work', 'travel'];
+
+  function canonicalSort(list, order) {
+    return list.slice().sort(function (a, b) {
+      var ia = order.indexOf(String(a).toLowerCase());
+      var ib = order.indexOf(String(b).toLowerCase());
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return String(a).toLowerCase().localeCompare(String(b).toLowerCase());
+    });
+  }
+
+  function buildFilterOptions() {
+    var items = state.items;
+
+    // Colors: admin catalog first (ordered), then any product colors missing
+    // from it. Case-insensitive dedupe, whitespace trimmed.
+    var colors = [];
+    var seen = {};
+    function addColor(name) {
+      var s = String(name || '').trim();
+      if (!s) return;
+      var low = s.toLowerCase();
+      if (seen[low]) return;
+      seen[low] = true;
+      colors.push(s);
+    }
+    (state.catalogColors || []).forEach(addColor);
+    var extras = [];
+    collectValues(items, 'colors').forEach(function (c) {
+      var s = String(c || '').trim();
+      if (!s || seen[s.toLowerCase()]) return;
+      extras.push(s);
+    });
+    extras.sort(function (a, b) { return String(a).toLowerCase().localeCompare(String(b).toLowerCase()); });
+    var colorsAll = colors.concat(extras);
+    var colorEl = document.getElementById('colorOptions');
+    if (colorEl) {
+      colorEl.innerHTML = colorsAll.map(function (c, i) {
+        var active = state.colors.indexOf(c) >= 0;
+        return '<span class="color-swatch-wrap' + (active ? ' active' : '') + '" data-color="' + escAttr(c) + '" title="' + escAttr(c) + '">' +
+          '<span class="color-swatch" style="background-color:' + colorHex(c, i) + ';' + (String(c).toLowerCase() === 'white' ? ' border:1px solid #ccc;' : '') + '"></span>' +
+          '<span class="color-swatch-name">' + escAttr(c) + '</span>' +
+          '</span>';
+      }).join('');
+    }
+
+    var sizes = canonicalSort(collectValues(items, 'sizes'), SIZE_ORDER);
+    var sizeEl = document.getElementById('sizeOptions');
+    if (sizeEl) {
+      sizeEl.innerHTML = sizes.map(function (s) {
+        return '<label class="filter-option" data-group="size" data-value="' + escAttr(s) + '">' +
+          '<span class="filter-checkbox"></span> <span>' + escAttr(s) + '</span>' +
+          '<span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">' + countValue(items, 'sizes', s) + '</span></label>';
+      }).join('');
+    }
+
+    var occasions = canonicalSort(collectValues(items, 'occasions'), OCC_ORDER);
+    var occEl = document.getElementById('occasionOptions');
+    if (occEl) {
+      occEl.innerHTML = occasions.map(function (o) {
+        return '<label class="filter-option" data-group="occasion" data-value="' + escAttr(o) + '">' +
+          '<span class="filter-checkbox"></span> <span>' + escAttr(o) + '</span>' +
+          '<span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">' + countValue(items, 'occasions', o) + '</span></label>';
+      }).join('');
+    }
   }
 
   function buildCard(p) {
@@ -97,7 +226,10 @@
         image: c.getAttribute('data-image') || '',
         rating: parseFloat(c.getAttribute('data-rating')) || 0,
         review_count: 0,
-        colors: [], sizes: [], fabrics: [], occasions: [],
+        colors: DEFAULT_COLORS.slice(),
+        sizes: DEFAULT_SIZES.slice(),
+        fabrics: DEFAULT_FABRICS.slice(),
+        occasions: DEFAULT_OCCASIONS.slice(),
         compare_at_price_cents: null, badge: null
       });
     }
@@ -111,6 +243,13 @@
     }).catch(function () {
       state.items = itemsFromStaticCards();
       state.source = 'static';
+    }).then(function () {
+      // Admin-managed color list (used first in the filter, order matters).
+      return fetch(HN.api('config')).then(function (res) { return res.json(); }).then(function (data) {
+        state.catalogColors = data && data.catalog && Array.isArray(data.catalog.colors) ? data.catalog.colors.slice() : [];
+      }).catch(function () {
+        state.catalogColors = [];
+      });
     });
   }
 
@@ -174,6 +313,8 @@
     });
     state.fabrics.forEach(function (f) { tags.push({ text: f, remove: function () { state.fabrics = []; setFilterControls(); render(); } }); });
     state.occasions.forEach(function (o) { tags.push({ text: o, remove: function () { state.occasions = []; setFilterControls(); render(); } }); });
+    state.sizes.forEach(function (s) { tags.push({ text: s, remove: function () { state.sizes = []; setFilterControls(); render(); } }); });
+    state.colors.forEach(function (c) { tags.push({ text: c, remove: function () { state.colors = []; setFilterControls(); render(); } }); });
 
     activeFiltersEl.textContent = '';
     if (!tags.length) {
@@ -215,6 +356,14 @@
       if (group === 'occasion') active = state.occasions.indexOf(val) >= 0;
       opt.classList.toggle('active', active);
     });
+
+    // Color swatches (plain fallback swatches and dynamic wrap labels).
+    document.querySelectorAll('.color-swatch-wrap[data-color]').forEach(function (w) {
+      w.classList.toggle('active', state.colors.indexOf(w.getAttribute('data-color')) >= 0);
+    });
+    document.querySelectorAll('.color-swatch[data-color]').forEach(function (s) {
+      s.classList.toggle('active', state.colors.indexOf(s.getAttribute('data-color')) >= 0);
+    });
   }
 
   function debounce(fn, ms) {
@@ -234,13 +383,14 @@
       });
     });
 
-    document.querySelectorAll('.filter-option[data-group]').forEach(function (opt) {
-      opt.addEventListener('click', function () {
-        var group = this.getAttribute('data-group');
-        var val = this.getAttribute('data-value') || '';
+    document.addEventListener('click', function (e) {
+      var opt = e.target.closest ? e.target.closest('.filter-option[data-group]') : null;
+      if (opt) {
+        var group = opt.getAttribute('data-group');
+        var val = opt.getAttribute('data-value') || '';
         if (group === 'category' && val === '') {
           state.categories = [];
-          this.classList.add('active');
+          opt.classList.add('active');
         } else if (group === 'category') {
           toggleIn(state.categories, val);
         } else if (group === 'size') { toggleIn(state.sizes, val); }
@@ -249,17 +399,17 @@
         state.page = 1;
         setFilterControls();
         render();
-      });
-    });
+        return;
+      }
 
-    document.querySelectorAll('.color-swatch[data-color]').forEach(function (sw) {
-      sw.addEventListener('click', function () {
-        var val = this.getAttribute('data-color');
-        toggleIn(state.colors, val);
-        this.classList.toggle('active', state.colors.indexOf(val) >= 0);
+      var sw = e.target.closest ? (e.target.closest('.color-swatch-wrap[data-color]') || e.target.closest('.color-swatch[data-color]')) : null;
+      if (sw) {
+        var color = sw.getAttribute('data-color') || '';
+        toggleIn(state.colors, color);
+        sw.classList.toggle('active', state.colors.indexOf(color) >= 0);
         state.page = 1;
         render();
-      });
+      }
     });
 
     var inputs = document.querySelectorAll('.price-input');
@@ -311,6 +461,7 @@
     wireFilters();
     loadItems()
       .then(function () {
+        buildFilterOptions();
         if (state.source === 'api') render();
         else {
           // Static markup already present; just compute counts & results.
@@ -323,6 +474,7 @@
       .catch(function () {
         var cards = itemsFromStaticCards();
         state.items = cards;
+        buildFilterOptions();
         render();
       });
   }

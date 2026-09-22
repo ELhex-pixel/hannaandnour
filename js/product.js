@@ -82,6 +82,9 @@
     var catEl = document.querySelector('.product-category');
     if (catEl) catEl.textContent = tr(catKey(p.category));
 
+    var infoEl = document.querySelector('.product-info');
+    if (infoEl) infoEl.setAttribute('data-slug', p.slug);
+
     var titleEl = document.querySelector('.product-title');
     if (titleEl) titleEl.textContent = HN.productName(p);
 
@@ -414,6 +417,7 @@
         wireActions(p);
         wireReviewForm(p);
         updateStockUI();
+        HN.updateWishlistHearts();
       })
       .catch(function () {
         showToast(tr('productNotFound'), tr('goToShop'), 'error');

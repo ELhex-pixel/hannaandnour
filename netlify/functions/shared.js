@@ -126,6 +126,18 @@ async function getSetting(sb, key, fallback) {
   return fallback;
 }
 
+// Upserts a settings row (jsonb) and returns the stored value.
+async function saveSetting(sb, key, value) {
+  const { error } = await sb.from('settings').upsert({ key, value, updated_at: new Date().toISOString() });
+  if (error) throw error;
+  return value;
+}
+
+// Falls back to a default catalog when the row is missing/malformed.
+function defaultCatalog() {
+  return { colors: [] };
+}
+
 function intEnv(name, fallback) {
   const v = parseInt(process.env[name], 10);
   return isNaN(v) ? fallback : v;
@@ -137,4 +149,4 @@ function floatEnv(name, fallback) {
 }
 
 module.exports = { json, getSupabase, isConfigured, readBody, sendEmail, CORS_HEADERS,
-  signToken, verifyToken, getBearer, requireAdmin, getSetting, intEnv, floatEnv };
+  signToken, verifyToken, getBearer, requireAdmin, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv };

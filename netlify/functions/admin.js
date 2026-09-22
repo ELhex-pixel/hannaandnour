@@ -14,13 +14,13 @@
  *   listOrders         { status?, shipping_status? }                   -> { orders }
  *   getOrder           { id }                                      -> { order }
  *   updateOrder        { id, tracking_number?, shipping_status?, delivery_type?, pickup_point? } -> { ok }
-*   getSettings        {}                                          -> { settings }
- *   saveSettings       { shipping }                                -> { ok }
+*   getSettings        {}                                          -> { settings, catalog }
+ *   saveSettings       { shipping, catalog? }                       -> { ok }
  *   listMessages       {}                                          -> { messages }
  *   deleteMessage      { id }                                      -> { ok }
  */
 const { json, getSupabase, isConfigured, readBody, CORS_HEADERS,
-  signToken, verifyToken, requireAdmin, getSetting, intEnv, floatEnv } = require('./shared');
+  signToken, verifyToken, requireAdmin, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv } = require('./shared');
 
 const crypto = require('crypto');
 
@@ -284,9 +284,10 @@ case 'getOrder': {
         return json(200, { ok: true, update });
       }
 
-      case 'getSettings': {
+case 'getSettings': {
         const settings = await loadSettings(sb);
-        return json(200, { settings });
+        const catalog = await loadCatalog(sb);
+        return json(200, { settings, catalog });
       }
 
       case 'saveSettings': {
@@ -302,7 +303,15 @@ case 'getOrder': {
         };
         const { error } = await sb.from('settings').upsert({ key: 'shipping', value, updated_at: new Date().toISOString() });
         if (error) throw error;
-        return json(200, { ok: true, settings: value });
+
+        let catalog;
+        if (body.catalog) {
+          const colors = Array.isArray(body.catalog.colors)
+            ? body.catalog.colors.map(String).map((s) => s.trim()).filter(Boolean)
+            : [];
+          catalog = await saveSetting(sb, 'catalog', { colors });
+        }
+        return json(200, { ok: true, settings: value, catalog });
       }
 
 case 'deleteMessage': {
@@ -355,6 +364,12 @@ async function loadSettings(sb) {
     tax_rate: floatEnv('TAX_RATE', 0.07),
     pickup_enabled: true
   };
+}
+
+async function loadCatalog(sb) {
+  const catalog = await getSetting(sb, 'catalog', null);
+  if (catalog && Array.isArray(catalog.colors)) return { colors: catalog.colors };
+  return defaultCatalog();
 }
 
 function esc(s) {
