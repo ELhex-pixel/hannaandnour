@@ -15,6 +15,14 @@
   var PROMO_LOCAL = { WELCOME15: 0.15 };
   var PROMO_KEY = 'hn-promo';
 
+  function applyConfig(cfg) {
+    if (!cfg || !cfg.settings) return;
+    var s = cfg.settings;
+    if (typeof s.tax_rate === 'number') TAX_RATE = s.tax_rate;
+    if (typeof s.free_threshold_cents === 'number') FREE_SHIPPING_CENTS = s.free_threshold_cents;
+    if (typeof s.standard_cents === 'number') STD_SHIPPING_CENTS = s.standard_cents;
+  }
+
   var itemsEl = document.querySelector('.cart-items');
   var summaryBox = document.querySelector('.cart-summary');
 
@@ -200,8 +208,14 @@
   }
 
   /* The static demo rows are replaced on load by renderItems(). */
-  renderItems();
-  wireEvents();
-  seedPromoInput();
+  fetch(HN.api('config'))
+    .then(function (res) { return res.json(); })
+    .then(applyConfig)
+    .catch(function () { /* offline: defaults */ })
+    .finally(function () {
+      renderItems();
+      wireEvents();
+      seedPromoInput();
+    });
   document.addEventListener('hn:cart', HN.refreshBadge, false);
 })();

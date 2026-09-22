@@ -32,7 +32,17 @@ function buildOrderEmail(order, items) {
     );
   }).join('');
 
-  const address = [order.address1, order.address2, [order.city, order.state].filter(Boolean).join(' '), [order.postal_code, order.country].filter(Boolean).join(' '), order.phone].filter(Boolean).map(esc).join('<br>');
+  const address = order.delivery_type === 'pickup'
+    ? [order.pickup_point ? 'Retrait &ndash; ' + order.pickup_point : 'Retrait en point relais', order.phone].filter(Boolean).map(esc).join('<br>')
+    : [order.address1, order.address2, [order.city, order.state].filter(Boolean).join(' '), [order.postal_code, order.country].filter(Boolean).join(' '), order.phone].filter(Boolean).map(esc).join('<br>');
+
+  const shipLabel = order.shipping_method === 'pickup'
+    ? 'point relais'
+    : order.shipping_method === 'express'
+      ? 'express'
+      : order.shipping_method === 'next_day'
+        ? 'J+1'
+        : order.shipping_method || 'standard';
 
   return (
     '<div style="background:#f6f1e8;padding:24px;">' +
@@ -49,7 +59,7 @@ function buildOrderEmail(order, items) {
     '<table style="width:100%;border-collapse:collapse;font-size:14px;font-family:Helvetica,Arial,sans-serif;color:#221f1a;">' +
     '<tr><td style="padding:6px 8px;">Sous-total</td><td style="padding:6px 8px;text-align:right;">' + moneyStr(order.subtotal_cents, order.currency) + '</td></tr>' +
     (order.discount_cents > 0 ? '<tr><td style="padding:6px 8px;">Remise' + (order.promo_code ? ' (' + esc(order.promo_code) + ')' : '') + '</td><td style="padding:6px 8px;text-align:right;color:#3d7a46;">-\u2212' + moneyStr(order.discount_cents, order.currency) + '</td></tr>' : '') +
-    '<tr><td style="padding:6px 8px;">Livraison (' + esc(order.shipping_method || 'standard') + ')</td><td style="padding:6px 8px;text-align:right;">' + moneyStr(order.shipping_cents, order.currency) + '</td></tr>' +
+    '<tr><td style="padding:6px 8px;">Livraison (' + shipLabel + ')</td><td style="padding:6px 8px;text-align:right;">' + moneyStr(order.shipping_cents, order.currency) + '</td></tr>' +
     (order.tax_cents > 0 ? '<tr><td style="padding:6px 8px;">Taxe</td><td style="padding:6px 8px;text-align:right;">' + moneyStr(order.tax_cents, order.currency) + '</td></tr>' : '') +
     '<tr><td style="padding:8px;font-weight:bold;">Total</td><td style="padding:8px;text-align:right;font-weight:bold;">' + moneyStr(order.total_cents, order.currency) + '</td></tr>' +
     '</table>' +
@@ -120,6 +130,20 @@ exports.handler = async function (event) {
             .eq('id', orderId)
             .single();
           if (fetchErr) throw fetchErr;
+
+          // Decrement per-variant stock (atomic, guarded by stock >= qty).
+          const items = paidOrder.order_items || [];
+          for (const it of items) {
+            if (it.variant_id) {
+              const { data: decremented, error: decErr } = await sb
+                .rpc('decrement_stock', { p_variant_id: it.variant_id, p_qty: it.quantity });
+              if (decErr) {
+                console.error('Stock decrement failed:', decErr.message, 'variant', it.variant_id);
+              } else if (decremented === false) {
+                console.error('Stock decrement rejected (insufficient stock) for variant', it.variant_id);
+              }
+            }
+          }
 
           const toEmail = paidOrder.email || customerEmail;
           if (toEmail) {

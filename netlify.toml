@@ -98,6 +98,26 @@
   to = "/.netlify/functions/stripe-webhook"
   status = 200
 
+[[redirects]]
+  from = "/api/config"
+  to = "/.netlify/functions/config"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/*"
+  to = "/.netlify/functions/admin"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
+[[redirects]]
+  from = "/print"
+  to = "/print.html"
+  status = 200
+
 # 404 page
 [[redirects]]
   from = "/*"

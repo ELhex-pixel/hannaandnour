@@ -15,13 +15,19 @@ Supabase catalog, Stripe Checkout payments, API served by Netlify Functions (`ne
 - Images live in `images/`. Reference local files; do not hot-link Unsplash. `collections/` is unused.
 
 ## API (Netlify Functions)
-- `/api/products`, `/api/products?slug=`, `/api/checkout`, `/api/orders?session_id=` or `?email=`, `/api/newsletter`, `/api/reviews`, `/api/stripe-webhook` (all proxied from `/.netlify/functions/*` via netlify.toml).
+- `/api/products`, `/api/products?slug=`, `/api/checkout`, `/api/orders?session_id=` or `?email=`, `/api/newsletter`, `/api/reviews`, `/api/stripe-webhook`, `/api/config` (public settings), `/api/admin/*` (authed) (all proxied from `/.netlify/functions/*` via netlify.toml).
 - Checkout creates a pending order, redirects to Stripe; webhook marks `paid` / `abandoned`. Orders render as `HN-<hex>`.
 - `orders.js` returns `{order}` for `session_id` and `{orders}` for `email`.
 - Order confirmation emails: `stripe-webhook.js` sends a recap via Resend when payment becomes `paid` (best-effort, skipped if `RESEND_API_KEY` is unset). Email template lives in `buildOrderEmail()` inside `stripe-webhook.js`; sending helper is `sendEmail()` in `shared.js`.
+- `stripe-webhook.js` calls the `decrement_stock(p_variant_id, p_qty)` RPC for each paid line and adapts the confirmation email/`shipLabel` for pickup orders.
+- `checkout.js` (Netlify) validates **stock per variant** (`product_variants`), blocks unavailable combos, resolves `variantId` into `order_items`, computes shipping from the `settings` table (fallback: env vars) and persists `delivery_type`/`pickup_point`.
+- `admin.js` API (all behind `requireAdmin`, HMAC token signed with `ADMIN_PASSWORD`, 12 h TTL): `login`, `listProducts`, `saveProduct`, `deleteProduct`, `uploadImage` (bucket `product-images`, base64 ≤ 4 MB), `listOrders`, `getOrder`, `updateOrder` (`shipping_status` new/shipped/delivered + `tracking_number` + email sent when shipped), `getSettings`, `saveSettings`. Client: `admin.html` + `js/admin.js`.
+- Printable docs: `print.html` + `js/print.js` (invoice / packing slip / barcode label via vendored `js/vendor/jsbarcode.min.js`).
 
 ## Business rules (MUST stay in sync client & server)
 - Tax 7 % (`checkout.js`/`cart-page.js` client; `TAX_RATE` server). Shipping: free ≥ `FREE_SHIPPING_THRESHOLD_CENTS` (7500 ¢), else standard 699 ¢, express 1200 ¢, next-day 2500 ¢.
+- **Admin-editable**: the `settings` table (key `shipping`) can override tax/shipping/free-threshold/pickup rates via the `/admin` page — it takes precedence over env vars. The client fetches them from `/api/config`.
+- A product **with `product_variants` rows = managed stock** (each color×size has its own stock; missing combo is blocked; size buttons are disabled when out of stock). A product **without variant rows = unlimited legacy product**. Cart items carry `variantId`.
 - Always mirror price/tax/shipping changes in the client JS AND the Netlify functions, or the displayed total won't match the charged total.
 - Static product cards on index/shop/collections/cart carry `data-slug`/`data-price-cents`/`data-name`/`data-image` and link to `product.html?slug=...`; JS re-renders them from the API when available. Product slugs must match `seed.sql`/`seed_products_2.sql`.
 

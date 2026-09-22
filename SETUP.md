@@ -16,6 +16,7 @@ paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Func
    - `supabase/schema.sql` (tables + RLS + trigger)
    - `supabase/seed.sql` (6 produits + promo `WELCOME15`)
    - `supabase/seed_products_2.sql` (6 produits supplémentaires)
+   - `supabase/migration_variants_admin.sql` (variantes/stock, settings, livraison — idempotent)
 3. Récupérez dans **Settings > API** :
    - `Project URL` → `SUPABASE_URL`
    - `anon public key` → à mettre dans `js/config.js` (client)
@@ -63,6 +64,22 @@ Copiez `.env.example` en `.env` pour `netlify dev`, et définissez les mêmes va
 | `SHIPPING_NEXTDAY_CENTS` | frais J+1 en centimes, ex. `2500` |
 | `RESEND_API_KEY` | clé API Resend (optionnel) pour l'email de confirmation de commande |
 | `MAIL_FROM` | expéditeur des emails (optionnel), ex. `Hanna & Nour <no-reply@votre-domaine.com>` |
+| `ADMIN_PASSWORD` | mot de passe de l'espace admin (`/admin`) — le définir obligatoirement |
+
+## 4ter. Espace administrateur (`/admin`)
+
+Accédez au site sur `/admin`, entrez le mot de passe `ADMIN_PASSWORD`.
+
+- **Produits** : créer/modifier/supprimer, champ par champ (nom 3 langues, prix, catégorie,
+  badge, galerie) ; **upload de photos** → stockées dans le bucket Supabase `product-images` ;
+  grille **stock par variante** (couleur × taille) — une ligne vide = produit sans stock géré
+  (vendu sans limite).
+- **Commandes** : liste les commandes payées, marque en *expédiée* (avec n° de suivi) ou *livrée*,
+  et imprime **facture / bon de livraison / étiquette colis** (code-barres Code 128, impression
+  navigateur → PDF).
+- **Paramètres** : frais de livraison (standard/express/J+1/point relais), seuil de livraison
+  gratuite et taux de taxe — sans redéployer, inscrits dans la table `settings` (priorité sur les
+  variables d'environnement).
 
 ## 4bis. Emails de confirmation (Resend, optionnel)
 

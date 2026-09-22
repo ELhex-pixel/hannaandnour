@@ -1,7 +1,8 @@
 /**
  * Checkout page: builds the cart summary, collects shipping details and
  * redirects to the Stripe Checkout Session created by /api/checkout.
- * Credit-card entry happens on Stripe's hosted page.
+ * Shipping rates / tax / free threshold come from /api/config (admin-editable),
+ * falling back to local defaults offline.
  */
 (function () {
   'use strict';
@@ -10,12 +11,13 @@
   if (!HN) return;
   var tr = HN.tr;
 
-  var TAX_RATE = 0.07;
-  var FREE_SHIPPING_CENTS = 7500;
-  var SHIP_RATES = { standard: 699, express: 1200, next_day: 2500 };
+  var DEFAULTS = {
+    standard_cents: 699, express_cents: 1200, nextday_cents: 2500, pickup_cents: 0,
+    free_threshold_cents: 7500, tax_rate: 0.07, pickup_enabled: true
+  };
   var PROMO_LOCAL = { WELCOME15: 0.15 };
 
-  var state = { method: 'standard' };
+  var state = { method: 'standard', settings: DEFAULTS, loaded: false };
 
   function getPromo() {
     try { return window.sessionStorage.getItem('hn-promo') || ''; } catch (e) { return ''; }
@@ -30,14 +32,22 @@
   }
 
   function totals() {
+    var s = state.settings;
     var items = HN.cart.list();
     var subtotal = 0;
     for (var i = 0; i < items.length; i++) subtotal += (items[i].priceCents || 0) * (items[i].qty || 1);
     var rate = PROMO_LOCAL[getPromo()] || 0;
     var discount = Math.round(subtotal * rate);
-    var shipping = state.method === 'standard' && subtotal >= FREE_SHIPPING_CENTS ? 0 : SHIP_RATES[state.method];
-    var tax = Math.round((subtotal - discount) * TAX_RATE);
-    var total = subtotal + shipping + tax - discount;
+    var shipping;
+    if (state.method === 'pickup') {
+      shipping = s.pickup_cents || 0;
+    } else if (state.method === 'standard' && subtotal >= s.free_threshold_cents) {
+      shipping = 0;
+    } else {
+      shipping = state.method === 'express' ? s.express_cents : state.method === 'next_day' ? s.nextday_cents : s.standard_cents;
+    }
+    var tax = subtotal > 0 ? Math.round((subtotal - discount) * (s.tax_rate || 0)) : 0;
+    var total = Math.max(0, subtotal + shipping + tax - discount);
     return { subtotal: subtotal, shipping: shipping, discount: discount, tax: tax, total: total };
   }
 
@@ -93,13 +103,52 @@
     holder.innerHTML = html;
   }
 
+  function injectPickupMethod() {
+    if (!state.settings.pickup_enabled) return;
+    var container = document.querySelector('.payment-methods');
+    if (!container) return;
+    if (document.querySelector('.payment-method[data-method="pickup"]')) return;
+    var fee = state.settings.pickup_cents || 0;
+    var div = document.createElement('div');
+    div.className = 'payment-method';
+    div.setAttribute('data-method', 'pickup');
+    div.innerHTML =
+      '<span class="payment-radio"></span>' +
+      '<div class="payment-details">' +
+      '<p class="payment-name">' + tr('shipPickup') + '</p>' +
+      '<p class="payment-desc">' + tr('shipPickupD') + '</p>' +
+      '</div>' +
+      '<strong>' + (fee === 0 ? tr('free') : HN.money(fee)) + '</strong>';
+    container.appendChild(div);
+  }
+
+  function ensurePickupField() {
+    var box = document.getElementById('pickupField');
+    if (box) return box;
+    var step2 = document.querySelector('.checkout-section .payment-methods');
+    var shipSection = step2 ? step2.closest('.checkout-section') : null;
+    if (!shipSection) return null;
+    var wrap = document.createElement('div');
+    wrap.id = 'pickupField';
+    wrap.style.cssText = 'margin-top: var(--spacing-lg); display: none;';
+    wrap.innerHTML =
+      '<div class="form-group">' +
+      '<label class="form-label" for="pickupPoint">' + tr('pickupPoint') + ' *</label>' +
+      '<input type="text" class="form-input" id="pickupPoint" placeholder="Adresse / relais / boutiques choisi(e)s">' +
+      '</div>';
+    shipSection.appendChild(wrap);
+    return wrap;
+  }
+
   function wireShippingMethods() {
+    injectPickupMethod();
     var methods = document.querySelectorAll('.payment-method[data-method]');
     methods.forEach(function (m) {
       m.addEventListener('click', function () {
         methods.forEach(function (x) { x.classList.remove('selected'); });
         m.classList.add('selected');
         state.method = m.getAttribute('data-method');
+        updateDeliveryUI();
         renderSummary();
       });
     });
@@ -116,6 +165,12 @@
         });
       }
     });
+  }
+
+  function updateDeliveryUI() {
+    var box = ensurePickupField();
+    if (!box) return;
+    box.style.display = state.method === 'pickup' ? '' : 'none';
   }
 
   function wirePromo() {
@@ -155,24 +210,44 @@
 
       var email = val('contactEmail');
       var name = val('fullName');
+      var isPickup = state.method === 'pickup';
+      var pickupPoint = val('pickupPoint');
+
       var payload = {
         items: items.map(function (it) {
-          return { slug: it.slug, qty: it.qty || 1, color: it.color || '', size: it.size || '' };
+          return {
+            slug: it.slug,
+            qty: it.qty || 1,
+            color: it.color || '',
+            size: it.size || '',
+            variantId: it.variantId || null
+          };
         }),
         email: email,
         customer_name: name,
         phone: val('contactPhone'),
-        address1: val('address1'),
-        address2: val('address2'),
-        city: val('city'),
-        state: val('state'),
-        postal_code: val('postalCode'),
-        country: val('country'),
-        shipping_method: state.method,
+        address1: isPickup ? 'Retrait' : val('address1'),
+        address2: isPickup ? '' : val('address2'),
+        city: isPickup ? 'Retrait' : val('city'),
+        state: isPickup ? '' : val('state'),
+        postal_code: isPickup ? '' : val('postalCode'),
+        country: isPickup ? 'FR' : val('country'),
+        shipping_method: isPickup ? 'pickup' : state.method,
+        pickup_point: isPickup ? pickupPoint : '',
+        delivery_type: isPickup ? 'pickup' : 'home',
         promo: getPromo()
       };
 
-      if (!email || !name || !payload.address1 || !payload.city || !payload.postal_code) {
+      if (!email || !name) {
+        window.hnToast && hnToast(tr('checkoutError'), tr('checkoutErrorMsg'), 'error');
+        return;
+      }
+      if (isPickup) {
+        if (!pickupPoint) {
+          window.hnToast && hnToast(tr('checkoutError'), tr('pickupPoint') + ' *', 'error');
+          return;
+        }
+      } else if (!payload.address1 || !payload.city || !payload.postal_code) {
         window.hnToast && hnToast(tr('checkoutError'), tr('checkoutErrorMsg'), 'error');
         return;
       }
@@ -210,10 +285,27 @@
     }
 
     renderItems();
-    renderSummary();
-    wireShippingMethods();
-    wirePromo();
-    wirePlaceOrder();
+
+    // Load admin-editable shipping settings (fallback to defaults offline).
+    fetch(HN.api('config'))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && data.settings) {
+          Object.keys(DEFAULTS).forEach(function (k) {
+            if (data.settings[k] !== undefined) DEFAULTS[k] = data.settings[k];
+          });
+          state.settings = DEFAULTS;
+        }
+      })
+      .catch(function () { /* offline: defaults */ })
+      .finally(function () {
+        state.loaded = true;
+        wireShippingMethods();
+        updateDeliveryUI();
+        renderSummary();
+        wirePromo();
+        wirePlaceOrder();
+      });
 
     document.addEventListener('langchange', function () { renderSummary(); });
   }

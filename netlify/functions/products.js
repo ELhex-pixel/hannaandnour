@@ -22,7 +22,11 @@ exports.handler = async function (event) {
     const q = event.queryStringParameters || {};
     const sb = getSupabase();
 
-    let query = sb.from('products').select('*').eq('active', true).order('created_at', { ascending: true });
+    let query = sb
+      .from('products')
+      .select('*, product_variants(id, color, size, stock, active)')
+      .eq('active', true)
+      .order('created_at', { ascending: true });
 
     if (q.category) query = query.eq('category', q.category);
     if (q.featured === 'true') query = query.eq('is_featured', true);
@@ -36,7 +40,9 @@ exports.handler = async function (event) {
     const { data, error } = await query;
     if (error) throw error;
 
-    return json(200, { products: data });
+    const products = (data || []).map((p) => ({ ...p, variants: p.product_variants || [] }));
+
+    return json(200, { products });
   } catch (err) {
     console.error('products.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

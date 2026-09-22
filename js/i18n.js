@@ -410,7 +410,17 @@
       successThank: 'Thank you for your purchase!',
       successDesc: 'Your payment was successful. A confirmation email is on its way. Below is your order reference.',
       successOrderNumber: 'Order Number:',
-      successTotal: 'Order Total:'
+      successTotal: 'Order Total:',
+      stockIn: 'In stock',
+      stockLow: 'Only {n} left',
+      stockOut: 'Out of stock',
+      shipPickup: 'Pickup / Point Relais',
+      shipPickupD: 'Pick up at your chosen point',
+      pickupPoint: 'Pickup point',
+      trackingN: 'Tracking: {n}',
+      shipShipped: 'Shipped',
+      shipDelivered: 'Delivered',
+      notAvailable: 'Not available'
     },
 
     /* ============ French ============ */
@@ -790,7 +800,17 @@
       successThank: 'Merci pour votre achat !',
       successDesc: 'Votre paiement a été accepté. Un e-mail de confirmation est en route. Voici votre référence de commande.',
       successOrderNumber: 'Numéro de commande :',
-      successTotal: 'Total de la commande :'
+      successTotal: 'Total de la commande :',
+      stockIn: 'En stock',
+      stockLow: 'Plus que {n} disponibles',
+      stockOut: 'Épuisé',
+      shipPickup: 'Retrait — point relais',
+      shipPickupD: 'Retrait au point relais choisi',
+      pickupPoint: 'Point relais',
+      trackingN: 'Suivi : {n}',
+      shipShipped: 'Expédiée',
+      shipDelivered: 'Livrée',
+      notAvailable: 'Indisponible'
     },
 
     /* ============ Arabic ============ */
@@ -1170,7 +1190,17 @@
       successThank: 'شكرًا لكِ على الشراء!',
       successDesc: 'تم قبول دفعتك بنجاح. سيصلك بريد تأكيد قريبًا. إليك مرجع طلبك أدناه.',
       successOrderNumber: 'رقم الطلب:',
-      successTotal: 'إجمالي الطلب:'
+      successTotal: 'إجمالي الطلب:',
+      stockIn: 'متوفر',
+      stockLow: 'بقي {n}',
+      stockOut: 'نفد المخزون',
+      shipPickup: 'استلام — نقطة التوصيل',
+      shipPickupD: 'الاستلام من نقطة التوصيل المختارة',
+      pickupPoint: 'نقطة التوصيل',
+      trackingN: 'التتبع: {n}',
+      shipShipped: 'تم الشحن',
+      shipDelivered: 'تم التسليم',
+      notAvailable: 'غير متوفر'
     }
   };
 

@@ -174,6 +174,100 @@
     if (reviewTabBtn) reviewTabBtn.textContent = tr('tabReviewsN', { n: p.review_count || 0 });
   }
 
+  /* ---- Variants & stock ---- */
+
+  function productVariants(p) {
+    if (Array.isArray(p.variants)) return p.variants;
+    if (Array.isArray(p.product_variants)) return p.product_variants;
+    return [];
+  }
+
+  function lower(s) { return String(s || '').toLowerCase().trim(); }
+
+  function variantFor(p, color, size) {
+    var vs = productVariants(p);
+    if (!vs.length) return null;
+    var c = lower(color);
+    var s = lower(size);
+    for (var i = 0; i < vs.length; i++) {
+      if (lower(vs[i].color) === c && lower(vs[i].size) === s) return vs[i];
+    }
+    return null;
+  }
+
+  // Returns an integer stock, or null when the product has no managed variants.
+  function stockFor(p, color, size) {
+    var v = variantFor(p, color, size);
+    if (!v) return null;
+    return Math.max(0, parseInt(v.stock, 10) || 0);
+  }
+
+  var stockEl = null;
+
+  function ensureStockLabel() {
+    if (stockEl) return stockEl;
+    var actions = document.querySelector('.product-actions');
+    if (!actions) return null;
+    stockEl = document.createElement('p');
+    stockEl.id = 'stockInfo';
+    stockEl.style.cssText = 'font-size: 0.875rem; font-weight: 600; margin: 0 0 var(--spacing-md);';
+    actions.parentNode.insertBefore(stockEl, actions);
+    return stockEl;
+  }
+
+  function updateStockUI() {
+    if (!current) return;
+    var p = current;
+    var vs = productVariants(p);
+    var managed = vs.length > 0;
+
+    var colorLabel = document.getElementById('selectedColor');
+    var sizeLabel = document.getElementById('selectedSize');
+    var color = colorLabel ? colorLabel.textContent : '';
+    var size = sizeLabel ? sizeLabel.textContent : '';
+
+    // Mark out-of-stock sizes for the current color.
+    document.querySelectorAll('.size-option').forEach(function (btn) {
+      var s = btn.textContent.trim();
+      var st = managed ? stockFor(p, color, s) : null;
+      btn.disabled = managed && st === 0;
+      btn.classList.toggle('out-of-stock', managed && st === 0);
+      btn.title = managed && st === 0 ? tr('notAvailable') : '';
+    });
+
+    var stock = managed ? stockFor(p, color, size) : null;
+    var inStock = !managed || (stock !== null && stock > 0);
+
+    var addBtn = document.getElementById('addToCartBtn');
+    var buyBtn = document.getElementById('buyNowBtn');
+    if (addBtn) addBtn.disabled = !inStock;
+    if (buyBtn) buyBtn.disabled = !inStock;
+
+    // Cap the quantity input to the available stock.
+    var qtyInput = document.getElementById('quantity');
+    if (qtyInput) {
+      qtyInput.max = managed && stock !== null ? Math.min(10, Math.max(1, stock)) : 10;
+      if (managed && stock !== null && (parseInt(qtyInput.value, 10) || 1) > stock) {
+        qtyInput.value = Math.max(1, stock);
+      }
+    }
+
+    var label = ensureStockLabel();
+    if (!label) return;
+    if (!managed) { label.style.display = 'none'; return; }
+    label.style.display = '';
+    label.style.color = 'var(--color-gray)';
+    if (stock === 0) {
+      label.textContent = tr('stockOut');
+      label.style.color = 'var(--color-burgundy)';
+    } else if (stock <= 5) {
+      label.textContent = tr('stockLow', { n: stock });
+      label.style.color = '#b5792a';
+    } else {
+      label.textContent = tr('stockIn');
+    }
+  }
+
   /* ---- Reviews ---- */
 
   function loadReviews(p) {
@@ -261,7 +355,14 @@
     var qty = 1;
     var qtyInput = document.getElementById('quantity');
     if (qtyInput) qty = parseInt(qtyInput.value, 10) || 1;
-    return { color: color, size: size, qty: qty };
+
+    if (!current) return { color: color, size: size, qty: qty, variantId: null, stock: null };
+    var stock = stockFor(current, color, size);
+    var variant = variantFor(current, color, size);
+    var managed = productVariants(current).length > 0;
+    if (managed && stock === 0) { qty = 0; }
+    if (managed && qty > stock) { qty = Math.max(0, stock); }
+    return { color: color, size: size, qty: qty, variantId: variant ? variant.id : null, stock: managed ? stock : null };
   }
 
   function wireActions(p) {
@@ -270,12 +371,16 @@
 
     function handleAdd(redirect) {
       var o = selectedOptions();
+      if (o.qty === 0) {
+        showToast(tr('stockOut'), tr('notAvailable'), 'error');
+        return;
+      }
       HN.cart.add({
         slug: p.slug,
         name_en: p.name_en || HN.productName(p),
         price_cents: p.price_cents,
         image: p.image || ''
-      }, { color: o.color, size: o.size, qty: o.qty });
+      }, { color: o.color, size: o.size, qty: o.qty, variantId: o.variantId, stock: o.stock });
       showToast(tr('cartAdd'), HN.productName(p) + ' x' + o.qty + ' ' + tr('cartAddMsg'), 'success');
       if (redirect) window.location.href = 'checkout.html';
     }
@@ -308,6 +413,7 @@
         loadReviews(p);
         wireActions(p);
         wireReviewForm(p);
+        updateStockUI();
       })
       .catch(function () {
         showToast(tr('productNotFound'), tr('goToShop'), 'error');
@@ -316,10 +422,23 @@
   }
 
   var current = null;
+
+  // main.js handles color/size selection via document-level delegation (runs
+  // first). This listener re-evaluates the stock state right after, using the
+  // already-updated labels.
+  document.addEventListener('click', function (e) {
+    if (!current) return;
+    var target = e.target;
+    if (target && (target.closest('.color-option') || target.closest('.size-option'))) {
+      updateStockUI();
+    }
+  });
+
   document.addEventListener('langchange', function () {
     if (current) {
       renderInfo(current);
       renderDetails(current);
+      updateStockUI();
     }
   });
 

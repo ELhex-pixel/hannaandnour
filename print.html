@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Impression &middot; Hanna &amp; Nour</title>
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<style>
+  :root { --sage:#7d9b76; --burgundy:#8a2c2c; --ink:#221f1a; --muted:#8a7d66; --line:#e4dccb; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: var(--ink); margin: 0; background: #efe7d8; }
+  .toolbar { position: fixed; inset: 0 0 auto 0; z-index: 20; background: #221f1a; color: #fff; display: flex; align-items: center; gap: 12px; padding: 10px 18px; }
+  .toolbar .btn { border: 0; border-radius: 6px; padding: 8px 14px; font-weight: 600; cursor: pointer; font-size: 13px; }
+  .btn-print { background: var(--sage); color: #fff; }
+  .btn-close { background: #3a362f; color: #fff; }
+  .toolbar span { color: #cfc6b4; font-size: 12px; }
+  main { padding: 76px 16px 40px; display: flex; flex-direction: column; align-items: center; }
+  .sheet { background: #fff; width: 210mm; min-height: 297mm; padding: 18mm 16mm; box-shadow: 0 6px 24px rgba(0,0,0,.12); margin: 0 0 18px; }
+  .doc-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid var(--burgundy); padding-bottom: 12px; margin-bottom: 16px; }
+  .doc-head h1 { font-family: Georgia, serif; margin: 0; color: var(--sage); font-size: 22px; }
+  .doc-head .doc-type { color: var(--burgundy); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; font-size: 13px; margin-top: 4px; }
+  .block { margin-bottom: 14px; }
+  .label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 0 0 3px; }
+  p, table { font-size: 12.5px; }
+  table.info { width: 100%; border-collapse: collapse; }
+  table.info th, table.info td { padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  table.info th { text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+  table.totals { width: 60%; margin-left: auto; border-collapse: collapse; margin-top: 10px; }
+  table.totals td { padding: 4px 8px; }
+  table.totals tr:last-child td { border-top: 2px solid var(--ink); font-weight: 700; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .sig { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 8px; color: var(--muted); font-size: 11px; }
+  .barcode-box { display: flex; flex-direction: column; align-items: center; margin: 8px 0 4px; }
+  .barcode-box svg { max-width: 100%; height: auto; }
+  .track { font-size: 12px; letter-spacing: 2px; color: var(--ink); font-weight: 700; }
+
+  /* Étiquette A6 (148 x 105 mm) */
+  .sheet.label { width: 148mm; min-height: 105mm; padding: 8mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .label-logo { font-family: Georgia, serif; font-size: 15px; color: var(--sage); }
+  .label-addr { font-size: 12px; line-height: 1.45; }
+  .label-barcode { text-align: center; padding: 4px; background: #fff; }
+  .label-footer { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-top: 6px; }
+
+  @media print {
+    .toolbar { display: none; }
+    body { background: #fff; }
+    main { padding: 0; }
+    .sheet { box-shadow: none; margin: 0; page-break-after: always; }
+    .sheet, .sheet.label { width: auto; min-height: auto; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="btn btn-print" id="printBtn">Imprimer</button>
+    <button class="btn btn-close" onclick="window.close()">Fermer</button>
+    <span id="toolbarInfo"></span>
+  </div>
+  <main id="sheetHolder"></main>
+
+  <script src="js/config.js"></script>
+  <script src="js/vendor/jsbarcode.min.js"></script>
+  <script src="js/print.js"></script>
+</body>
+</html>

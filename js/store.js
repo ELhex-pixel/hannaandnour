@@ -122,7 +122,9 @@
 
   function addToCart(product, opts) {
     var o = opts || {};
-    var qty = Math.min(10, Math.max(1, parseInt(o.qty, 10) || 1));
+    var maxQty = o.stock != null ? Math.max(0, parseInt(o.stock, 10) || 0) : 10;
+    var qty = Math.min(maxQty || 1, 10, Math.max(1, parseInt(o.qty, 10) || 1));
+    if (maxQty === 0) return getCart();
     var cart = getCart();
     var found = null;
     for (var i = 0; i < cart.length; i++) {
@@ -136,7 +138,7 @@
       }
     }
     if (found) {
-      found.qty = Math.min(10, found.qty + qty);
+      found.qty = Math.min(found.maxQty != null ? found.maxQty : 10, 10, found.qty + qty || qty);
     } else {
       cart.push({
         slug: product.slug,
@@ -145,6 +147,8 @@
         image: product.image || '',
         color: o.color || '',
         size: o.size || '',
+        variantId: o.variantId || null,
+        maxQty: o.stock != null ? maxQty : null,
         qty: qty
       });
     }
@@ -157,7 +161,8 @@
   function updateQty(index, qty) {
     var cart = getCart();
     if (cart[index]) {
-      cart[index].qty = Math.min(10, Math.max(1, parseInt(qty, 10) || 1));
+      var cap = cart[index].maxQty != null ? cart[index].maxQty : 10;
+      cart[index].qty = Math.min(cap || 1, 10, Math.max(1, parseInt(qty, 10) || 1));
       saveCart(cart);
       refreshBadge();
       emit('hn:cart');

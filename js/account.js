@@ -16,6 +16,11 @@
     return key ? tr(key) : (map[status] || status);
   }
 
+  function shippingText(s) {
+    var key = s === 'shipped' ? 'shipShipped' : s === 'delivered' ? 'shipDelivered' : null;
+    return key ? tr(key) : '';
+  }
+
   function renderOrders(orders) {
     var box = document.getElementById('accountOrders');
     if (!box) return;
@@ -47,8 +52,12 @@
         '  <div class="order-header">' +
         '    <div><p class="order-number">' + (o.order_number || '') + '</p>' +
         '    <p class="order-date">' + tr('placedOnN', { d: date }) + '</p></div>' +
-        '    <span class="order-status">' + statusText(o.status) + '</span>' +
+        '    <div style="text-align: right;"><span class="order-status">' + statusText(o.status) + '</span>' +
+        (o.shipping_status && shippingText(o.shipping_status) ? '<span class="order-status" style="display:block; margin-top:6px;">' + shippingText(o.shipping_status) + '</span>' : '') +
+        '    </div>' +
         '  </div>' +
+        (o.tracking_number ? '<p style="margin: 8px 0 0; font-size: 0.875rem; color: var(--color-gray);">' + tr('trackingN', { n: o.tracking_number }) + '</p>' : '') +
+        (o.delivery_type === 'pickup' && o.pickup_point ? '<p style="margin: 6px 0 0; font-size: 0.875rem; color: var(--color-gray);">' + tr('pickupPoint') + ' : ' + o.pickup_point + '</p>' : '') +
         '  <div class="order-items">' + itemsHtml +
         '    <div class="order-item">' +
         '      <div style="flex: 1;"></div>' +

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin &middot; Hanna &amp; Nour</title>
+<link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  html, body { margin: 0; padding: 0; background: #f6f1e8; color: #221f1a; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; }
+  * { box-sizing: border-box; }
+
+  .admin-container { max-width: 1200px; margin: 0 auto; padding: 24px 16px 60px; }
+  .admin-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .admin-logo { font-family: Georgia, serif; font-size: 1.4rem; color: #8a2c2c; font-weight: 700; }
+  .admin-logo small { font-family: 'Segoe UI', Arial, sans-serif; font-weight: 400; color: #8a7d66; font-size: .8rem; margin-left: 8px; }
+
+  .admin-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 22px; }
+  .admin-tab { padding: 9px 16px; border: 1px solid #e4dccb; background: #fff; border-radius: 8px; cursor: pointer; font-weight: 600; color: #5c5548; }
+  .admin-tab.active { background: #7d9b76; border-color: #7d9b76; color: #fff; }
+
+  .admin-panel { display: none; }
+  .admin-panel.active { display: block; }
+
+  .card { background: #fff; border: 1px solid #efe7d8; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .card h3 { margin: 0 0 12px; font-size: 1.05rem; color: #221f1a; }
+
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .btn { border: 0; border-radius: 8px; padding: 10px 16px; font-weight: 600; cursor: pointer; font-size: 13px; }
+  .btn-primary { background: #7d9b76; color: #fff; }
+  .btn-secondary { background: #efe7d8; color: #5c5548; }
+  .btn-danger { background: #b03a2e; color: #fff; }
+  .btn-small { padding: 6px 10px; font-size: 12px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid #efe7d8; text-align: left; vertical-align: middle; }
+  th { color: #8a7d66; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+  tr:hover td { background: #fbf8f2; }
+
+  .thumb { width: 40px; height: 52px; object-fit: cover; border-radius: 6px; background: #eee; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .badge-green { background: #e3efe0; color: #3d7a46; }
+  .badge-red { background: #fbe3e0; color: #b03a2e; }
+  .badge-gray { background: #efe7d8; color: #5c5548; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .field label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 12px; color: #5c5548; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid #ddd5c4; border-radius: 8px; font: inherit; background: #fff;
+  }
+  .field textarea { resize: vertical; min-height: 56px; }
+  .field input[type="checkbox"] { width: auto; }
+  .check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #5c5548; }
+
+  .editor-overlay { position: fixed; inset: 0; background: rgba(34,31,26,.45); display: none; align-items: flex-start; justify-content: center; padding: 24px 12px; overflow-y: auto; z-index: 50; }
+  .editor-overlay.open { display: flex; }
+  .editor { background: #fff; border-radius: 14px; max-width: 860px; width: 100%; padding: 22px; }
+  .editor-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .editor-head h2 { margin: 0; font-size: 1.2rem; }
+  .editor-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
+  .variant-grid { display: grid; gap: 8px; margin-top: 8px; }
+  .variant-row { display: grid; grid-template-columns: 130px 1fr 90px 90px; gap: 8px; align-items: center; }
+  .variant-row input { padding: 6px 8px; border: 1px solid #ddd5c4; border-radius: 6px; }
+
+  .gallery-item { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; border: 1px solid #e4dccb; border-radius: 8px; padding: 6px; margin: 0 8px 8px 0; }
+  .gallery-item img { width: 56px; height: 72px; object-fit: cover; border-radius: 6px; }
+
+  .login-box { max-width: 380px; margin: 80px auto; background: #fff; border: 1px solid #efe7d8; border-radius: 14px; padding: 28px; }
+  .login-box h1 { font-size: 1.3rem; margin: 0 0 4px; color: #8a2c2c; }
+  .login-box p { color: #8a7d66; margin: 0 0 16px; font-size: 13px; }
+  .login-err { color: #b03a2e; font-size: 13px; margin-top: 8px; display: none; }
+
+  .order-status { font-size: 12px; font-weight: 700; }
+  .order-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #221f1a; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 80; opacity: 0; transition: opacity .25s; }
+  .toast.show { opacity: 1; }
+  .toast.ok { background: #3d7a46; }
+  .toast.err { background: #b03a2e; }
+  .empty { color: #8a7d66; padding: 20px 0; text-align: center; }
+
+  @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } .variant-row { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+  <!-- LOGIN -->
+  <div id="loginView" class="login-box">
+    <h1>Espace administrateur</h1>
+    <p>Hanna &amp; Nour</p>
+    <input type="password" id="loginPassword" placeholder="Mot de passe" style="width:100%; padding:10px 12px; border:1px solid #ddd5c4; border-radius:8px; font:inherit;">
+    <p class="login-err" id="loginErr">Mot de passe incorrect</p>
+    <button class="btn btn-primary" id="loginBtn" style="width:100%; margin-top:12px;">Se connecter</button>
+  </div>
+
+  <!-- APP -->
+  <div id="appView" class="admin-container" style="display:none;">
+    <div class="admin-header">
+      <div class="admin-logo">Hanna &amp; Nour<small>Administration</small></div>
+      <div>
+        <a href="index.html" class="btn btn-secondary btn-small">Voir le site</a>
+        <button class="btn btn-secondary btn-small" id="logoutBtn">D&eacute;connexion</button>
+      </div>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="products">Produits</button>
+      <button class="admin-tab" data-tab="orders">Commandes</button>
+      <button class="admin-tab" data-tab="settings">Param&egrave;tres</button>
+    </div>
+
+    <!-- PRODUCTS -->
+    <div class="admin-panel active" id="panel-products">
+      <div class="toolbar">
+        <input type="text" id="filterProducts" placeholder="Rechercher..." style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
+        <select id="filterCategory" style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
+          <option value="">Toutes cat&eacute;gories</option>
+          <option value="hijab">Hijab</option>
+          <option value="abaya">Abaya</option>
+          <option value="prayer">Prayer</option>
+          <option value="dress">Dress</option>
+          <option value="accessory">Accessory</option>
+        </select>
+        <button class="btn btn-primary" id="newProductBtn">+ Nouveau produit</button>
+      </div>
+      <div class="card" id="productsList"><p class="empty">Chargement...</p></div>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="admin-panel" id="panel-orders">
+      <div class="toolbar">
+        <select id="filterOrderStatus" style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
+          <option value="">Tous les statuts</option>
+          <option value="pending">En attente</option>
+          <option value="paid">Pay&eacute;es</option>
+          <option value="abandoned">Abandonn&eacute;es</option>
+          <option value="refunded">Rembours&eacute;es</option>
+        </select>
+        <select id="filterShippingStatus" style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
+          <option value="">Toutes exp&eacute;ditions</option>
+          <option value="new">&Agrave; exp&eacute;dier</option>
+          <option value="shipped">Exp&eacute;di&eacute;es</option>
+          <option value="delivered">Livr&eacute;es</option>
+        </select>
+        <button class="btn btn-secondary" id="refreshOrdersBtn">Actualiser</button>
+      </div>
+      <div class="card" id="ordersList"><p class="empty">Chargement...</p></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="admin-panel" id="panel-settings">
+      <div class="card">
+        <h3>Frais de livraison &amp; taxes</h3>
+        <div class="form-grid">
+          <div class="field"><label>Standard ($)</label><input type="number" step="0.01" min="0" id="setStd"></div>
+          <div class="field"><label>Express ($)</label><input type="number" step="0.01" min="0" id="setExpr"></div>
+          <div class="field"><label>J+1 ($)</label><input type="number" step="0.01" min="0" id="setNext"></div>
+          <div class="field"><label>Retrait / point relais ($)</label><input type="number" step="0.01" min="0" id="setPickup"></div>
+          <div class="field"><label>Livraison gratuite &agrave; partir de ($)</label><input type="number" step="0.01" min="0" id="setFree"></div>
+          <div class="field"><label>Taxe (%)</label><input type="number" step="0.1" min="0" max="100" id="setTax"></div>
+        </div>
+        <div style="margin-top:14px;">
+          <label class="check"><input type="checkbox" id="setPickupEnabled"> Activer l&rsquo;option &laquo; Retrait / point relais &raquo; au checkout</label>
+        </div>
+        <div style="margin-top:16px;"><button class="btn btn-primary" id="saveSettingsBtn">Enregistrer</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRODUCT EDITOR -->
+  <div class="editor-overlay" id="productEditor">
+    <div class="editor">
+      <div class="editor-head">
+        <h2 id="editorTitle">Nouveau produit</h2>
+        <button class="btn btn-secondary btn-small" id="closeEditorBtn">Fermer</button>
+      </div>
+      <input type="hidden" id="f-id">
+      <div class="form-grid">
+        <div class="field"><label>Nom (EN) *</label><input id="f-name_en"></div>
+        <div class="field"><label>Nom (FR)</label><input id="f-name_fr"></div>
+        <div class="field full"><label>Nom (AR)</label><input id="f-name_ar"></div>
+        <div class="field"><label>Description (EN)</label><textarea id="f-desc_en"></textarea></div>
+        <div class="field"><label>Description (FR)</label><textarea id="f-desc_fr"></textarea></div>
+        <div class="field full"><label>Description (AR)</label><textarea id="f-desc_ar"></textarea></div>
+        <div class="field"><label>Slug</label><input id="f-slug" placeholder="auto si vide"></div>
+        <div class="field"><label>SKU</label><input id="f-sku" placeholder="auto si vide"></div>
+        <div class="field"><label>Prix ($) *</label><input type="number" step="0.01" min="0.01" id="f-price"></div>
+        <div class="field"><label>Ancien prix ($, promo)</label><input type="number" step="0.01" min="0" id="f-compare"></div>
+        <div class="field">
+          <label>Cat&eacute;gorie</label>
+          <select id="f-category">
+            <option value="hijab">Hijab</option><option value="abaya">Abaya</option>
+            <option value="prayer">Prayer</option><option value="dress">Dress</option>
+            <option value="accessory">Accessory</option>
+          </select>
+        </div>
+        <div class="field"><label>Badge</label><input id="f-badge" placeholder="ex: Bestseller, Nouveau"></div>
+        <div class="field"><label>Couleurs (séparées par des virgules)</label><input id="f-colors" placeholder="Gold, Bronze, Beige"></div>
+        <div class="field"><label>Tailles (virgules)</label><input id="f-sizes" placeholder="One Size, M, L"></div>
+        <div class="field"><label>Fabrics</label><input id="f-fabrics" placeholder="Silk, Cotton"></div>
+        <div class="field"><label>Occasions</label><input id="f-occasions" placeholder="Daily, Events"></div>
+        <div class="field"><label>Points forts (EN, virgules)</label><input id="f-features_en" placeholder="Soft, Breathable"></div>
+        <div class="field"><label>Composition (EN)</label><input id="f-fabric_comp_en" placeholder="70% Silk, 30% Cotton"></div>
+        <div class="field"><label>Entretien (EN, virgules)</label><input id="f-care_en" placeholder="Hand wash, Lay flat to dry"></div>
+        <div class="field"><label>Note</label><input type="number" step="0.1" min="0" max="5" id="f-rating"></div>
+        <div class="field"><label>Image principale (URL)</label><input id="f-image" placeholder="images/... ou URL Supabase"></div>
+        <div class="field full"><label>&nbsp;</label>
+          <div>
+            <button class="btn btn-secondary btn-small" id="uploadMainBtn">Uploader une photo</button>
+            <input type="file" id="fileMain" accept="image/jpeg,image/png,image/webp" style="display:none;">
+          </div>
+        </div>
+        <div class="field full"><label>Galerie (URLs)</label><input id="f-gallery" placeholder="une URL par ligne">
+          <div style="margin-top:8px;">
+            <button class="btn btn-secondary btn-small" id="uploadGalleryBtn">Ajouter au galerie</button>
+            <input type="file" id="fileGallery" accept="image/jpeg,image/png,image/webp" style="display:none;">
+          </div>
+        </div>
+        <div class="field full">
+          <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:4px;">
+            <label class="check"><input type="checkbox" id="f-featured"> Mis en avant</label>
+            <label class="check"><input type="checkbox" id="f-bestseller"> Bestseller</label>
+            <label class="check"><input type="checkbox" id="f-active" checked> Actif</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>Stock par variante <small style="font-weight:400; color:#8a7d66;">(laissez vide si le produit n&rsquo;a pas de stock g&eacute;r&eacute;)</small></h3>
+        <div id="variantGrid" class="variant-grid"></div>
+      </div>
+
+      <div class="editor-actions">
+        <button class="btn btn-danger" id="deleteProductBtn" style="display:none;">Supprimer</button>
+        <button class="btn btn-primary" id="saveProductBtn">Enregistrer le produit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORDER DETAILS -->
+  <div class="editor-overlay" id="orderModal">
+    <div class="editor">
+      <div class="editor-head">
+        <h2 id="orderModalTitle">Commande</h2>
+        <button class="btn btn-secondary btn-small" id="closeOrderBtn">Fermer</button>
+      </div>
+      <div id="orderModalBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
