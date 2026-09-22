@@ -162,6 +162,19 @@
       });
 
     document.getElementById('printBtn').addEventListener('click', function () { window.print(); });
+
+    var closeBtn = document.getElementById('closeBtn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () {
+        window.close();
+        setTimeout(function () {
+          if (!window.closed) {
+            if (window.history && window.history.length > 1) window.history.back();
+            else window.location.href = '/admin';
+          }
+        }, 150);
+      });
+    }
   }
 
   init();

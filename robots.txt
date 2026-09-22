@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
 
-# Nothing sensitive is blocked; the site is fully static.
+# Admin dashboard and printable documents are password-protected
+# (admin API) - keep them out of search results.
+Disallow: /admin
+Disallow: /print
+Disallow: /admin.html
+Disallow: /print.html

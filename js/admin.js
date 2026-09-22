@@ -297,6 +297,10 @@
     document.getElementById('closeEditorBtn').addEventListener('click', function () {
       document.getElementById('productEditor').classList.remove('open');
     });
+    // Close by clicking the dark backdrop around the editor.
+    document.getElementById('productEditor').addEventListener('click', function (e) {
+      if (e.target === this) this.classList.remove('open');
+    });
     document.getElementById('newProductBtn').addEventListener('click', function () { openEditor(null); });
     document.getElementById('f-colors').addEventListener('input', buildVariantGrid);
     document.getElementById('f-sizes').addEventListener('input', buildVariantGrid);
@@ -510,6 +514,10 @@
     document.getElementById('filterShippingStatus').addEventListener('change', loadOrders);
     document.getElementById('closeOrderBtn').addEventListener('click', function () {
       document.getElementById('orderModal').classList.remove('open');
+    });
+    // Close by clicking the dark backdrop around the modal.
+    document.getElementById('orderModal').addEventListener('click', function (e) {
+      if (e.target === this) this.classList.remove('open');
     });
     document.addEventListener('click', function (e) {
       var viewBtn = e.target.closest('.view-order');
