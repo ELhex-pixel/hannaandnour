@@ -55,15 +55,35 @@
     var headers = { 'Content-Type': 'application/json' };
     var token = getToken();
     if (needsAuth && token) headers['Authorization'] = 'Bearer ' + token;
-    return fetch(apiUrl(), { method: 'POST', headers: headers, body: JSON.stringify(payload || {}) })
+
+    // Hard timeout so a stuck request can never leave the UI in limbo.
+    var ctrl = typeof window !== 'undefined' && typeof window.AbortController === 'function' ? new window.AbortController() : null;
+    var req = { method: 'POST', headers: headers, body: JSON.stringify(payload || {}) };
+    if (ctrl) req.signal = ctrl.signal;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 20000);
+
+    return fetch(apiUrl(), req)
       .then(function (res) { return res.json(); })
       .then(function (data) {
+        clearTimeout(timer);
         if (data && data.error) {
           var e = new Error(data.error);
           e.code = data.error;
           throw e;
         }
         return data;
+      })
+      .catch(function (err) {
+        clearTimeout(timer);
+        if (err && err.code) throw err;
+        if (ctrl && err && err.name === 'AbortError') {
+          var t = new Error('Request timed out');
+          t.code = 'timeout';
+          throw t;
+        }
+        var n = new Error('Network error');
+        n.code = 'network_error';
+        throw n;
       });
   }
 
