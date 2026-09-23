@@ -23,6 +23,9 @@ const { json, getSupabase, isConfigured, readBody, CORS_HEADERS,
   signToken, verifyToken, requireAdmin, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv } = require('./shared');
 
 const crypto = require('crypto');
+const Stripe = require('stripe');
+
+const STRIPE = () => new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 async function ensureBucket(sb) {
   const { error } = await sb.storage.getBucket('product-images');
@@ -352,6 +355,124 @@ case 'deleteMessage': {
         return json(200, { messages: data || [] });
       }
 
+      case 'listReviews': {
+        const { data, error } = await sb
+          .from('reviews')
+          .select('*, products(name_en, slug)')
+          .order('created_at', { ascending: false })
+          .limit(200);
+        if (error) throw error;
+        const reviews = (data || []).map((r) => {
+          const { products, ...rest } = r;
+          return { ...rest, product: products || null };
+        });
+        return json(200, { reviews });
+      }
+
+      case 'approveReview': {
+        const id = String(body.id || '').trim();
+        if (!id) return json(400, { error: 'Missing id' });
+        const { data: r, error: gErr } = await sb.from('reviews').select('product_id').eq('id', id).maybeSingle();
+        if (gErr) throw gErr;
+        if (!r) return json(404, { error: 'Review not found' });
+        const { error } = await sb.from('reviews').update({ status: 'approved' }).eq('id', id);
+        if (error) throw error;
+        await recomputeRating(sb, r.product_id);
+        return json(200, { ok: true });
+      }
+
+      case 'deleteReview': {
+        const id = String(body.id || '').trim();
+        if (!id) return json(400, { error: 'Missing id' });
+        const { data: r, error: gErr } = await sb.from('reviews').select('product_id').eq('id', id).maybeSingle();
+        if (gErr) throw gErr;
+        if (!r) return json(404, { error: 'Review not found' });
+        await sb.from('reviews').delete().eq('id', id);
+        await recomputeRating(sb, r.product_id);
+        return json(200, { ok: true });
+      }
+
+      case 'listPromos': {
+        const { data, error } = await sb.from('promo_codes').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        return json(200, { promos: data || [] });
+      }
+
+      case 'savePromo': {
+        const code = String(body.code || '').trim().toUpperCase();
+        if (!code || code.length > 30) return json(400, { error: 'Code invalide' });
+        const percent = parseInt(body.percent_off, 10);
+        if (!(percent >= 1 && percent <= 100)) return json(400, { error: 'Pourcentage invalide (1-100)' });
+        const fields = {
+          code,
+          percent_off: percent,
+          active: body.active !== false,
+          single_use: !!body.single_use,
+          expires_at: body.expires_at ? String(body.expires_at) : null
+        };
+        const { error } = await sb.from('promo_codes').upsert(fields);
+        if (error) throw error;
+        return json(200, { ok: true, promo: fields });
+      }
+
+      case 'deletePromo': {
+        const code = String(body.code || '').trim().toUpperCase();
+        if (!code) return json(400, { error: 'Missing code' });
+        await sb.from('promo_codes').delete().eq('code', code);
+        return json(200, { ok: true });
+      }
+
+      case 'refundOrder': {
+        const oid = String(body.id || '').trim();
+        if (!oid) return json(400, { error: 'Missing id' });
+        if (!process.env.STRIPE_SECRET_KEY) return json(503, { error: 'Stripe is not configured' });
+        const { data: order, error: oErr } = await sb
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('id', oid)
+          .maybeSingle();
+        if (oErr) throw oErr;
+        if (!order) return json(404, { error: 'Commande introuvable' });
+        if (order.status !== 'paid') return json(400, { error: 'Seules les commandes payées peuvent être remboursées' });
+
+        let paymentIntent = null;
+        if (order.stripe_session_id) {
+          const sess = await STRIPE().checkout.sessions.retrieve(order.stripe_session_id);
+          paymentIntent = sess && sess.payment_intent;
+        }
+        if (!paymentIntent) {
+          const pi = await STRIPE().paymentIntents.search({ query: 'metadata["order_id"]:"' + order.id + '"' });
+          if (pi && pi.data && pi.data.length) paymentIntent = pi.data[0].id;
+        }
+        if (!paymentIntent) return json(400, { error: 'Aucun paiement associé à cette commande' });
+
+        try {
+          await STRIPE().refunds.create({ payment_intent: paymentIntent });
+        } catch (refundErr) {
+          if (!/already been refunded|anymore/i.test(refundErr.message)) throw refundErr;
+        }
+
+        const { error: updErr } = await sb.from('orders')
+          .update({ status: 'refunded' })
+          .eq('id', order.id);
+        if (updErr) throw updErr;
+
+        await restockOrder(sb, order);
+
+        try {
+          const { sendEmail } = require('./shared');
+          await sendEmail({
+            to: order.email,
+            subject: 'Remboursement de votre commande ' + order.order_number + ' \u2014 Hanna & Nour',
+            html: buildRefundEmail(order)
+          });
+        } catch (mailErr) {
+          console.error('Refund email failed:', mailErr.message);
+        }
+
+        return json(200, { ok: true });
+      }
+
       default:
         return json(400, { error: 'Unknown action' });
     }
@@ -383,4 +504,40 @@ async function loadCatalog(sb) {
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Recomputes the product rating/review_count from approved reviews only.
+async function recomputeRating(sb, productId) {
+  const { data: rows, error } = await sb
+    .from('reviews')
+    .select('rating')
+    .eq('product_id', productId)
+    .eq('status', 'approved');
+  if (error) throw error;
+  const count = rows ? rows.length : 0;
+  const sum = rows ? rows.reduce((n, r) => n + r.rating, 0) : 0;
+  const rating = count ? Math.round((sum / count) * 10) / 10 : 4.5;
+  await sb.from('products').update({ rating, review_count: count }).eq('id', productId);
+}
+
+// Puts managed-variant stock back after a refund (only for managed products).
+async function restockOrder(sb, order) {
+  const items = (order.order_items || []).filter((it) => it.variant_id);
+  for (const it of items) {
+    try {
+      await sb.rpc('increment_stock', { p_variant_id: it.variant_id, p_qty: parseInt(it.quantity, 10) || 1 });
+    } catch (e) {
+      console.error('restock failed for ' + it.variant_id + ':', e.message);
+    }
+  }
+}
+
+function buildRefundEmail(order) {
+  const siteUrl = (process.env.SITE_URL || 'https://hannaandnour.netlify.app').replace(/\/$/, '');
+  return '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
+    'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande a été remboursée</h2>' +
+    '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ', le remboursement intégral de votre commande ' +
+    '<strong>' + esc(order.order_number) + '</strong> a bien été effectué (montant restitué sur votre moyen de paiement).</p>' +
+    '<p style="font-size:14px;color:#221f1a;">Si la commande avait déjà été expédiée, vous pouvez la conserver ou la retourner selon nos conditions.</p>' +
+    '<p style="font-size:12px;color:#8a7d66;">Merci de votre confiance.</p></div></div>';
 }

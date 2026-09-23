@@ -18,6 +18,7 @@ paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Func
    - `supabase/seed_products_2.sql` (6 produits supplémentaires)
    - `supabase/migration_variants_admin.sql` (variantes/stock, settings, livraison — idempotent)
    - `supabase/rls_accounts.sql` (comptes clients : table `user_wishlist` + RLS sur la commande et les favoris — défense en profondeur)
+   - `supabase/migration_promos_refunds.sql` (remboursements : RPC `increment_stock` pour re-stocker une commande remboursée)
 3. Récupérez dans **Settings > API** :
    - `Project URL` → `SUPABASE_URL`
    - `anon public key` → à mettre dans `js/config.js` (client)
@@ -122,7 +123,7 @@ netlify deploy --prod
 
 - Taxe : 7 % (client `js/checkout.js`, `js/cart-page.js` ; serveur `checkout.js`, dépliable via `TAX_RATE`).
 - Livraison standard : gratuite ≥ 7500 ¢ sinon 699 ¢ ; express 1200 ¢ ; J+1 2500 ¢.
-- Code promo : `WELCOME15` → −15 % (table `promo_codes`, client `PROMO_LOCAL` en fallback visuel).
+- Codes promo : gérés dans la table `promo_codes` depuis **/admin → Promos** (% non limité en usage). Le client les charge via `/api/promos` (`HN.promoRate`), annonce dans le header réalimentée dynamiquement ; `WELCOME15` reste le seed et le fallback hors-ligne.
 - Tout changement de prix/taxe/frais doit être répercuté dans le JS client **et** les fonctions Netlify, sinon le total affiché ≠ total facturé.
 
 ## Commandes de dev

@@ -18,6 +18,7 @@
       navStory: 'Our Story',
       navBlog: 'Blog',
       announce: 'Free shipping on orders over $75 | Use code WELCOME15 for 15% off',
+      announcePromo: 'Free shipping on orders over $75 | Use code {code} for {pct}% off',
       langLabel: 'Language',
 
       /* Footer */
@@ -360,7 +361,7 @@
       qtyDecreased: 'Quantity decreased.',
       qtyIncreased: 'Quantity increased.',
       promoApplied: 'Promo Applied!',
-      promoAppliedMsg: '15% discount applied to your demo order.',
+      promoAppliedMsg: '{pct}% off applied to your order.',
       invalidCode: 'Invalid Code',
       invalidCodeMsg: 'This promo code is not valid or has expired.',
       noCode: 'No Code Entered',
@@ -467,6 +468,7 @@
       navStory: 'Notre histoire',
       navBlog: 'Blog',
       announce: 'Livraison gratuite dès 75 $ | Utilisez le code WELCOME15 pour -15 %',
+      announcePromo: 'Livraison gratuite dès 75 $ | Utilisez le code {code} pour -{pct} %',
       langLabel: 'Langue',
       footerTagline: 'Nous habillons les musulmanes modernes avec élégance et pudeur, en célébrant la foi et le style.',
       footerShop: 'Boutique',
@@ -786,7 +788,7 @@
       qtyDecreased: 'Quantité diminuée.',
       qtyIncreased: 'Quantité augmentée.',
       promoApplied: 'Code appliqué !',
-      promoAppliedMsg: 'Réduction de 15 % appliquée à votre commande démo.',
+      promoAppliedMsg: 'Réduction de {pct} % appliquée à votre commande.',
       invalidCode: 'Code invalide',
       invalidCodeMsg: 'Ce code promo n\'est pas valide ou a expiré.',
       noCode: 'Aucun code saisi',
@@ -893,6 +895,7 @@
       navStory: 'قصتنا',
       navBlog: 'المدونة',
       announce: 'شحن مجاني للطلبات فوق 75 دولارًا | استخدمي كود WELCOME15 لخصم 15%',
+      announcePromo: 'شحن مجاني للطلبات فوق 75 دولارًا | استخدمي كود {code} لخصم {pct}%',
       langLabel: 'اللغة',
       footerTagline: 'نُلبس المرأة المسلمة العصرية بأناقة تستحضر الحياء، محتفيةً بالإيمان والأناقة.',
       footerShop: 'المتجر',
@@ -1212,7 +1215,7 @@
       qtyDecreased: 'تم تقليل الكمية.',
       qtyIncreased: 'تم زيادة الكمية.',
       promoApplied: 'تم تطبيق الكود!',
-      promoAppliedMsg: 'أُضيف خصم 15% إلى طلبك التجريبي.',
+      promoAppliedMsg: 'أُضيف خصم {pct}% إلى طلبك.',
       invalidCode: 'كود غير صالح',
       invalidCodeMsg: 'كود الخصم غير صالح أو منتهي.',
       noCode: 'لم تُدخلِ كودًا',
@@ -1343,7 +1346,7 @@
         str = str.split('{' + p + '}').join(params[p]);
       });
     }
-    if (key === 'announce' || key === 'metaShipText') str = applySymbol(str);
+    if (key === 'announce' || key === 'metaShipText' || key === 'announcePromo') str = applySymbol(str);
     return str;
   }
 

@@ -108,6 +108,8 @@
         panel.classList.add('active');
         if (id === 'panel-products') loadProducts();
         if (id === 'panel-orders') loadOrders();
+        if (id === 'panel-reviews') loadReviews();
+        if (id === 'panel-promos') loadPromos();
         if (id === 'panel-messages') loadMessages();
         if (id === 'panel-settings') loadSettings();
       });
@@ -455,6 +457,7 @@
         '<button class="btn btn-secondary btn-small" data-act="markShipped">Marquer expédiée</button>' +
         '<button class="btn btn-secondary btn-small" data-act="markDelivered">Marquer livr&eacute;e</button>' +
         '<button class="btn btn-secondary btn-small" data-act="revert">R&eacute;initialiser</button>' +
+        '<button class="btn btn-danger btn-small" data-act="refund">Rembourser (complet)</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printInvoice">Facture</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printPacking">Bon de livraison</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printLabel">&Eacute;tiquette</button>' +
@@ -472,6 +475,13 @@
     body.querySelectorAll('[data-act]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var act = btn.getAttribute('data-act');
+        if (act === 'refund') {
+          if (!confirm('Rembourser intégralement cette commande ?\nLe stock sera ré-augmenté et le client notifié par email.')) return;
+          call('refundOrder', { id: o.id })
+            .then(function () { return afterUpdate(o.id, 'Commande remboursée'); })
+            .catch(function (e) { toast(e.message, 'err'); });
+          return;
+        }
         if (act === 'printInvoice' || act === 'printPacking' || act === 'printLabel') {
           window.open('print.html?doc=' + (act === 'printInvoice' ? 'invoice' : act === 'printPacking' ? 'packing' : 'label') + '&order=' + o.id, '_blank');
           return;
@@ -634,6 +644,173 @@
     });
   }
 
+  /* ---------------- Reviews (moderation) ---------------- */
+
+  function stars(rating) {
+    var n = Math.max(0, Math.min(5, parseInt(rating, 10) || 0));
+    return '\u2605'.repeat(n) + '\u2606'.repeat(5 - n);
+  }
+
+  function loadReviews() {
+    return call('listReviews').then(function (res) {
+      renderReviews(res.reviews || []);
+    }).catch(function (e) {
+      document.getElementById('reviewsList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+    });
+  }
+
+  function renderReviews(list) {
+    var box = document.getElementById('reviewsList');
+    if (!box) return;
+    if (!list.length) { box.innerHTML = '<p class="empty">Aucun avis.</p>'; return; }
+    box.innerHTML = list.map(function (r) {
+      var prod = r.product || {};
+      var approved = r.status === 'approved';
+      return '<div class="card" style="margin-bottom:10px; ' + (approved ? 'opacity:.8;' : 'border-color:#d9b98a;') + '">' +
+        '<div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">' +
+        '<div><strong>' + esc(r.author_name) + '</strong> <span style="color:#b8860b;">' + stars(r.rating) + '</span> ' +
+        '<span style="color:#8a7d66;">' + r.rating + '/5</span>' +
+        (prod.slug ? '<br><small style="color:#8a7d66;">Produit : <strong>' + esc(prod.name_en || prod.slug) + '</strong> (' + esc(prod.slug) + ')</small>' : '') +
+        '</div>' +
+        '<div style="text-align:right; color:#8a7d66; font-size:12px;">' + fmtDate(r.created_at) + '<br>' +
+        '<span class="badge ' + (approved ? 'badge-green' : 'badge-gray') + '">' + (approved ? 'Publié' : 'En attente') + '</span></div>' +
+        '</div>' +
+        '<p style="margin:10px 0 0; white-space:pre-wrap;">' + esc(r.body) + '</p>' +
+        '<div style="margin-top:10px;">' +
+        (!approved ? '<button class="btn btn-primary btn-small rev-approve" data-id="' + r.id + '">Approuver</button> ' : '') +
+        '<button class="btn btn-danger btn-small rev-del" data-id="' + r.id + '">Supprimer</button>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function wireReviews() {
+    document.getElementById('refreshReviewsBtn').addEventListener('click', loadReviews);
+    document.addEventListener('click', function (e) {
+      var approve = e.target.closest('.rev-approve');
+      if (approve) {
+        call('approveReview', { id: approve.getAttribute('data-id') })
+          .then(function () { toast('Avis publié', 'ok'); return loadReviews(); })
+          .catch(function (err) { toast(err.message, 'err'); });
+        return;
+      }
+      var del = e.target.closest('.rev-del');
+      if (del) {
+        if (!confirm('Supprimer cet avis ?')) return;
+        call('deleteReview', { id: del.getAttribute('data-id') })
+          .then(function () { toast('Avis supprimé', 'ok'); return loadReviews(); })
+          .catch(function (err) { toast(err.message, 'err'); });
+      }
+    });
+  }
+
+  /* ---------------- Promos (admin CRUD) ---------------- */
+
+  var promosAll = [];
+
+  function loadPromos() {
+    return call('listPromos').then(function (res) {
+      promosAll = res.promos || [];
+      renderPromos();
+    }).catch(function (e) {
+      document.getElementById('promosList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+    });
+  }
+
+  function renderPromos() {
+    var box = document.getElementById('promosList');
+    if (!box) return;
+    if (!promosAll.length) { box.innerHTML = '<p class="empty">Aucun code promo. Créez le premier !</p>'; return; }
+    box.innerHTML = '<table><thead><tr><th>Code</th><th>Réduction</th><th>Expiration</th><th>Statut</th><th></th></tr></thead><tbody>' +
+      promosAll.map(function (p) {
+        return '<tr>' +
+          '<td><strong>' + esc(p.code) + '</strong></td>' +
+          '<td>' + (parseInt(p.percent_off, 10) || 0) + ' %</td>' +
+          '<td>' + (p.expires_at ? fmtDate(p.expires_at) : '—') + '</td>' +
+          '<td><span class="badge ' + (p.active ? 'badge-green' : 'badge-red') + '">' + (p.active ? 'Actif' : 'Inactif') + '</span></td>' +
+          '<td style="white-space:nowrap;">' +
+          '<button class="btn btn-secondary btn-small edit-promo" data-code="' + esc(p.code) + '">Modifier</button> ' +
+          '<button class="btn btn-danger btn-small del-promo" data-code="' + esc(p.code) + '">Supprimer</button>' +
+          '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  var editingPromo = null;
+
+  function openPromoEditor(p) {
+    editingPromo = p || { code: '', percent_off: '', expires_at: '', active: true };
+    document.getElementById('promoEditorTitle').textContent = p ? 'Modifier : ' + p.code : 'Nouveau code promo';
+    setVal('p-code', editingPromo.code);
+    setVal('p-percent', editingPromo.percent_off === '' ? '' : editingPromo.percent_off);
+    setVal('p-expires', editingPromo.expires_at ? String(editingPromo.expires_at).slice(0, 10) : '');
+    document.getElementById('p-active').checked = editingPromo.active !== false;
+    document.getElementById('deletePromoBtn').style.display = p ? '' : 'none';
+    document.getElementById('promoEditor').classList.add('open');
+  }
+
+  function wirePromos() {
+    document.getElementById('newPromoBtn').addEventListener('click', function () { openPromoEditor(null); });
+    document.getElementById('closePromoBtn').addEventListener('click', function () {
+      document.getElementById('promoEditor').classList.remove('open');
+    });
+    document.getElementById('promoEditor').addEventListener('click', function (e) {
+      if (e.target === this) this.classList.remove('open');
+    });
+
+    document.getElementById('savePromoBtn').addEventListener('click', function () {
+      var btn = this;
+      var code = getVal('p-code').toUpperCase();
+      var percent = parseInt(getVal('p-percent'), 10);
+      if (!code) { toast('Code requis', 'err'); return; }
+      if (!(percent >= 1 && percent <= 100)) { toast('Pourcentage invalide (1-100)', 'err'); return; }
+      var expires = getVal('p-expires');
+      btn.disabled = true;
+      call('savePromo', {
+        code: code,
+        percent_off: percent,
+        active: document.getElementById('p-active').checked,
+        expires_at: expires ? new Date(expires + 'T23:59:59').toISOString() : null
+      })
+        .then(function () {
+          toast('Code promo enregistré', 'ok');
+          document.getElementById('promoEditor').classList.remove('open');
+          return loadPromos();
+        })
+        .catch(function (e) { toast(e.message, 'err'); })
+        .finally(function () { btn.disabled = false; });
+    });
+
+    document.getElementById('deletePromoBtn').addEventListener('click', function () {
+      if (!editingPromo || !editingPromo.code) return;
+      if (!confirm('Supprimer le code ' + editingPromo.code + ' ?')) return;
+      call('deletePromo', { code: editingPromo.code })
+        .then(function () {
+          toast('Code supprimé', 'ok');
+          document.getElementById('promoEditor').classList.remove('open');
+          return loadPromos();
+        })
+        .catch(function (e) { toast(e.message, 'err'); });
+    });
+
+    document.addEventListener('click', function (e) {
+      var edit = e.target.closest('.edit-promo');
+      if (edit) {
+        var code = edit.getAttribute('data-code');
+        var found = promosAll.filter(function (p) { return p.code === code; })[0];
+        if (found) openPromoEditor(found);
+        return;
+      }
+      var del = e.target.closest('.del-promo');
+      if (del) {
+        var delCode = del.getAttribute('data-code');
+        if (!confirm('Supprimer le code ' + delCode + ' ?')) return;
+        call('deletePromo', { code: delCode })
+          .then(function () { toast('Code supprimé', 'ok'); return loadPromos(); })
+          .catch(function (err) { toast(err.message, 'err'); });
+      }
+    });
+  }
+
   /* ---------------- Filters ---------------- */
 
   function wireFilters() {
@@ -651,6 +828,8 @@
   wireTabs();
   wireEditor();
   wireOrders();
+  wireReviews();
+  wirePromos();
   wireMessages();
   wireSettings();
   wireFilters();

@@ -97,6 +97,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/promos"
+  to = "/.netlify/functions/promos"
+  status = 200
+
+[[redirects]]
   from = "/api/newsletter"
   to = "/.netlify/functions/newsletter"
   status = 200

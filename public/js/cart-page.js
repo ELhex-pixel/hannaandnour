@@ -53,7 +53,8 @@
 
   function promoRate() {
     var code = getPromo();
-    return PROMO_LOCAL[code] || 0;
+    if (!code) return 0;
+    return window.HN && typeof window.HN.promoRate === 'function' ? window.HN.promoRate(code) : (PROMO_LOCAL[code] || 0);
   }
 
   function totals() {
@@ -181,9 +182,9 @@
           showToast(tr('noCode'), tr('noCodeMsg'), 'error');
           return;
         }
-        if (PROMO_LOCAL[code]) {
+        if (promoRate() > 0) {
           setPromo(code);
-          showToast(tr('promoApplied'), tr('promoAppliedMsg'), 'success');
+          showToast(tr('promoApplied'), tr('promoAppliedMsg', { pct: Math.round(promoRate() * 100) }), 'success');
           renderSummary();
         } else {
           clearPromo();

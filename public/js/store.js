@@ -91,6 +91,75 @@
     return window.I18n && typeof window.I18n.lang === 'function' ? window.I18n.lang() : 'en';
   }
 
+  /* ---------------- Promo codes (server-driven) ---------------- */
+
+  var PROMOS_CACHE_KEY = 'hn-promos';
+  var DEMO_PROMOS = { WELCOME15: 15 };
+  var promosList = [];
+  var promosInit = null;
+
+  // Expose active promos (code -> %) from /api/promos, cached for offline.
+  function loadPromos() {
+    if (promosInit) return promosInit;
+    var cached = readLS(PROMOS_CACHE_KEY);
+    if (cached && Array.isArray(cached) && cached.length) promosList = cached;
+    promosInit = fetch(apiUrl('promos'))
+      .then(function (res) {
+        if (!res.ok) throw new Error('promos request failed');
+        return res.json();
+      })
+      .then(function (data) {
+        promosList = Array.isArray(data.promos) ? data.promos : [];
+        try { writeLS(PROMOS_CACHE_KEY, promosList); } catch (e) {}
+        refreshPromoAnnounce(promosList);
+        return promosList;
+      })
+      .catch(function () {
+        promosInit = null;
+        refreshPromoAnnounce(promosList);
+        return promosList;
+      });
+    return promosInit;
+  }
+
+  function promos() {
+    return promosList.slice();
+  }
+
+  // Discount rate (0..1) for a code. Falls back to the legacy WELCOME15 demo
+  // code when the API is unreachable so the offline preview still works.
+  function promoRate(codeRaw) {
+    var code = String(codeRaw || '').toUpperCase();
+    if (!code) return 0;
+    var pct = 0;
+    for (var i = 0; i < promosList.length; i++) {
+      if (String(promosList[i].code).toUpperCase() === code) {
+        pct = parseInt(promosList[i].percent_off, 10) || 0;
+        break;
+      }
+    }
+    if (pct > 0) return pct / 100;
+    return (DEMO_PROMOS[code] || 0) / 100;
+  }
+
+  // Announces the first active promo in the header bar instead of a hardcoded
+  // code, so promo changes are visible everywhere without touching i18n.
+  function refreshPromoAnnounce(list) {
+    try {
+      if (!window.I18n || typeof window.I18n.t !== 'function') return;
+      var active = null;
+      (list || promosList).forEach(function (p) {
+        if (active) return;
+        if (p && p.percent_off && (!p.expires_at || new Date(p.expires_at).getTime() > Date.now())) active = p;
+      });
+      if (!active) return;
+      var text = window.I18n.t('announcePromo', { code: active.code, pct: active.percent_off });
+      document.querySelectorAll('[data-i18n="announce"]').forEach(function (el) {
+        if (el && el.textContent) el.textContent = text;
+      });
+    } catch (e) {}
+  }
+
   function productName(p) {
     if (!p) return '';
     var lang = currentLang();
@@ -385,6 +454,10 @@
     updateWishlistHearts();
     // Load admin config first (currency symbol) so prices render correctly.
     loadConfig();
+    // Load promo codes so the header announce and cart preview use live codes.
+    loadPromos();
+    // Re-announce the promo after a language switch (i18n resets [data-i18n]).
+    document.addEventListener('langchange', function () { refreshPromoAnnounce(promosList); });
     // Load the catalog in the background (rendering scripts call it too).
     if (!window.HN_CONFIG_SUPPRESS_AUTOLOAD) {
       loadProducts().catch(function () { /* offline preview: static content remains */ });
@@ -430,6 +503,9 @@
     moneyCents: money,
     symbol: function () { return CURRENCY_SYMBOL; },
     loadConfig: loadConfig,
+    loadPromos: loadPromos,
+    promos: promos,
+    promoRate: promoRate,
     isAuthConfigured: isAuthConfigured
   };
 })();

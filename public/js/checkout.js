@@ -25,6 +25,11 @@
   function setPromo(code) {
     try { window.sessionStorage.setItem('hn-promo', code || ''); } catch (e) {}
   }
+  function promoRate() {
+    var code = getPromo();
+    if (!code) return 0;
+    return window.HN && typeof window.HN.promoRate === 'function' ? window.HN.promoRate(code) : (PROMO_LOCAL[code] || 0);
+  }
 
   function localizedName(item) {
     var p = HN.getProduct(item.slug);
@@ -36,7 +41,7 @@
     var items = HN.cart.list();
     var subtotal = 0;
     for (var i = 0; i < items.length; i++) subtotal += (items[i].priceCents || 0) * (items[i].qty || 1);
-    var rate = PROMO_LOCAL[getPromo()] || 0;
+    var rate = promoRate();
     var discount = Math.round(subtotal * rate);
     var shipping;
     if (state.method === 'pickup') {
@@ -180,9 +185,10 @@
       applyBtn.addEventListener('click', function () {
         var code = input.value.trim().toUpperCase();
         if (!code) { window.hnToast && hnToast(tr('noCode'), tr('noCodeMsg'), 'error'); return; }
-        if (PROMO_LOCAL[code]) {
+        var rate = promoRate();
+        if (rate > 0) {
           setPromo(code);
-          window.hnToast && hnToast(tr('promoApplied'), tr('promoAppliedMsg'), 'success');
+          window.hnToast && hnToast(tr('promoApplied'), tr('promoAppliedMsg', { pct: Math.round(rate * 100) }), 'success');
         } else {
           setPromo('');
           window.hnToast && hnToast(tr('invalidCode'), tr('invalidCodeMsg'), 'error');

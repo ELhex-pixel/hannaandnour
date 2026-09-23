@@ -113,6 +113,8 @@
     <div class="admin-tabs">
       <button class="admin-tab active" data-tab="products">Produits</button>
       <button class="admin-tab" data-tab="orders">Commandes</button>
+      <button class="admin-tab" data-tab="reviews">Avis</button>
+      <button class="admin-tab" data-tab="promos">Promos</button>
       <button class="admin-tab" data-tab="messages">Messages</button>
       <button class="admin-tab" data-tab="settings">Param&egrave;tres</button>
     </div>
@@ -155,6 +157,24 @@
       <div class="card" id="ordersList"><p class="empty">Chargement...</p></div>
     </div>
 
+    <!-- REVIEWS (moderation) -->
+    <div class="admin-panel" id="panel-reviews">
+      <div class="toolbar">
+        <span style="color:#8a7d66;">Avis clients &agrave; mod&eacute;rer (tout statut)</span>
+        <button class="btn btn-secondary" id="refreshReviewsBtn">Actualiser</button>
+      </div>
+      <div class="card" id="reviewsList"><p class="empty">Chargement...</p></div>
+    </div>
+
+    <!-- PROMOS -->
+    <div class="admin-panel" id="panel-promos">
+      <div class="toolbar">
+        <span style="color:#8a7d66;">Codes promo (r&eacute;duction en %)</span>
+        <button class="btn btn-primary" id="newPromoBtn">+ Nouveau code</button>
+      </div>
+      <div class="card" id="promosList"><p class="empty">Chargement...</p></div>
+    </div>
+
     <!-- MESSAGES (client contact form) -->
     <div class="admin-panel" id="panel-messages">
       <div class="toolbar">
@@ -188,6 +208,27 @@
           <label class="check"><input type="checkbox" id="setPickupEnabled"> Activer l&rsquo;option &laquo; Retrait / point relais &raquo; au checkout</label>
         </div>
         <div style="margin-top:16px;"><button class="btn btn-primary" id="saveSettingsBtn">Enregistrer</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMO EDITOR -->
+  <div class="editor-overlay" id="promoEditor">
+    <div class="editor" style="max-width:520px;">
+      <div class="editor-head">
+        <h2 id="promoEditorTitle">Code promo</h2>
+        <button class="btn btn-secondary btn-small" id="closePromoBtn">Fermer</button>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Code *</label><input id="p-code" placeholder="ex: ETE2026"></div>
+        <div class="field"><label>R&eacute;duction (%) *</label><input type="number" min="1" max="100" id="p-percent"></div>
+        <div class="field"><label>Expiration (optionnel)</label><input type="date" id="p-expires"></div>
+        <div class="field"><label>&nbsp;</label><label class="check"><input type="checkbox" id="p-active" checked> Actif</label></div>
+      </div>
+      <div style="font-size:12px;color:#8a7d66;margin-top:8px;">Un code actif est utilisable par tous les clients ; usage non limit&eacute;.</div>
+      <div class="editor-actions">
+        <button class="btn btn-danger" id="deletePromoBtn" style="display:none;">Supprimer</button>
+        <button class="btn btn-primary" id="savePromoBtn">Enregistrer</button>
       </div>
     </div>
   </div>
