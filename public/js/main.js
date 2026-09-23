@@ -136,7 +136,7 @@
     injectNavMobileFooter();
 
     navMobile.addEventListener('click', function(e) {
-      if (e.target.closest('.nav-mobile-link, .nav-mobile-footer-link, .nav-mobile-signin')) {
+      if (e.target.closest('.nav-mobile-link, .nav-mobile-footer-link')) {
         setMenuOpen(false);
       }
     });
@@ -171,24 +171,6 @@
       '</label>';
     navMobile.appendChild(footer);
 
-    var hdr = navMobile.querySelector('.nav-mobile-header');
-    if (hdr && !hdr.querySelector('.nav-mobile-menu-title')) {
-      var title = document.createElement('span');
-      title.className = 'nav-mobile-menu-title';
-      title.setAttribute('data-i18n', 'navMenu');
-      hdr.insertBefore(title, hdr.querySelector('.nav-mobile-close'));
-    }
-
-    ensureNavSignIn();
-
-    var langRow = footer.querySelector('.nav-mobile-lang');
-    if (langRow) {
-      var lbl = document.createElement('span');
-      lbl.className = 'nav-mobile-lang-label';
-      lbl.setAttribute('data-i18n', 'menuLanguage');
-      langRow.insertBefore(lbl, langRow.firstChild);
-    }
-
     try {
       if (window.I18n && typeof window.I18n.lang === 'function') {
         var sel = footer.querySelector('.lang-switcher');
@@ -198,22 +180,6 @@
         window.HN.refreshBadge();
       }
     } catch (e) {}
-  }
-
-  function ensureNavSignIn() {
-    if (!navMobile || navMobile.querySelector('.nav-mobile-signin')) return;
-    var linksBox = navMobile.querySelector('.nav-mobile-links');
-    var bar = document.createElement('a');
-    bar.className = 'nav-mobile-signin';
-    bar.href = 'account.html';
-    bar.innerHTML =
-      '<span class="nav-mobile-signin-hello" data-i18n="drawerSignIn">Sign in</span>' +
-      '<span class="nav-mobile-signin-lists" data-i18n="drawerAccountLists">Account &amp; Lists</span>';
-    if (linksBox) {
-      navMobile.insertBefore(bar, linksBox);
-    } else {
-      navMobile.appendChild(bar);
-    }
   }
 
   /* ==============================================
