@@ -457,6 +457,7 @@
       shipPickupD: 'Pick up at your chosen point',
       pickupPoint: 'Pickup point',
       trackingN: 'Tracking: {n}',
+      shipPending: 'Pending shipment',
       shipShipped: 'Shipped',
       shipDelivered: 'Delivered',
       notAvailable: 'Not available'
@@ -886,6 +887,7 @@
       shipPickupD: 'Retrait au point relais choisi',
       pickupPoint: 'Point relais',
       trackingN: 'Suivi : {n}',
+      shipPending: 'En attente d\u2019expédition',
       shipShipped: 'Expédiée',
       shipDelivered: 'Livrée',
       notAvailable: 'Indisponible'
@@ -1315,6 +1317,7 @@
       shipPickupD: 'الاستلام من نقطة التوصيل المختارة',
       pickupPoint: 'نقطة التوصيل',
       trackingN: 'التتبع: {n}',
+      shipPending: 'في انتظار الشحن',
       shipShipped: 'تم الشحن',
       shipDelivered: 'تم التسليم',
       notAvailable: 'غير متوفر'

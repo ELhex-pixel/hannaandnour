@@ -16,7 +16,7 @@
   }
 
   function shippingText(s) {
-    var key = s === 'shipped' ? 'shipShipped' : s === 'delivered' ? 'shipDelivered' : null;
+    var key = s === 'new' ? 'shipPending' : s === 'shipped' ? 'shipShipped' : s === 'delivered' ? 'shipDelivered' : null;
     return key ? tr(key) : '';
   }
 
