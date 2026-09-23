@@ -157,7 +157,7 @@
         return currentUser();
       })
       .catch(function () {
-        if (!sess.refresh_token) { current = null; removeLS(SESSION_KEY); return null; }
+        if (!sess.refresh_token) { current = null; removeLS(SESSION_KEY); emitAuth(); return null; }
         return call({ action: 'refresh', refresh_token: sess.refresh_token })
           .then(function (d) {
             if (d && d.session && d.session.access_token) {
@@ -167,10 +167,10 @@
               emitAuth();
               return currentUser();
             }
-            current = null; removeLS(SESSION_KEY);
+            current = null; removeLS(SESSION_KEY); emitAuth();
             return null;
           })
-          .catch(function () { current = null; removeLS(SESSION_KEY); return null; });
+          .catch(function () { current = null; removeLS(SESSION_KEY); emitAuth(); return null; });
       });
   }
 

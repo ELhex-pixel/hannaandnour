@@ -230,10 +230,11 @@
     wireOrderFilter();
     wireAuth();
 
+    // Render immediately from the stored session (auth.js already loaded it
+    // into memory), then re-render once the network restore (me/refresh) settles.
+    renderAuthState();
     if (window.HN_AUTH && HN_AUTH.ready) {
       HN_AUTH.ready.then(function () { renderAuthState(); }).catch(function () { renderAuthState(); });
-    } else {
-      renderAuthState();
     }
 
     HN.loadProducts().then(function () {
