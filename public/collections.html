@@ -1,19 +1,19 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <meta name="description" content="Hanna &amp; Nour Blog - styling tips, modest fashion inspiration, and community stories.">
+  <meta name="description" content="Explore Hanna &amp; Nour collections - Everyday Hijabs, Eid Collection, Abayas, Prayer Sets, and more.">
 
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://hannaandnour.netlify.app/blog.html">
+  <link rel="canonical" href="https://hannaandnour.netlify.app/collections.html">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="Hanna &amp; Nour">
-  <meta property="og:title" content="Blog | Hanna &amp; Nour">
-  <meta property="og:description" content="Style tips - Hanna &amp; Nour.">
-  <title>Blog | Hanna &amp; Nour</title>
+  <meta property="og:title" content="Collections | Hanna &amp; Nour">
+  <meta property="og:description" content="Shop by collection - Hanna &amp; Nour.">
+  <title>Collections | Hanna &amp; Nour</title>
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="css/styles.css">
   <meta property="og:image" content="https://hannaandnour.netlify.app/images/hero.jpg">
@@ -32,9 +32,9 @@
           <nav class="nav-desktop">
             <a href="index.html" class="nav-link" data-i18n="navHome">Home</a>
             <a href="shop.html" class="nav-link" data-i18n="navShop">Shop</a>
-            <a href="collections.html" class="nav-link" data-i18n="navCollections">Collections</a>
+            <a href="collections.html" class="nav-link active" data-i18n="navCollections">Collections</a>
             <a href="about.html" class="nav-link" data-i18n="navStory">Our Story</a>
-            <a href="blog.html" class="nav-link active" data-i18n="navBlog">Blog</a>
+            <a href="blog.html" class="nav-link" data-i18n="navBlog">Blog</a>
           </nav>
           <div class="header-actions">
             <select class="lang-switcher" name="lang" aria-label="Language">
@@ -66,138 +66,113 @@
   </header>
 
   <main>
-    <section class="page-header">
+    <!-- Collections Hero -->
+    <section class="collections-hero">
       <div class="container">
-        <span class="subtitle" data-i18n="blogSubtitle">Style &amp; Inspiration</span>
-        <h1 class="page-header-title" data-i18n="journalTitle">The Hanna &amp; Nour Journal</h1>
-        <div class="page-header-breadcrumb">
-          <a href="index.html">Home</a><span>/</span><span>Blog</span>
+        <span class="subtitle" style="color: rgba(255,255,255,0.8);" data-i18n="curatedForYou">Curated Selections</span>
+        <h1 class="collections-hero-title" data-i18n="collectionsTitle">Our Collections</h1>
+        <p data-i18n="collectionsDesc">Each Hanna &amp; Nour collection is thoughtfully curated to bring you pieces that celebrate your faith, your style, and your unique beauty.</p>
+      </div>
+    </section>
+
+    <!-- Collections Showcase -->
+    <section class="collections-showcase">
+      <div class="container">
+        <div class="collections-showcase-grid">
+
+          <div class="collection-showcase-card">
+            <img src="images/everyday-hijab.jpg" alt="Everyday Hijabs Collection">
+            <div class="collection-showcase-overlay">
+              <h2 class="collection-showcase-title" data-i18n="collectionEveryday">Everyday Hijabs</h2>
+              <p class="collection-showcase-desc" data-i18n="everydayDesc">Our signature collection of comfortable, breathable hijabs in versatile colors and premium fabrics for your everyday elegance.</p>
+              <a href="shop.html" class="btn btn-white" data-i18n="shopHijabs">Shop Hijabs</a>
+            </div>
+          </div>
+
+          <div class="collection-showcase-card">
+            <img src="images/eid-abaya.jpg" alt="Elegant Abayas Collection">
+            <div class="collection-showcase-overlay">
+              <h2 class="collection-showcase-title" data-i18n="collectionAbayas">Elegant Abayas</h2>
+              <p class="collection-showcase-desc" data-i18n="abayasDesc">Flowing silhouettes, luxurious fabrics, and sophisticated details. Abayas that move with you from morning to evening.</p>
+              <a href="shop.html" class="btn btn-white" data-i18n="shopAbayas">Shop Abayas</a>
+            </div>
+          </div>
+
+          <div class="collection-showcase-card">
+            <img src="images/prayer-wear.jpg" alt="Prayer Sets Collection">
+            <div class="collection-showcase-overlay">
+              <h2 class="collection-showcase-title" data-i18n="collectionPrayer">Prayer Sets</h2>
+              <p class="collection-showcase-desc" data-i18n="prayerDesc">Beautiful, comfortable, and practical prayer wear designed for daily worship and spiritual connection.</p>
+              <a href="shop.html" class="btn btn-white" data-i18n="shopPrayerWear">Shop Prayer Wear</a>
+            </div>
+          </div>
+
+          <div class="collection-showcase-card">
+            <img src="images/hero.jpg" alt="Eid Collection">
+            <div class="collection-showcase-overlay" style="background: linear-gradient(to right, rgba(128,0,32,0.85) 0%, transparent 100%);">
+              <h2 class="collection-showcase-title" data-i18n="eidTitle">Eid Collection</h2>
+              <p class="collection-showcase-desc" data-i18n="eidDesc">Limited edition pieces for your most special celebrations. Luxurious fabrics and intricate details for Eid and beyond.</p>
+              <a href="shop.html" class="btn btn-white" data-i18n="shopEid">Shop Eid Collection</a>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
 
-    <section class="section">
+    <!-- Featured Products per Collection -->
+    <section class="section" style="background-color: var(--color-white);">
       <div class="container">
-        <div class="blog-grid">
-
-          <!-- Blog Post 1 -->
-          <article class="blog-card">
-            <div class="blog-card-image" style="display:block;">
-              <img src="images/hero.jpg" alt="Hijab styling tips">
-            </div>
-            <div class="blog-card-content">
-              <span class="blog-card-category" data-i18n="catStyling">Styling Tips</span>
-              <h2 class="blog-card-title" data-i18n="b1Title">5 Simple Ways to Style Your Everyday Hijab</h2>
-              <p class="blog-card-excerpt" data-i18n="b1Excerpt">From classic drapes to modern twists, discover versatile hijab styles that take you from work to weekend effortlessly.</p>
-              <div class="blog-card-meta">
-                <div class="blog-card-author">
-                  <span class="blog-author-avatar">A</span>
-                  <span>Amina H.</span>
-                </div>
-                <span data-i18n="read5">Mar 12, 2026 &bull; 5 min read</span>
-              </div>
-            </div>
-          </article>
-
-          <!-- Blog Post 2 -->
-          <article class="blog-card">
-            <div class="blog-card-image" style="display:block;">
-              <img src="images/eid-abaya.jpg" alt="Abaya styling">
-            </div>
-            <div class="blog-card-content">
-              <span class="blog-card-category" data-i18n="catFashion">Fashion Inspiration</span>
-              <h2 class="blog-card-title" data-i18n="b2Title">The Art of the Abaya: Modern Ways to Wear Tradition</h2>
-              <p class="blog-card-excerpt" data-i18n="b2Excerpt">Embrace the elegance of the abaya with contemporary styling techniques that celebrate both heritage and modernity.</p>
-              <div class="blog-card-meta">
-                <div class="blog-card-author">
-                  <span class="blog-author-avatar" style="background-color: var(--color-blush);">Z</span>
-                  <span>Zahra K.</span>
-                </div>
-                <span data-i18n="read7">Feb 28, 2026 &bull; 7 min read</span>
-              </div>
-            </div>
-          </article>
-
-          <!-- Blog Post 3 -->
-          <article class="blog-card">
-            <div class="blog-card-image" style="display:block;">
-              <img src="images/prayer-wear.jpg" alt="Prayer wear guide">
-            </div>
-            <div class="blog-card-content">
-              <span class="blog-card-category" data-i18n="catShopping">Shopping Guide</span>
-              <h2 class="blog-card-title" data-i18n="b3Title">The Ultimate Guide to Choosing Prayer Wear</h2>
-              <p class="blog-card-excerpt" data-i18n="b3Excerpt">Comfort, coverage, and quality - our complete guide to selecting prayer wear that supports your spiritual practice.</p>
-              <div class="blog-card-meta">
-                <div class="blog-card-author">
-                  <span class="blog-author-avatar" style="background-color: var(--color-emerald);">M</span>
-                  <span>Maryam S.</span>
-                </div>
-                <span data-i18n="read4">Feb 14, 2026 &bull; 4 min read</span>
-              </div>
-            </div>
-          </article>
-
-          <!-- Blog Post 4 -->
-          <article class="blog-card">
-            <div class="blog-card-image" style="display:block;">
-              <img src="images/everyday-hijab.jpg" alt="Modest fashion brands">
-            </div>
-            <div class="blog-card-content">
-              <span class="blog-card-category" data-i18n="catCommunity">Community</span>
-              <h2 class="blog-card-title" data-i18n="b4Title">Why Modest Fashion Matters in 2026</h2>
-              <p class="blog-card-excerpt" data-i18n="b4Excerpt">The modest fashion movement is reshaping the industry. Here's why it matters more than ever for women everywhere.</p>
-              <div class="blog-card-meta">
-                <div class="blog-card-author">
-                  <span class="blog-author-avatar">A</span>
-                  <span>Amina H.</span>
-                </div>
-                <span data-i18n="read6">Feb 01, 2026 &bull; 6 min read</span>
-              </div>
-            </div>
-          </article>
-
-          <!-- Blog Post 5 -->
-          <article class="blog-card">
-            <div class="blog-card-image" style="display:block;">
-              <img src="images/pearl-brooch.jpg" alt="Fabric care">
-            </div>
-            <div class="blog-card-content">
-              <span class="blog-card-category" data-i18n="catCare">Care Tips</span>
-              <h2 class="blog-card-title" data-i18n="b5Title">How to Care for Your Silk and Chiffon Hijabs</h2>
-              <p class="blog-card-excerpt" data-i18n="b5Excerpt">Extend the life of your luxury fabrics with these simple washing, drying, and storage tips from our atelier.</p>
-              <div class="blog-card-meta">
-                <div class="blog-card-author">
-                  <span class="blog-author-avatar" style="background-color: var(--color-emerald);">Z</span>
-                  <span>Zahra K.</span>
-                </div>
-                <span data-i18n="read3">Jan 25, 2026 &bull; 3 min read</span>
-              </div>
-            </div>
-          </article>
-
-          <!-- Blog Post 6 -->
-          <article class="blog-card">
-            <div class="blog-card-image" style="display:block;">
-              <img src="images/velvet-abaya.jpg" alt="Eid outfit ideas">
-            </div>
-            <div class="blog-card-content">
-              <span class="blog-card-category" data-i18n="catOccasion">Occasion Wear</span>
-              <h2 class="blog-card-title" data-i18n="b6Title">Eid Outfit Ideas: From Morning Prayers to Family Celebrations</h2>
-              <p class="blog-card-excerpt" data-i18n="b6Excerpt">Complete Eid looks that keep you elegant, comfortable, and covered from the first prayer to the last gathering.</p>
-              <div class="blog-card-meta">
-                <div class="blog-card-author">
-                  <span class="blog-author-avatar" style="background-color: var(--color-burgundy);">M</span>
-                  <span>Maryam S.</span>
-                </div>
-                <span data-i18n="read8">Jan 08, 2026 &bull; 8 min read</span>
-              </div>
-            </div>
-          </article>
-
+        <div class="text-center" style="margin-bottom: var(--spacing-2xl);">
+          <span class="subtitle" data-i18n="collectionHighlights">Collection Highlights</span>
+          <h2 class="heading-section" data-i18n="featuredPieces">Featured Pieces</h2>
         </div>
 
-        <div class="text-center" style="margin-top: var(--spacing-2xl);">
-          <button class="btn btn-secondary" data-i18n="loadMoreArticles">Load More Articles</button>
+        <div class="products-grid">
+          <div class="product-card">
+            <a href="shop.html" class="product-card-image" style="display:block;">
+              <img src="images/silk-hijab.jpg" alt="Silk Blend Hijab">
+            </a>
+            <div class="product-card-info">
+              <span class="product-card-category">Everyday Hijabs</span>
+              <a href="shop.html"><h3 class="product-card-title" data-i18n="silkHijab">Silk Blend Hijab</h3></a>
+              <div class="product-card-price"><span class="product-price-current">$35.00</span></div>
+            </div>
+          </div>
+
+          <div class="product-card">
+            <a href="shop.html" class="product-card-image" style="display:block;">
+              <img src="images/velvet-abaya.jpg" alt="Embroidered Abaya">
+            </a>
+            <div class="product-card-info">
+              <span class="product-card-category">Eid Collection</span>
+              <a href="product.html?slug=embroidered-abaya"><h3 class="product-card-title" data-i18n="embroideredAbaya">Embroidered Abaya</h3></a>
+              <div class="product-card-price"><span class="product-price-current">$149.00</span></div>
+            </div>
+          </div>
+
+          <div class="product-card">
+            <a href="shop.html" class="product-card-image" style="display:block;">
+              <img src="images/prayer-wear.jpg" alt="Premium Prayer Set">
+            </a>
+            <div class="product-card-info">
+              <span class="product-card-category">Prayer Sets</span>
+              <a href="product.html?slug=premium-prayer-set"><h3 class="product-card-title" data-i18n="premiumPrayerSet">Premium Prayer Set</h3></a>
+              <div class="product-card-price"><span class="product-price-current">$65.00</span></div>
+            </div>
+          </div>
+
+          <div class="product-card">
+            <a href="shop.html" class="product-card-image" style="display:block;">
+              <img src="images/pearl-brooch.jpg" alt="Chiffon Evening Hijab">
+            </a>
+            <div class="product-card-info">
+              <span class="product-card-category">Eid Collection</span>
+              <a href="product.html?slug=chiffon-wedding"><h3 class="product-card-title" data-i18n="chiffonEvening">Chiffon Evening Hijab</h3></a>
+              <div class="product-card-price"><span class="product-price-current">$45.00</span></div>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>
@@ -227,7 +202,7 @@
           <ul class="footer-links">
             <li><a href="contact.html" class="footer-link" data-i18n="linkContact">Contact Us</a></li>
             <li><a href="mailto:care@hannaandnour.com" class="footer-link">care@hannaandnour.com</a></li>
-            <li><a href="https://www.hannaandnour.com" class="footer-link" target="_blank" rel="noopener">www.hannaandnour.com</a></li>
+            <li><a href="https://hannaandnour.netlify.app" class="footer-link" target="_blank" rel="noopener">hannaandnour.netlify.app</a></li>
                                                           </ul>
         </div>
         <div class="footer-column">

@@ -40,7 +40,16 @@ exports.handler = async function (event) {
       if (cat && Array.isArray(cat.colors)) catalog = { colors: cat.colors };
     } catch (e) { /* keep default */ }
 
-    return json(200, { settings, catalog });
+    let currency = { code: 'usd', symbol: '$' };
+    try {
+      const cur = await getSetting(sb, 'currency', null);
+      const code = String(cur && cur.code || '').toLowerCase();
+      if (code === 'usd' || code === 'eur') {
+        currency = { code, symbol: code === 'eur' ? '\u20AC' : '$' };
+      }
+    } catch (e) { /* keep default */ }
+
+    return json(200, { settings, catalog, currency });
   } catch (err) {
     console.error('config.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

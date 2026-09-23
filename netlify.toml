@@ -1,7 +1,9 @@
-# Static site: no build step required
-# Note: Netlify auto-excludes dot-directories (.agents/) from the deploy.
+# Static site: no build step required.
+# Publish directory is `public/` so dev/docs files (supabase/, AGENTS.md,
+# SETUP.md, package.json, .agents/, etc.) are never served. Netlify also
+# auto-excludes dot-directories from the deploy.
 [build]
-  publish = "."
+  publish = "public"
 
 [functions]
   directory = "netlify/functions"

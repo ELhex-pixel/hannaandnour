@@ -34,9 +34,14 @@
     setTimeout(function () { el.className = 'toast'; }, 2600);
   }
 
-  function money(cents) {
-    return '$' + ((parseInt(cents, 10) || 0) / 100).toFixed(2);
+  function money(cents, currency) {
+    var sym = '$';
+    if (currency === 'eur') sym = '\u20AC';
+    else if (currency === 'usd') sym = '$';
+    else if (ADMIN_CURRENCY_SYMBOL) sym = ADMIN_CURRENCY_SYMBOL;
+    return sym + ((parseInt(cents, 10) || 0) / 100).toFixed(2);
   }
+  var ADMIN_CURRENCY_SYMBOL = '$';
   function dollars(cents) {
     return ((parseInt(cents, 10) || 0) / 100).toFixed(2);
   }
@@ -405,7 +410,7 @@
       '<td><strong>' + esc(o.order_number) + '</strong><br><small style="color:#8a7d66;">' + fmtDate(o.created_at) + '</small></td>' +
       '<td>' + esc(o.customer_name) + '<br><small style="color:#8a7d66;">' + esc(o.email) + '</small></td>' +
       '<td>' + count + '</td>' +
-      '<td>' + money(o.total_cents) + '</td>' +
+      '<td>' + money(o.total_cents, o.currency) + '</td>' +
       '<td><span class="' + payClass(o.status) + '">' + statusLabel(o.status) + '</span></td>' +
       '<td><span class="badge ' + shipClass(o.shipping_status) + '">' + shipLabel(o.shipping_status) + '</span>' +
       (o.tracking_number ? '<br><small style="color:#8a7d66;">' + esc(o.tracking_number) + '</small>' : '') + '</td>' +
@@ -423,7 +428,7 @@
 
   function itemRows(o) {
     return (o.order_items || []).map(function (it) {
-      return '<tr><td>' + esc(it.product_name) + '</td><td>' + (parseInt(it.quantity, 10) || 1) + '</td><td>' + money(it.unit_price_cents * it.quantity) + '</td></tr>';
+      return '<tr><td>' + esc(it.product_name) + '</td><td>' + (parseInt(it.quantity, 10) || 1) + '</td><td>' + money(it.unit_price_cents * it.quantity, o.currency) + '</td></tr>';
     }).join('');
   }
 
@@ -441,11 +446,11 @@
       (o.tracking_number ? '<br><strong>Suivi :</strong> ' + esc(o.tracking_number) : '') + '</div>' +
       '</div>' +
       '<table><thead><tr><th>Article</th><th>Qt&eacute;</th><th>Total</th></tr></thead><tbody>' + itemRows(o) + '</tbody></table>' +
-      '<table style="margin-top:10px;"><tr><td>Sous-total</td><td style="text-align:right;">' + money(o.subtotal_cents) + '</td></tr>' +
-      (o.discount_cents > 0 ? '<tr><td>Remise</td><td style="text-align:right;">-' + money(o.discount_cents) + '</td></tr>' : '') +
-      '<tr><td>Livraison</td><td style="text-align:right;">' + money(o.shipping_cents) + '</td></tr>' +
-      (o.tax_cents > 0 ? '<tr><td>Taxe</td><td style="text-align:right;">' + money(o.tax_cents) + '</td></tr>' : '') +
-      '<tr><td><strong>Total</strong></td><td style="text-align:right;"><strong>' + money(o.total_cents) + '</strong></td></tr></table>' +
+      '<table style="margin-top:10px;"><tr><td>Sous-total</td><td style="text-align:right;">' + money(o.subtotal_cents, o.currency) + '</td></tr>' +
+      (o.discount_cents > 0 ? '<tr><td>Remise</td><td style="text-align:right;">-' + money(o.discount_cents, o.currency) + '</td></tr>' : '') +
+      '<tr><td>Livraison</td><td style="text-align:right;">' + money(o.shipping_cents, o.currency) + '</td></tr>' +
+      (o.tax_cents > 0 ? '<tr><td>Taxe</td><td style="text-align:right;">' + money(o.tax_cents, o.currency) + '</td></tr>' : '') +
+      '<tr><td><strong>Total</strong></td><td style="text-align:right;"><strong>' + money(o.total_cents, o.currency) + '</strong></td></tr></table>' +
       (o.status === 'paid' ? '<div class="order-actions">' +
         '<button class="btn btn-secondary btn-small" data-act="markShipped">Marquer expédiée</button>' +
         '<button class="btn btn-secondary btn-small" data-act="markDelivered">Marquer livr&eacute;e</button>' +
@@ -549,6 +554,11 @@
       setVal('setFree', dollars(s.free_threshold_cents));
       setVal('setTax', (parseFloat(s.tax_rate) || 0) * 100);
       document.getElementById('setPickupEnabled').checked = s.pickup_enabled !== false;
+      var cur = res.currency || {};
+      ADMIN_CURRENCY_SYMBOL = cur.symbol || (cur.code === 'eur' ? '\u20AC' : '$');
+      if (cur.code === 'usd' || cur.code === 'eur') {
+        document.getElementById('setCurrency').value = cur.code;
+      }
       var colors = (res.catalog && res.catalog.colors) || [];
       document.getElementById('setCatalogColors').value = colors.join(', ');
     }).catch(function (e) { toast(e.message, 'err'); });
@@ -568,8 +578,12 @@
           tax_rate: (parseFloat(getVal('setTax')) || 0) / 100,
           pickup_enabled: document.getElementById('setPickupEnabled').checked
         },
-        catalog: { colors: colors }
-      }).then(function () { toast('Paramètres enregistrés', 'ok'); })
+        catalog: { colors: colors },
+        currency: { code: document.getElementById('setCurrency').value }
+      }).then(function (res) {
+        if (res && res.currency) ADMIN_CURRENCY_SYMBOL = res.currency.symbol || ADMIN_CURRENCY_SYMBOL;
+        toast('Paramètres enregistrés', 'ok');
+      })
         .catch(function (e) { toast(e.message, 'err'); });
     });
   }

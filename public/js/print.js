@@ -16,7 +16,12 @@
   }
 
   function money(cents) {
-    return '$' + ((parseInt(cents, 10) || 0) / 100).toFixed(2);
+    return CURRENCY_SYMBOL + ((parseInt(cents, 10) || 0) / 100).toFixed(2);
+  }
+  var CURRENCY_SYMBOL = '$';
+
+  function setOrderCurrency(o) {
+    CURRENCY_SYMBOL = o && o.currency === 'eur' ? '\u20AC' : '$';
   }
 
   function fmtDate(iso) {
@@ -151,6 +156,7 @@
       .then(function (data) {
         if (!data.order) throw new Error('Commande introuvable');
         var holder = document.getElementById('sheetHolder');
+        setOrderCurrency(data.order);
         if (doc === 'invoice') holder.innerHTML = renderInvoice(data.order);
         else if (doc === 'packing') holder.innerHTML = renderPacking(data.order);
         else holder.innerHTML = renderLabel(data.order);

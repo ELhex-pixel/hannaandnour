@@ -1,19 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us | Hanna &amp; Nour</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <meta name="description" content="Your shopping cart at Hanna &amp; Nour - modest fashion for the modern woman.">
-
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://hannaandnour.netlify.app/cart.html">
-  <meta property="og:type" content="website">
-  <meta property="og:locale" content="en_US">
-  <meta property="og:site_name" content="Hanna &amp; Nour">
-  <meta property="og:title" content="Cart | Hanna &amp; Nour">
-  <meta property="og:description" content="Your cart - Hanna &amp; Nour.">
-  <title>Shopping Cart | Hanna &amp; Nour</title>
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="css/styles.css">
   <meta property="og:image" content="https://hannaandnour.netlify.app/images/hero.jpg">
@@ -68,125 +59,47 @@
   <main>
     <section class="page-header">
       <div class="container">
-        <h1 class="page-header-title" data-i18n="cartTitle">Shopping Cart</h1>
+        <h1 class="page-header-title" data-i18n="contactTitle">Contact Us</h1>
         <div class="page-header-breadcrumb">
-          <a href="index.html" data-i18n="navHome">Home</a><span>/</span><span data-i18n="crumbCart">Cart</span>
+          <a href="index.html" data-i18n="navHome">Home</a><span>/</span><span data-i18n="contactTitle">Contact Us</span>
         </div>
       </div>
     </section>
 
-    <section class="container">
-      <div class="cart-layout">
-
-        <!-- Cart Items -->
-        <div class="cart-items">
-
-          <div class="cart-item">
-            <div class="cart-item-image">
-              <img src="images/silk-hijab.jpg" alt="Silk Blend Hijab">
-            </div>
-            <div class="cart-item-info">
-              <a href="product.html?slug=silk-hijab"><h2 class="cart-item-title" data-i18n="silkHijab">Silk Blend Hijab</h2></a>
-              <span class="cart-item-variant" data-i18n="cartVariantSilk">Color: Emerald | Size: One Size</span>
-              <span class="cart-item-price">$35.00</span>
-            </div>
-            <div class="cart-item-actions">
-              <div class="quantity-selector">
-                <button class="quantity-btn cart-qty-minus" aria-label="Decrease quantity" data-i18n-aria-label="a11yQtyDec">&minus;</button>
-                <input type="number" class="quantity-input cart-qty-input" name="qty" value="1" min="1" max="10" aria-label="Quantity" data-i18n-aria-label="a11yQty">
-                <button class="quantity-btn cart-qty-plus" aria-label="Increase quantity" data-i18n-aria-label="a11yQtyInc">+</button>
-              </div>
-              <button class="cart-item-remove" data-remove-cart data-i18n="remove">&#10005; Remove</button>
-            </div>
+    <section class="contact-section">
+      <div class="container">
+        <div class="contact-grid">
+          <div class="contact-info">
+            <h2 data-i18n="contactInfo">Get in touch</h2>
+            <p data-i18n="contactSub">A question about an order, your size, or care instructions? We usually answer within 24 hours.</p>
+            <p><strong data-i18n="contactEmail">Email :</strong> <a href="mailto:care@hannaandnour.com">care@hannaandnour.com</a></p>
           </div>
 
-          <div class="cart-item">
-            <div class="cart-item-image">
-              <img src="images/eid-abaya.jpg" alt="Flowing Abaya">
+          <form id="contactForm" class="contact-form" novalidate>
+            <div class="form-group">
+              <label class="form-label" for="cName" data-i18n="contactName">Name *</label>
+              <input type="text" class="form-input" id="cName" name="name" required data-i18n-placeholder="contactNamePh">
             </div>
-            <div class="cart-item-info">
-              <a href="product.html?slug=flowing-abaya"><h2 class="cart-item-title" data-i18n="flowingAbaya">Flowing Abaya</h2></a>
-              <span class="cart-item-variant" data-i18n="cartVariantAbaya">Color: Charcoal | Size: M</span>
-              <span class="cart-item-price">$89.00</span>
+            <div class="form-group">
+              <label class="form-label" for="cEmail" data-i18n="contactMail">Email *</label>
+              <input type="email" class="form-input" id="cEmail" name="email" required data-i18n-placeholder="contactMailPh">
             </div>
-            <div class="cart-item-actions">
-              <div class="quantity-selector">
-                <button class="quantity-btn cart-qty-minus" aria-label="Decrease quantity" data-i18n-aria-label="a11yQtyDec">&minus;</button>
-                <input type="number" class="quantity-input cart-qty-input" name="qty" value="1" min="1" max="10" aria-label="Quantity" data-i18n-aria-label="a11yQty">
-                <button class="quantity-btn cart-qty-plus" aria-label="Increase quantity" data-i18n-aria-label="a11yQtyInc">+</button>
-              </div>
-              <button class="cart-item-remove" data-remove-cart data-i18n="remove">&#10005; Remove</button>
+            <div class="form-group">
+              <label class="form-label" for="cSubject" data-i18n="contactSubject">Subject</label>
+              <input type="text" class="form-input" id="cSubject" name="subject" data-i18n-placeholder="contactSubjectPh">
             </div>
-          </div>
-
-          <div class="cart-item">
-            <div class="cart-item-image">
-              <img src="images/prayer-wear.jpg" alt="Prayer Set">
+            <div class="form-group">
+              <label class="form-label" for="cMessage" data-i18n="contactMessage">Message *</label>
+              <textarea class="form-input" id="cMessage" name="message" rows="5" required data-i18n-placeholder="contactMessagePh"></textarea>
             </div>
-            <div class="cart-item-info">
-              <a href="product.html?slug=prayer-set"><h2 class="cart-item-title" data-i18n="prayerSet">Luxury Prayer Set</h2></a>
-              <span class="cart-item-variant" data-i18n="cartVariantPrayer">Color: Sage | Size: One Size</span>
-              <span class="cart-item-price">$65.00</span>
-            </div>
-            <div class="cart-item-actions">
-              <div class="quantity-selector">
-                <button class="quantity-btn cart-qty-minus" aria-label="Decrease quantity" data-i18n-aria-label="a11yQtyDec">&minus;</button>
-                <input type="number" class="quantity-input cart-qty-input" name="qty" value="1" min="1" max="10" aria-label="Quantity" data-i18n-aria-label="a11yQty">
-                <button class="quantity-btn cart-qty-plus" aria-label="Increase quantity" data-i18n-aria-label="a11yQtyInc">+</button>
-              </div>
-              <button class="cart-item-remove" data-remove-cart data-i18n="remove">&#10005; Remove</button>
-            </div>
-          </div>
-
-          <!-- Continue Shopping -->
-          <div style="margin-top: var(--spacing-lg);">
-            <a href="shop.html" class="btn btn-outline" data-i18n="continueShopping">&larr; Continue Shopping</a>
-          </div>
+            <button type="submit" class="btn btn-primary" id="contactSubmitBtn" data-i18n="contactSend">Send message</button>
+            <p class="contact-status" id="contactStatus" role="status"></p>
+          </form>
         </div>
-
-        <!-- Cart Summary -->
-        <div class="cart-summary">
-          <h2 class="cart-summary-title" data-i18n="orderSummary">Order Summary</h2>
-          <div class="cart-summary-row">
-            <span id="sumSubtotalLabel">Subtotal</span>
-            <span id="cartSummarySubtotal">$0.00</span>
-          </div>
-          <div class="cart-summary-row">
-            <span data-i18n="sumShipping">Shipping</span>
-            <span class="cart-summary-shipping" id="cartSummaryShipping" data-i18n="free">Free</span>
-          </div>
-          <div class="cart-summary-row" id="cartDiscountRow" style="display: none;">
-            <span data-i18n="sumDiscount">Discount</span>
-            <span id="cartSummaryDiscount">-$0.00</span>
-          </div>
-          <div class="cart-summary-row">
-            <span data-i18n="sumTax">Tax (est.)</span>
-            <span id="cartSummaryTax">$0.00</span>
-          </div>
-          <div class="cart-summary-row total">
-            <span data-i18n="sumTotal">Total</span>
-            <span id="cartSummaryTotal">$0.00</span>
-          </div>
-
-          <div class="cart-promo">
-            <input type="text" class="form-input" name="promo" placeholder="Promo code" id="promoInput" aria-label="Promo code" data-i18n-placeholder="promoPlaceholder">
-            <button class="btn btn-secondary btn-sm" id="applyPromo" data-i18n="apply">Apply</button>
-          </div>
-
-          <div class="cart-checkout">
-            <a href="checkout.html" class="btn btn-primary btn-lg" data-i18n="proceedToCheckout">Proceed to Checkout</a>
-            <p class="cart-secure">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              <span data-i18n="secureStripe">Secure 256-bit SSL encrypted checkout powered by Stripe</span>
-            </p>
-          </div>
-        </div>
-
       </div>
     </section>
   </main>
 
-  <!-- Footer -->
   <footer class="footer">
     <div class="container">
       <div class="footer-grid">
@@ -210,15 +123,15 @@
           <ul class="footer-links">
             <li><a href="contact.html" class="footer-link" data-i18n="linkContact">Contact Us</a></li>
             <li><a href="mailto:care@hannaandnour.com" class="footer-link">care@hannaandnour.com</a></li>
-            <li><a href="https://www.hannaandnour.com" class="footer-link" target="_blank" rel="noopener">www.hannaandnour.com</a></li>
-                                                          </ul>
+            <li><a href="https://hannaandnour.netlify.app" class="footer-link" target="_blank" rel="noopener">hannaandnour.netlify.app</a></li>
+          </ul>
         </div>
         <div class="footer-column">
           <h3 class="footer-title" data-i18n="footerAbout">About</h3>
           <ul class="footer-links">
             <li><a href="about.html" class="footer-link" data-i18n="linkOurStory">Our Story</a></li>
             <li><a href="blog.html" class="footer-link" data-i18n="linkBlog">Blog</a></li>
-                        <li><a href="privacy.html" class="footer-link" data-i18n="linkPrivacy">Privacy Policy</a></li>
+            <li><a href="privacy.html" class="footer-link" data-i18n="linkPrivacy">Privacy Policy</a></li>
             <li><a href="terms.html" class="footer-link" data-i18n="linkTerms">Terms of Service</a></li>
           </ul>
         </div>
@@ -240,6 +153,6 @@
   <script src="js/i18n.js"></script>
   <script src="js/store.js"></script>
   <script src="js/main.js"></script>
-  <script src="js/cart-page.js"></script>
+  <script src="js/contact.js"></script>
 </body>
 </html>

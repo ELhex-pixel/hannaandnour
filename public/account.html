@@ -1,20 +1,19 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="index, follow">
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <meta name="description" content="Privacy Policy of Hanna &amp; Nour. How we handle data on this demonstration store.">
+  <meta name="description" content="Your account at Hanna &amp; Nour - orders, wishlist, and profile.">
 
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://hannaandnour.netlify.app/privacy.html">
+  <link rel="canonical" href="https://hannaandnour.netlify.app/account.html">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="Hanna &amp; Nour">
-  <meta property="og:title" content="Privacy Policy | Hanna &amp; Nour">
-  <meta property="og:description" content="Privacy Policy - Hanna &amp; Nour.">
-  <title>Privacy Policy | Hanna &amp; Nour</title>
+  <meta property="og:title" content="My Account | Hanna &amp; Nour">
+  <meta property="og:description" content="Your account - Hanna &amp; Nour.">
+  <title>My Account | Hanna &amp; Nour</title>
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="css/styles.css">
   <meta property="og:image" content="https://hannaandnour.netlify.app/images/hero.jpg">
@@ -45,6 +44,7 @@
             </select>
             <button class="header-action-btn" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg></button>
             <a href="account.html" class="header-action-btn" aria-label="Account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></a>
+            <button class="header-action-btn" aria-label="Wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
             <a href="cart.html" class="header-action-btn"><span class="sr-only">Cart</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg><span class="cart-count">3</span></a>
           </div>
         </div>
@@ -68,40 +68,60 @@
   <main>
     <section class="page-header">
       <div class="container">
-        <h1 class="page-header-title">Privacy Policy</h1>
+        <h1 class="page-header-title" data-i18n="accountTitle">My Account</h1>
         <div class="page-header-breadcrumb">
-          <a href="index.html" data-i18n="navHome">Home</a><span>/</span><span>Privacy Policy</span>
+          <a href="index.html" data-i18n="navHome">Home</a><span>/</span><span data-i18n="crumbAccount">Account</span>
         </div>
       </div>
     </section>
 
-    <section class="container" style="max-width: 800px; padding-top: var(--spacing-2xl); padding-bottom: var(--spacing-3xl);">
-      <p><strong>Last updated:</strong> 20 September 2026</p>
+    <section class="container">
+      <div class="account-layout">
+        <!-- Sidebar -->
+        <aside class="account-sidebar">
+          <nav class="account-nav">
+            <a href="#orders" class="account-nav-link active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line></svg>
+              <span data-i18n="navOrders">Orders</span>
+            </a>
+            <a href="#wishlist" class="account-nav-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              <span data-i18n="navWishlist">Wishlist</span>
+            </a>
+          </nav>
+        </aside>
 
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">1. About this site</h2>
-      <p>Hanna &amp; Nour is a demonstration store. The checkout, account, cart and review features are illustrative: they do not process orders, collect money, or create real accounts. Payment fields accept test data only and are never transmitted anywhere.</p>
+        <!-- Account Content -->
+        <div class="account-content">
+          <div class="account-content-header">
+            <h2 class="account-content-title" id="orders" data-i18n="orderHistory">Order History</h2>
+          </div>
 
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">2. Data we collect</h2>
-      <p>This site is served as static pages and does not run analytics, advertising or tracking scripts. We collect no personal data server-side.</p>
-      <ul style="list-style: disc; padding-left: var(--spacing-xl);">
-        <li><strong>Language preference</strong> &mdash; stored only in your browser's local storage (<code>hn-lang</code>) to remember your choice of language on this device. It never leaves your browser.</li>
-        <li><strong>Form entries</strong> (newsletter, reviews, checkout, profile) &mdash; processed in memory for demonstration only; nothing is stored or transmitted.</li>
-      </ul>
+          <form id="accountOrderForm" style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg);">
+            <input type="email" class="form-input" id="accountEmail" name="email" placeholder="you@example.com" required data-i18n-placeholder="emailPlaceholder2">
+            <button type="submit" class="btn btn-primary" data-i18n="findOrders">Find My Orders</button>
+          </form>
 
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">3. Cookies</h2>
-      <p>We do not use cookies. No third-party tracking cookies are set.</p>
+          <div id="accountOrders">
+            <p style="color: var(--color-gray); padding: var(--spacing-lg) 0;" data-i18n="findOrdersHint">Enter the email you used at checkout to see your orders.</p>
+          </div>
 
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">4. Hosting</h2>
-      <p>This website is hosted by Netlify. Netlify may process standard server logs (IP address, user agent, requested pages) for security and performance. Their privacy policy applies to that processing.</p>
+          <!-- Wishlist Section -->
+          <div id="wishlist" style="margin-top: var(--spacing-3xl);">
+            <div class="account-content-header">
+              <h2 class="account-content-title" data-i18n="myWishlist">My Wishlist</h2>
+              <span id="wishlistCount" style="font-size: 0.875rem; color: var(--color-gray);">0 items</span>
+            </div>
+            <div class="products-grid" id="wishlistGrid">
+            </div>
+          </div>
 
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">5. Your rights</h2>
-      <p>Under the GDPR (EU) and UK GDPR, you may ask for access, correction, erasure or portability of your personal data. Since we hold no personal data, there is generally nothing to erase. For any question, contact us at <a href="mailto:care@hannaandnour.com">care@hannaandnour.com</a>.</p>
-
-      <h2 style="margin: var(--spacing-xl) 0 var(--spacing-sm);">6. Contact</h2>
-      <p>Email: <a href="mailto:care@hannaandnour.com">care@hannaandnour.com</a></p>
+        </div>
+      </div>
     </section>
   </main>
 
+  <!-- Footer -->
   <footer class="footer">
     <div class="container">
       <div class="footer-grid">
@@ -125,15 +145,15 @@
           <ul class="footer-links">
             <li><a href="contact.html" class="footer-link" data-i18n="linkContact">Contact Us</a></li>
             <li><a href="mailto:care@hannaandnour.com" class="footer-link">care@hannaandnour.com</a></li>
-            <li><a href="https://www.hannaandnour.com" class="footer-link" target="_blank" rel="noopener">www.hannaandnour.com</a></li>
-          </ul>
+            <li><a href="https://hannaandnour.netlify.app" class="footer-link" target="_blank" rel="noopener">hannaandnour.netlify.app</a></li>
+                                                          </ul>
         </div>
         <div class="footer-column">
           <h3 class="footer-title" data-i18n="footerAbout">About</h3>
           <ul class="footer-links">
             <li><a href="about.html" class="footer-link" data-i18n="linkOurStory">Our Story</a></li>
             <li><a href="blog.html" class="footer-link" data-i18n="linkBlog">Blog</a></li>
-            <li><a href="privacy.html" class="footer-link" data-i18n="linkPrivacy">Privacy Policy</a></li>
+                        <li><a href="privacy.html" class="footer-link" data-i18n="linkPrivacy">Privacy Policy</a></li>
             <li><a href="terms.html" class="footer-link" data-i18n="linkTerms">Terms of Service</a></li>
           </ul>
         </div>
@@ -155,5 +175,6 @@
   <script src="js/i18n.js"></script>
   <script src="js/store.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/account.js"></script>
 </body>
 </html>

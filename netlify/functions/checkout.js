@@ -39,6 +39,13 @@ exports.handler = async function (event) {
     const sb = getSupabase();
     const body = readBody(event);
 
+    // ---- Currency (admin-editable `settings` key, then env, then usd) ----
+    let currencyCode = String(process.env.STRIPE_PRICE_CURRENCY || 'usd').toLowerCase();
+    const curSetting = await getSetting(sb, 'currency', null);
+    if (curSetting && (curSetting.code === 'usd' || curSetting.code === 'eur')) {
+      currencyCode = curSetting.code;
+    }
+
     // ---- Validate payload ----
     if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > 50) {
       return json(400, { error: 'Invalid cart' });
@@ -140,7 +147,7 @@ exports.handler = async function (event) {
       lineItems.push({
         quantity: qty,
         price_data: {
-          currency: process.env.STRIPE_PRICE_CURRENCY || 'usd',
+          currency: currencyCode,
           unit_amount: product.price_cents,
           product_data: {
             name: product.name_en + (variant ? ` - ${variant}` : ''),
@@ -221,7 +228,7 @@ exports.handler = async function (event) {
       lineItems.push({
         quantity: 1,
         price_data: {
-          currency: process.env.STRIPE_PRICE_CURRENCY || 'usd',
+          currency: currencyCode,
           unit_amount: taxCents,
           product_data: { name: 'Tax (est.)' }
         }
@@ -254,7 +261,7 @@ exports.handler = async function (event) {
       tax_cents: taxCents,
       discount_cents: discountCents,
       total_cents: totalCents,
-      currency: process.env.STRIPE_PRICE_CURRENCY || 'usd',
+      currency: currencyCode,
       status: 'pending',
       promo_code: promoCode,
       user_id: body.user_id || null
@@ -286,7 +293,7 @@ exports.handler = async function (event) {
         {
           shipping_rate_data: {
             type: 'fixed_amount',
-            fixed_amount: { amount: shippingCents, currency: process.env.STRIPE_PRICE_CURRENCY || 'usd' },
+            fixed_amount: { amount: shippingCents, currency: currencyCode },
             display_name: shippingMethod === 'standard' ? 'Standard Shipping' : shippingMethod === 'express' ? 'Express Shipping' : shippingMethod === 'pickup' ? 'Pickup / Point Relais' : 'Next Day Delivery'
           }
         }

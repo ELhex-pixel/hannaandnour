@@ -10,8 +10,9 @@ Supabase catalog, Stripe Checkout payments, API served by Netlify Functions (`ne
 ## Working with the site
 - Open any `*.html` directly in a browser for offline preview (API calls fall back to static markup).
 - Every page loads, in order: `js/config.js` → `js/i18n.js` → `js/store.js` → `js/main.js` (+ a page script for shop/product/cart/checkout/account; `404.html` uses absolute `/js/...` paths and no page script).
-- `js/store.js` exposes `window.HN` (IIFE, ES5 style): `api`, `tr`, `money`, `lang`, `productName`, `loadProducts`, `getProduct`, `products()`, `cart.{list,add,update,remove,clear,count}`, `wishlist.{list,toggle,has,count}`, `quickAdd`, `refreshBadge`, `updateWishlistHearts`, `isAuthConfigured`. Cart key: `localStorage['hn-cart']`, wishlist: `localStorage['hn-wishlist']` (slugs), lang: `localStorage['hn-lang']`, promo `WELCOME15`: `sessionStorage['hn-promo']`.
-- Page scripts are self-contained: `shop.js`, `product.js`, `cart-page.js`, `checkout.js`, `account.js`. `main.js` only handles shared UI (header, toasts, modals, tabs, newsletter form, wishlist/quick-add delegation, qty/gallery/color/size on product page).
+- `js/store.js` exposes `window.HN` (IIFE, ES5 style): `api`, `tr`, `money`, `symbol`, `loadConfig`, `lang`, `productName`, `loadProducts`, `getProduct`, `products()`, `cart.{list,add,update,remove,clear,count}`, `wishlist.{list,toggle,has,count}`, `quickAdd`, `refreshBadge`, `updateWishlistHearts`, `isAuthConfigured`. Cart key: `localStorage['hn-cart']`, wishlist: `localStorage['hn-wishlist']` (slugs), lang: `localStorage['hn-lang']`, promo `WELCOME15`: `sessionStorage['hn-promo']`, cached `/api/config` (incl. currency symbol): `localStorage['hn-config']`. `HN.money()` formats cents with the admin-selected currency symbol (fetched at startup from `/api/config`).
+- Page scripts are self-contained: `shop.js`, `product.js`, `cart-page.js`, `checkout.js`, `account.js`. `main.js` handles shared UI (header, toasts, modals, tabs, newsletter form, wishlist/quick-add delegation, qty/gallery/color/size on product page) **plus the full-text search modal** (search results = products + categories, i18n keys `searchPlaceholder`/`searchEmpty`/`searchNoResults`).
+- Publish dir is `public/` (`netlify.toml`): drop the `test` folder (drag & drop) or `test/public` subfolder; dev files (`supabase/`, `AGENTS.md`, `SETUP.md`, `skills-lock.json`, `opencode.json`, `.agents/`) are never served.
 - Images live in `images/`. Reference local files; do not hot-link Unsplash. `collections/` is unused.
 
 ## API (Netlify Functions)
@@ -28,12 +29,13 @@ Supabase catalog, Stripe Checkout payments, API served by Netlify Functions (`ne
 ## Business rules (MUST stay in sync client & server)
 - Tax 7 % (`checkout.js`/`cart-page.js` client; `TAX_RATE` server). Shipping: free ≥ `FREE_SHIPPING_THRESHOLD_CENTS` (7500 ¢), else standard 699 ¢, express 1200 ¢, next-day 2500 ¢.
 - **Admin-editable**: the `settings` table (key `shipping`) can override tax/shipping/free-threshold/pickup rates via the `/admin` page — it takes precedence over env vars. The client fetches them from `/api/config`. Key `catalog` in `settings` stores an admin-defined list of shop colors (`{ colors: [...] }`, edited in `/admin` → Settings); the **color filter is currently removed** from `/shop`, so this field is kept in backend/admin only (not read by `shop.js`) for a future re-enable.
+- **Currency (admin-editable)**: `settings` key `currency` → `{ code: 'usd'|'eur', symbol: '$'|'€' }`, edited in `/admin` → Settings, seeded as `usd`. It drives the client symbol (`HN.money`, announced "$75" copy via `I18n.refreshCurrency`) and — in `checkout.js` — the Stripe currency (fallback: env `STRIPE_PRICE_CURRENCY`, then `usd`). `order.currency` is persisted per order and used by emails (`stripe-webhook.js`) and print docs.
 - A product **with `product_variants` rows = managed stock** (each color×size has its own stock; missing combo is blocked; size buttons are disabled when out of stock). A product **without variant rows = unlimited legacy product**. Cart items carry `variantId`.
 - Always mirror price/tax/shipping changes in the client JS AND the Netlify functions, or the displayed total won't match the charged total.
 - Static product cards on index/shop/collections/cart carry `data-slug`/`data-price-cents`/`data-name`/`data-image` and link to `product.html?slug=...`; JS re-renders them from the API when available. Product slugs must match `seed.sql`/`seed_products_2.sql`.
 
 ## i18n
-- `js/i18n.js` (ES5 IIFE) exposes `window.I18n` (`en`/`fr`/`ar`), persists `localStorage['hn-lang']`, switches page `dir` for RTL. Confirm all slugs you add in `tr()` land in all three languages.
+- `js/i18n.js` (ES5 IIFE) exposes `window.I18n` (`en`/`fr`/`ar`), persists `localStorage['hn-lang']`, switches page `dir` for RTL. Confirm all slugs you add in `tr()` land in all three languages. Exports also `apply()` and `refreshCurrency()` (re-renders the announce/`metaShipText` "$75" copy with the current currency symbol).
 
 ## Conventions
 - i18n.js and store.js are ES5-style (`var`, IIFE). Match that style when editing them.

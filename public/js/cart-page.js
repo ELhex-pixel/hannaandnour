@@ -208,8 +208,7 @@
   }
 
   /* The static demo rows are replaced on load by renderItems(). */
-  fetch(HN.api('config'))
-    .then(function (res) { return res.json(); })
+  HN.loadConfig()
     .then(applyConfig)
     .catch(function () { /* offline: defaults */ })
     .finally(function () {

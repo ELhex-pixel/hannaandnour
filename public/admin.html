@@ -173,8 +173,16 @@
           <div class="field"><label>Express ($)</label><input type="number" step="0.01" min="0" id="setExpr"></div>
           <div class="field"><label>J+1 ($)</label><input type="number" step="0.01" min="0" id="setNext"></div>
           <div class="field"><label>Retrait / point relais ($)</label><input type="number" step="0.01" min="0" id="setPickup"></div>
-          <div class="field"><label>Livraison gratuite &agrave; partir de ($)</label><input type="number" step="0.01" min="0" id="setFree"></div>
+          <div class="field"><label>Livraison gratuite &agrave; partir de</label><input type="number" step="0.01" min="0" id="setFree"></div>
           <div class="field"><label>Taxe (%)</label><input type="number" step="0.1" min="0" max="100" id="setTax"></div>
+          <div class="field">
+            <label>Devise de la boutique</label>
+            <select id="setCurrency" style="width:100%;">
+              <option value="usd">USD ($)</option>
+              <option value="eur">EUR (&euro;)</option>
+            </select>
+            <div style="font-size:12px;color:#8a7d66;margin-top:4px;">Appliqu&eacute;e &agrave; tous les prix (boutique + paiement Stripe).</div>
+          </div>
         </div>
         <div style="margin-top:14px;">
           <label class="check"><input type="checkbox" id="setPickupEnabled"> Activer l&rsquo;option &laquo; Retrait / point relais &raquo; au checkout</label>

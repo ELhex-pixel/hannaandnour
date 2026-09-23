@@ -42,9 +42,49 @@
     try { document.dispatchEvent(new CustomEvent(name)); } catch (e) {}
   }
 
+  var CURRENCY_SYMBOL = '$';
+  var CONFIG_CACHE_KEY = 'hn-config';
+  var configPromise = null;
+
   function money(cents) {
     var v = (parseInt(cents, 10) || 0) / 100;
-    return '$' + v.toFixed(2);
+    return CURRENCY_SYMBOL + v.toFixed(2);
+  }
+
+  // Loads the admin-editable /api/config (currency symbol, shipping, tax) once
+  // and reuses the cached copy when offline. Pages that call loadProducts are
+  // gated on this so prices render with the right symbol.
+  function loadConfig() {
+    if (configPromise) return configPromise;
+    var cachedCfg = readLS(CONFIG_CACHE_KEY) || {};
+    if (cachedCfg.currency && cachedCfg.currency.symbol) {
+      CURRENCY_SYMBOL = cachedCfg.currency.symbol;
+    }
+    configPromise = fetch(apiUrl('config'))
+      .then(function (res) {
+        if (!res.ok) throw new Error('config request failed');
+        return res.json();
+      })
+      .then(function (data) {
+        try {
+          writeLS(CONFIG_CACHE_KEY, data);
+          if (data && data.currency && data.currency.symbol) {
+            CURRENCY_SYMBOL = data.currency.symbol;
+          }
+        } catch (e) {}
+        // Refresh the "$75" announcement copy with the admin currency symbol.
+        try {
+          if (window.I18n && typeof window.I18n.refreshCurrency === 'function') {
+            window.I18n.refreshCurrency();
+          }
+        } catch (e) {}
+        return data || {};
+      })
+      .catch(function () {
+        configPromise = null;
+        return cachedCfg || {};
+      });
+    return configPromise;
   }
 
   function currentLang() {
@@ -66,25 +106,32 @@
 
   function loadProducts(force) {
     if (!force && productsPromise) return productsPromise;
-    var cached = !force ? readLS(PROD_CACHE_KEY) : null;
-    if (cached && Array.isArray(cached) && cached.length) {
-      productsList = cached;
-      return Promise.resolve(cached);
-    }
-    productsPromise = fetch(apiUrl('products'))
-      .then(function (res) {
-        if (!res.ok) throw new Error('products request failed');
-        return res.json();
-      })
-      .then(function (data) {
-        productsList = data.products || [];
-        writeLS(PROD_CACHE_KEY, productsList);
-        return productsList;
-      })
-      .catch(function (err) {
-        productsPromise = null;
-        throw err;
-      });
+    var cfg = configPromise || loadConfig();
+    productsPromise = cfg.then(function () {
+      var cached = !force ? readLS(PROD_CACHE_KEY) : null;
+      if (cached && Array.isArray(cached) && cached.length) {
+        productsList = cached;
+        return cached;
+      }
+      return fetch(apiUrl('products'))
+        .then(function (res) {
+          if (!res.ok) throw new Error('products request failed');
+          return res.json();
+        })
+        .then(function (data) {
+          productsList = data.products || [];
+          try {
+            // Bound the cache so an oversized catalog never fills localStorage.
+            if (JSON.stringify(productsList).length < 1500000) {
+              writeLS(PROD_CACHE_KEY, productsList);
+            }
+          } catch (e) { /* oversized payload: keep in-memory only */ }
+          return productsList;
+        });
+    }).catch(function (err) {
+      productsPromise = null;
+      throw err;
+    });
     return productsPromise;
   }
 
@@ -279,6 +326,8 @@
   function init() {
     refreshBadge();
     updateWishlistHearts();
+    // Load admin config first (currency symbol) so prices render correctly.
+    loadConfig();
     // Load the catalog in the background (rendering scripts call it too).
     if (!window.HN_CONFIG_SUPPRESS_AUTOLOAD) {
       loadProducts().catch(function () { /* offline preview: static content remains */ });
@@ -320,6 +369,8 @@
     refreshBadge: refreshBadge,
     updateWishlistHearts: updateWishlistHearts,
     moneyCents: money,
+    symbol: function () { return CURRENCY_SYMBOL; },
+    loadConfig: loadConfig,
     isAuthConfigured: isAuthConfigured
   };
 })();

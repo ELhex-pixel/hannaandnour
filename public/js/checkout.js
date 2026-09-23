@@ -287,8 +287,7 @@
     renderItems();
 
     // Load admin-editable shipping settings (fallback to defaults offline).
-    fetch(HN.api('config'))
-      .then(function (res) { return res.json(); })
+    HN.loadConfig()
       .then(function (data) {
         if (data && data.settings) {
           Object.keys(DEFAULTS).forEach(function (k) {

@@ -6,6 +6,11 @@ insert into promo_codes (code, percent_off, active, single_use) values
   ('WELCOME15', 15, true, false)
 on conflict (code) do nothing;
 
+-- Default shop currency (admin-editable via /admin -> Settings).
+insert into settings (key, value) values
+  ('currency', '{"code":"usd","symbol":"$"}')
+on conflict (key) do nothing;
+
 insert into products (
   slug, sku, category, price_cents, compare_at_price_cents,
   name_en, name_fr, name_ar,

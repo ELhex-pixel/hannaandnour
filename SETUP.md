@@ -55,7 +55,7 @@ Copiez `.env.example` en `.env` pour `netlify dev`, et définissez les mêmes va
 | `SUPABASE_SERVICE_ROLE_KEY` | clé `service_role` (serveur uniquement) |
 | `STRIPE_SECRET_KEY` | clé secrète Stripe |
 | `STRIPE_WEBHOOK_SECRET` | signing secret du webhook |
-| `STRIPE_PRICE_CURRENCY` | devise, ex. `usd` |
+| `STRIPE_PRICE_CURRENCY` | devise, ex. `usd` (fallback — la devise est normalement réglée dans `/admin` → Settings, clé `currency`) |
 | `SITE_URL` | URL publique du site (sans `/` final), ex. `https://votre-site.netlify.app` |
 | `TAX_RATE` | taux de taxe décimal, ex. `0.07` |
 | `FREE_SHIPPING_THRESHOLD_CENTS` | seuil livraison gratuite en centimes, ex. `7500` |
@@ -114,6 +114,8 @@ npm install
 netlify login
 netlify deploy --prod
 ```
+
+> Le dossier publié est `public/` (`netlify.toml`) : les fichiers de dev (`supabase/`, `AGENTS.md`, `SETUP.md`, l'éventuel `opencode.json`) ne sont donc **pas** servis. Le SQL ci-dessus se lance depuis la console Supabase (lignes dans `supabase/schema.sql` + `seed.sql`, ou SQL Editor). Toutes les clés (`SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `ADMIN_PASSWORD`) sont des variables d'environnement Netlify — ne jamais les committer.
 
 ## Règles métier (à garder cohérentes entre client et serveur)
 

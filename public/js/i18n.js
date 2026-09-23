@@ -112,7 +112,6 @@
       shopTitle: 'Shop All',
       crumbShop: 'Shop',
       filterTitleCategory: 'Category',
-      filterTitleColor: 'Color',
       filterTitleSize: 'Size',
       filterTitleFabric: 'Fabric',
       filterTitleOccasion: 'Occasion',
@@ -335,7 +334,6 @@
       crumbAccount: 'Account',
       navOrders: 'Orders',
       navWishlist: 'Wishlist',
-      navProfile: 'Profile Settings',
       navAddresses: 'Addresses',
       navPassword: 'Change Password',
       navLogout: 'Logout',
@@ -348,7 +346,6 @@
       placedOn2: 'Placed on February 8, 2026',
       orderTotal: 'Total',
       profileSettings: 'Profile Settings',
-      firstName: 'First Name',
       lastName: 'Last Name',
       saveChanges: 'Save Changes',
       myWishlist: 'My Wishlist',
@@ -539,7 +536,6 @@
       shopTitle: 'Toutes les pièces',
       crumbShop: 'Boutique',
       filterTitleCategory: 'Catégorie',
-      filterTitleColor: 'Couleur',
       filterTitleSize: 'Taille',
       filterTitleFabric: 'Tissu',
       filterTitleOccasion: 'Occasion',
@@ -748,7 +744,6 @@
       crumbAccount: 'Compte',
       navOrders: 'Commandes',
       navWishlist: 'Liste de souhaits',
-      navProfile: 'Profil',
       navAddresses: 'Adresses',
       navPassword: 'Changer le mot de passe',
       navLogout: 'Déconnexion',
@@ -761,7 +756,6 @@
       placedOn2: 'Passée le 8 février 2026',
       orderTotal: 'Total',
       profileSettings: 'Paramètres du profil',
-      firstName: 'Prénom',
       lastName: 'Nom',
       saveChanges: 'Enregistrer les modifications',
       myWishlist: 'Ma liste de souhaits',
@@ -951,7 +945,6 @@
       shopTitle: 'جميع المنتجات',
       crumbShop: 'المتجر',
       filterTitleCategory: 'الفئة',
-      filterTitleColor: 'اللون',
       filterTitleSize: 'المقاس',
       filterTitleFabric: 'الخامة',
       filterTitleOccasion: 'المناسبة',
@@ -1160,7 +1153,6 @@
       crumbAccount: 'الحساب',
       navOrders: 'الطلبات',
       navWishlist: 'المفضلة',
-      navProfile: 'إعدادات الملف الشخصي',
       navAddresses: 'العناوين',
       navPassword: 'تغيير كلمة المرور',
       navLogout: 'تسجيل الخروج',
@@ -1173,7 +1165,6 @@
       placedOn2: 'أُدرج في 8 فبراير 2026',
       orderTotal: 'الإجمالي',
       profileSettings: 'إعدادات الملف الشخصي',
-      firstName: 'الاسم الأول',
       lastName: 'اسم العائلة',
       saveChanges: 'حفظ التغييرات',
       myWishlist: 'قائمة المفضلة',
@@ -1301,7 +1292,24 @@
         str = str.split('{' + p + '}').join(params[p]);
       });
     }
+    if (key === 'announce' || key === 'metaShipText') str = applySymbol(str);
     return str;
+  }
+
+  // Replaces the hard-coded currency amount ($75 / 75 $ / 75 دولارًا) with the
+  // admin-selected currency symbol so the copy matches the live prices.
+  function applySymbol(str) {
+    var sym = window.HN && typeof window.HN.symbol === 'function' ? window.HN.symbol() : '$';
+    if (sym === '$') return str;
+    return str.split('$').join(sym).split('دولارًا').join(sym);
+  }
+
+  function refreshCurrencyLabels() {
+    ['announce', 'metaShipText'].forEach(function (key) {
+      document.querySelectorAll('[data-i18n="' + key + '"]').forEach(function (el) {
+        el.textContent = t(key);
+      });
+    });
   }
 
   function applyTranslations() {
@@ -1340,7 +1348,8 @@
     lang: function() { return lang; },
     t: t,
     setLang: setLang,
-    apply: applyTranslations
+    apply: applyTranslations,
+    refreshCurrency: refreshCurrencyLabels
   };
 
   document.addEventListener('DOMContentLoaded', function() {

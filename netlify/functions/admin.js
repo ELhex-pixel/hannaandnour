@@ -287,7 +287,8 @@ case 'getOrder': {
 case 'getSettings': {
         const settings = await loadSettings(sb);
         const catalog = await loadCatalog(sb);
-        return json(200, { settings, catalog });
+        const currency = await getSetting(sb, 'currency', null) || { code: 'usd', symbol: '$' };
+        return json(200, { settings, catalog, currency });
       }
 
       case 'saveSettings': {
@@ -311,7 +312,15 @@ case 'getSettings': {
             : [];
           catalog = await saveSetting(sb, 'catalog', { colors });
         }
-        return json(200, { ok: true, settings: value, catalog });
+
+        let currency;
+        if (body.currency) {
+          const code = String(body.currency.code || '').toLowerCase();
+          if (code === 'usd' || code === 'eur') {
+            currency = await saveSetting(sb, 'currency', { code, symbol: code === 'eur' ? '\u20AC' : '$' });
+          }
+        }
+        return json(200, { ok: true, settings: value, catalog, currency });
       }
 
 case 'deleteMessage': {
