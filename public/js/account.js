@@ -73,14 +73,37 @@
 
   /* ---------------- Auth-backed account ---------------- */
 
+  function dateVal(id) {
+    var el = document.getElementById(id);
+    return el && el.value ? el.value.trim() : '';
+  }
+
   function loadAccountOrders() {
     if (!window.HN_AUTH || !HN_AUTH.isAuthed()) return;
-    HN_AUTH.call({ action: 'orders' }, true)
+    var payload = { action: 'orders' };
+    var from = dateVal('orderFilterFrom');
+    var to = dateVal('orderFilterTo');
+    if (from) payload.from = from;
+    if (to) payload.to = to;
+    HN_AUTH.call(payload, true)
       .then(function (data) { renderOrders(data.orders || []); })
-      .catch(function () {
+      .catch(function (err) {
         renderOrders([]);
-        window.hnToast && hnToast(tr('ordersError'), tr('demoMsg'), 'error');
+        window.hnToast && hnToast(tr('ordersError'), (err && err.message) || tr('demoMsg'), 'error');
       });
+  }
+
+  function wireOrderFilter() {
+    var apply = document.getElementById('orderFilterApply');
+    var reset = document.getElementById('orderFilterReset');
+    if (apply) apply.addEventListener('click', function () { loadAccountOrders(); });
+    if (reset) reset.addEventListener('click', function () {
+      var from = document.getElementById('orderFilterFrom');
+      var to = document.getElementById('orderFilterTo');
+      if (from) from.value = '';
+      if (to) to.value = '';
+      loadAccountOrders();
+    });
   }
 
   function setAuthError(msg) {
@@ -106,7 +129,9 @@
     var box = document.getElementById('accountOrders');
     var wishSection = document.getElementById('wishlist');
     var wishLink = document.querySelector('.account-nav-link[href="#wishlist"]');
+    var orderFilter = document.getElementById('orderFilter');
     if (wishLink) wishLink.style.display = user ? '' : 'none';
+    if (orderFilter) orderFilter.style.display = user ? 'flex' : 'none';
 
     if (user) {
       if (authPanel) authPanel.style.display = 'none';
@@ -202,6 +227,7 @@
 
   function init() {
     wireWishlistGrid();
+    wireOrderFilter();
     wireAuth();
 
     if (window.HN_AUTH && HN_AUTH.ready) {

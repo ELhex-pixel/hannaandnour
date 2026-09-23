@@ -112,17 +112,25 @@ exports.handler = async function (event) {
         if (!auth.ok) return json(401, { error: auth.error });
         const user = auth.user;
         // PostgREST .or() filter: only inject the email when it is free of
-        // filter syntax (commas/parens), user ids are Supabase UUIDs.
+        // filter syntax (commas/parens). ilike => case-insensitive email match
+        // (checkout lowercases emails, but legacy rows may not be).
         const emailSafe = user.email && /^[^\s,()]+$/.test(user.email) ? user.email : null;
-        const filter = emailSafe
-          ? `user_id.eq.${user.id},email.eq.${emailSafe}`
-          : `user_id.eq.${user.id}`;
-        const { data: orders, error } = await sb
-          .from('orders')
-          .select('*, order_items(*)')
-          .or(filter)
+        const filters = [`user_id.eq.${user.id}`];
+        if (emailSafe) filters.push(`email.ilike.${emailSafe}`);
+
+        let query = sb.from('orders').select('*, order_items(*)').or(filters.join(','));
+
+        // Optional date range on created_at (values "YYYY-MM-DD").
+        const from = String(body.from || '').trim();
+        const to = String(body.to || '').trim();
+        const fromTs = from && !isNaN(new Date(from + 'T00:00:00').getTime()) ? new Date(from + 'T00:00:00').toISOString() : null;
+        const toTs = to && !isNaN(new Date(to + 'T23:59:59.999').getTime()) ? new Date(to + 'T23:59:59.999').toISOString() : null;
+        if (fromTs) query = query.gte('created_at', fromTs);
+        if (toTs) query = query.lte('created_at', toTs);
+
+        const { data: orders, error } = await query
           .order('created_at', { ascending: false })
-          .limit(50);
+          .limit(200);
         if (error) throw error;
         return json(200, { orders });
       }
@@ -173,8 +181,9 @@ function bearerToken(event) {
 
 async function linkOrdersByEmail(sb, userId, email) {
   try {
+    // ilike: match legacy orders whose stored email might have mixed case.
     await sb.from('orders').update({ user_id: userId })
-      .eq('email', String(email).toLowerCase().trim())
+      .ilike('email', String(email).toLowerCase().trim())
       .is('user_id', null);
   } catch (e) {
     console.error('linkOrdersByEmail failed:', e.message);
