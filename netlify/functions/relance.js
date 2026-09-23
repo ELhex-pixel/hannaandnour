@@ -12,7 +12,7 @@ function esc(s) {
 }
 
 function buildHtml(order, link) {
-  const siteUrl = (process.env.SITE_URL || 'https://hannaandnour.netlify.app').replace(/\/$/, '');
+  const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
   return '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
     'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre panier vous attend</h2>' +
     '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ', vous avez commencé une commande chez Hanna &amp; Nour ' +
@@ -44,7 +44,7 @@ async function handler() {
       .limit(50);
     if (error) throw error;
 
-    const siteUrl = (process.env.SITE_URL || 'https://hannaandnour.netlify.app').replace(/\/$/, '');
+    const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
     let sent = 0;
     for (const order of data || []) {
       if (!order.email || !order.cart_restore_token) continue;

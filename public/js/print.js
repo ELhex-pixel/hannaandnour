@@ -34,7 +34,7 @@
     name: 'Hanna & Nour',
     tagline: 'Modest Fashion for the Modern Woman',
     email: 'care@hannaandnour.com',
-    site: 'https://hannaandnour.netlify.app'
+    site: 'https://hannanour.netlify.app'
   };
 
   function customerAddress(o) {

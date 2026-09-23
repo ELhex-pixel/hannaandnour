@@ -265,7 +265,7 @@ case 'getOrder': {
             if (!oErr && ord && ord.email && ord.status === 'paid') {
               const { sendEmail } = require('./shared');
               const tracking = update.tracking_number || ord.tracking_number;
-              const siteUrl = (process.env.SITE_URL || 'https://hannaandnour.netlify.app').replace(/\/$/, '');
+              const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
               const html =
                 '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
                 'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande est exp\u00E9di\u00E9e !</h2>' +
@@ -579,7 +579,7 @@ async function restockOrder(sb, order) {
 }
 
 function buildRefundEmail(order) {
-  const siteUrl = (process.env.SITE_URL || 'https://hannaandnour.netlify.app').replace(/\/$/, '');
+  const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
   return '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
     'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande a été remboursée</h2>' +
     '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ', le remboursement intégral de votre commande ' +

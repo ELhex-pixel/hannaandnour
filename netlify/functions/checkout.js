@@ -35,7 +35,9 @@ exports.handler = async function (event) {
       return json(503, { error: 'Stripe is not configured' });
     }
 
-    const siteUrl = (process.env.SITE_URL || 'http://localhost:8888').replace(/\/$/, '');
+    const proto = String((event.headers && (event.headers['x-forwarded-proto'] || event.headers['X-Forwarded-Proto'])) || 'https').split(',')[0].trim();
+    const host = String(event.headers && (event.headers.host || event.headers.Host) || '').split(',')[0].trim();
+    const siteUrl = (host ? proto + '://' + host : (process.env.SITE_URL || 'https://hannanour.netlify.app')).replace(/\/$/, '');
     const sb = getSupabase();
     const body = readBody(event);
 

@@ -19,7 +19,7 @@ function moneyStr(cents, currency) {
 }
 
 function buildOrderEmail(order, items) {
-  const siteUrl = (process.env.SITE_URL || 'https://hannaandnour.netlify.app').replace(/\/$/, '');
+  const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
   const rows = (items || []).map(function (it) {
     const src = it.image && it.image.indexOf('http') === 0 ? it.image : it.image ? siteUrl + '/' + it.image : '';
     return (

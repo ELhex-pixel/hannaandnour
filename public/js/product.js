@@ -153,13 +153,13 @@
       '@context': 'https://schema.org',
       '@type': 'Product',
       name: p.name_en || p.slug,
-      image: [p.image || 'https://hannaandnour.netlify.app/images/hero.jpg'],
+      image: [p.image || 'https://hannanour.netlify.app/images/hero.jpg'],
       description: p.description_en || '',
       sku: p.sku || p.slug,
       brand: { '@type': 'Brand', name: 'Hanna & Nour' },
       offers: {
         '@type': 'Offer',
-        url: 'https://hannaandnour.netlify.app/product.html?slug=' + encodeURIComponent(p.slug),
+        url: 'https://hannanour.netlify.app/product.html?slug=' + encodeURIComponent(p.slug),
         priceCurrency: 'USD',
         price: ((parseInt(p.price_cents, 10) || 0) / 100).toFixed(2),
         availability: 'https://schema.org/InStock'

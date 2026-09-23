@@ -141,25 +141,14 @@ exports.handler = async function (event) {
         const userId = auth.user.id;
 
         if (String(body.method || 'GET').toUpperCase() === 'GET' || body.slugs === undefined) {
-          const { data, error } = await sb.from('user_wishlist').select('slug').eq('user_id', userId);
-          if (error) throw error;
-          const slugs = (data || []).map((r) => r.slug).filter(Boolean);
-          return json(200, { slugs });
+          return json(200, { slugs: await readWishlist(sb, userId) });
         }
 
         const slugs = Array.isArray(body.slugs)
           ? body.slugs.map(String).map((s) => s.trim()).filter(Boolean)
           : [];
         const unique = Array.from(new Set(slugs));
-        const { error: delErr } = await sb.from('user_wishlist').delete().eq('user_id', userId);
-        if (delErr) throw delErr;
-        if (unique.length) {
-          const { error: insErr } = await sb.from('user_wishlist').insert(
-            unique.map((slug) => ({ user_id: userId, slug }))
-          );
-          if (insErr) throw insErr;
-        }
-        return json(200, { slugs: unique });
+        return json(200, { slugs: await writeWishlist(sb, userId, unique) });
       }
 
       default:
@@ -187,5 +176,36 @@ async function linkOrdersByEmail(sb, userId, email) {
       .is('user_id', null);
   } catch (e) {
     console.error('linkOrdersByEmail failed:', e.message);
+  }
+}
+
+// Resilient wishlist helpers: if the user_wishlist table is missing (migration
+// `supabase/rls_accounts.sql` not run yet) we degrade to an empty list instead
+// of failing the whole cart/account (favorites stay persisted client-side).
+async function readWishlist(sb, userId) {
+  try {
+    const { data, error } = await sb.from('user_wishlist').select('slug').eq('user_id', userId);
+    if (error) throw error;
+    return (data || []).map((r) => r.slug).filter(Boolean);
+  } catch (e) {
+    console.error('readWishlist failed:', e.message);
+    return [];
+  }
+}
+
+async function writeWishlist(sb, userId, unique) {
+  try {
+    const { error: delErr } = await sb.from('user_wishlist').delete().eq('user_id', userId);
+    if (delErr) throw delErr;
+    if (unique.length) {
+      const { error: insErr } = await sb.from('user_wishlist').insert(
+        unique.map((slug) => ({ user_id: userId, slug }))
+      );
+      if (insErr) throw insErr;
+    }
+    return unique;
+  } catch (e) {
+    console.error('writeWishlist failed:', e.message);
+    return unique;
   }
 }
