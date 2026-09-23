@@ -188,9 +188,12 @@
           showToast(tr('noCode'), tr('noCodeMsg'), 'error');
           return;
         }
-        if (promoRate() > 0) {
+        var rate = window.HN && typeof window.HN.promoRate === 'function'
+          ? window.HN.promoRate(code)
+          : (PROMO_LOCAL[code] || 0);
+        if (rate > 0) {
           setPromo(code);
-          showToast(tr('promoApplied'), tr('promoAppliedMsg', { pct: Math.round(promoRate() * 100) }), 'success');
+          showToast(tr('promoApplied'), tr('promoAppliedMsg', { pct: Math.round(rate * 100) }), 'success');
           renderSummary();
         } else {
           clearPromo();

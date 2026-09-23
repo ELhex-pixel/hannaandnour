@@ -185,7 +185,9 @@
       applyBtn.addEventListener('click', function () {
         var code = input.value.trim().toUpperCase();
         if (!code) { window.hnToast && hnToast(tr('noCode'), tr('noCodeMsg'), 'error'); return; }
-        var rate = promoRate();
+        var rate = window.HN && typeof window.HN.promoRate === 'function'
+          ? window.HN.promoRate(code)
+          : (PROMO_LOCAL[code] || 0);
         if (rate > 0) {
           setPromo(code);
           window.hnToast && hnToast(tr('promoApplied'), tr('promoAppliedMsg', { pct: Math.round(rate * 100) }), 'success');
