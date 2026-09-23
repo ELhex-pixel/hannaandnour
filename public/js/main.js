@@ -112,12 +112,54 @@
   }
 
   if (navMobile) {
+    injectNavMobileFooter();
+
     navMobile.addEventListener('click', function(e) {
-      if (e.target.closest('.nav-mobile-link')) {
+      if (e.target.closest('.nav-mobile-link, .nav-mobile-footer-link')) {
         navMobile.classList.remove('active');
         document.body.style.overflow = '';
       }
     });
+  }
+
+  function injectNavMobileFooter() {
+    if (!navMobile || navMobile.querySelector('.nav-mobile-footer')) return;
+    var footer = document.createElement('div');
+    footer.className = 'nav-mobile-footer';
+    footer.innerHTML =
+      '<div class="nav-mobile-footer-links">' +
+        '<a href="account.html" class="nav-mobile-footer-link" aria-label="Account">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' +
+          '<span data-i18n="crumbAccount">Account</span>' +
+        '</a>' +
+        '<a href="account.html" class="nav-mobile-footer-link" aria-label="Wishlist">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>' +
+          '<span data-i18n="navWishlist">Wishlist</span>' +
+        '</a>' +
+        '<a href="cart.html" class="nav-mobile-footer-link" aria-label="Cart">' +
+          '<span style="position: relative; display: inline-flex;">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>' +
+            '<span class="cart-count nav-mobile-cart-count"></span>' +
+          '</span>' +
+          '<span data-i18n="crumbCart">Cart</span>' +
+        '</a>' +
+      '</div>' +
+      '<label class="nav-mobile-lang">' +
+        '<select class="lang-switcher" name="lang" aria-label="Language">' +
+          '<option value="en">EN</option><option value="fr">FR</option><option value="ar">AR</option>' +
+        '</select>' +
+      '</label>';
+    navMobile.appendChild(footer);
+
+    try {
+      if (window.I18n && typeof window.I18n.lang === 'function') {
+        var sel = footer.querySelector('.lang-switcher');
+        if (sel) sel.value = window.I18n.lang();
+      }
+      if (window.HN && typeof window.HN.refreshBadge === 'function') {
+        window.HN.refreshBadge();
+      }
+    } catch (e) {}
   }
 
   /* ==============================================
