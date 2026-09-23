@@ -108,6 +108,29 @@
     holder.innerHTML = html;
   }
 
+  function renderShippingMethodPrices() {
+    var s = state.settings || DEFAULTS;
+    var rates = {
+      standard: s.standard_cents || 0,
+      express: s.express_cents || 0,
+      next_day: s.nextday_cents || 0,
+      pickup: s.pickup_cents || 0
+    };
+    var subtotal = 0;
+    var items = HN.cart.list();
+    for (var i = 0; i < items.length; i++) subtotal += (items[i].priceCents || 0) * (items[i].qty || 1);
+    document.querySelectorAll('.payment-method[data-method]').forEach(function (m) {
+      var method = m.getAttribute('data-method');
+      var strong = m.querySelector('strong');
+      if (!strong) return;
+      if (method === 'standard' && subtotal >= (s.free_threshold_cents || 0)) {
+        strong.textContent = tr('free');
+      } else {
+        strong.textContent = HN.money(rates[method] || 0);
+      }
+    });
+  }
+
   function injectPickupMethod() {
     if (!state.settings.pickup_enabled) return;
     var container = document.querySelector('.payment-methods');
@@ -313,13 +336,14 @@
       .finally(function () {
         state.loaded = true;
         wireShippingMethods();
+        renderShippingMethodPrices();
         updateDeliveryUI();
         renderSummary();
         wirePromo();
         wirePlaceOrder();
       });
 
-    document.addEventListener('langchange', function () { renderSummary(); });
+    document.addEventListener('langchange', function () { renderShippingMethodPrices(); renderSummary(); });
   }
 
   init();
