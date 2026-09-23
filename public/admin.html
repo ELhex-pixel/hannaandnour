@@ -24,6 +24,11 @@
   .admin-panel { display: none; }
   .admin-panel.active { display: block; }
 
+  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .stat-card { background: #fbf8f1; border: 1px solid #efe7d8; border-radius: 10px; padding: 12px; text-align: center; }
+  .stat-card strong { display: block; font-size: 1.35rem; color: #8a2c2c; }
+  .stat-card span { display: block; margin-top: 4px; font-size: .78rem; color: #8a7d66; }
+
   .card { background: #fff; border: 1px solid #efe7d8; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
   .card h3 { margin: 0 0 12px; font-size: 1.05rem; color: #221f1a; }
 
@@ -115,6 +120,7 @@
       <button class="admin-tab" data-tab="orders">Commandes</button>
       <button class="admin-tab" data-tab="reviews">Avis</button>
       <button class="admin-tab" data-tab="promos">Promos</button>
+      <button class="admin-tab" data-tab="stats">Stats</button>
       <button class="admin-tab" data-tab="messages">Messages</button>
       <button class="admin-tab" data-tab="settings">Param&egrave;tres</button>
     </div>
@@ -173,6 +179,15 @@
         <button class="btn btn-primary" id="newPromoBtn">+ Nouveau code</button>
       </div>
       <div class="card" id="promosList"><p class="empty">Chargement...</p></div>
+    </div>
+
+    <!-- STATS (in-house analytics) -->
+    <div class="admin-panel" id="panel-stats">
+      <div class="toolbar">
+        <span style="color:#8a7d66;">Analyse de visite (maison &ndash; pas de GA4). P&eacute;riodes : 7 jours, 30 jours, total.</span>
+        <button class="btn btn-secondary" id="refreshStatsBtn">Actualiser</button>
+      </div>
+      <div class="card" id="statsList"><p class="empty">Chargement...</p></div>
     </div>
 
     <!-- MESSAGES (client contact form) -->

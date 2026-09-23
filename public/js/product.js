@@ -447,6 +447,7 @@
         }
         if (!p) throw new Error('not found');
         current = p;
+        if (HN.track) HN.track('product_view', slug);
         renderGallery(p);
         renderInfo(p);
         renderDetails(p);

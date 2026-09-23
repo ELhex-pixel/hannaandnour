@@ -131,6 +131,14 @@ exports.handler = async function (event) {
             .single();
           if (fetchErr) throw fetchErr;
 
+          // Record the purchase for in-house analytics.
+          await sb.from('analytics_events').insert({
+            event_type: 'purchase',
+            product_slug: null,
+            path: orderId,
+            referrer: 'stripe-webhook'
+          }).then(function () {}, function () {});
+
           // Decrement per-variant stock (atomic, guarded by stock >= qty).
           const items = paidOrder.order_items || [];
           for (const it of items) {

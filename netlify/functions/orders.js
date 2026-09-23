@@ -42,7 +42,27 @@ exports.handler = async function (event) {
       return json(200, { orders });
     }
 
-    return json(400, { error: 'Missing session_id or email' });
+    // Abandoned-cart recovery: `?cart_token=` restores the exact order items.
+    if (q.cart_token) {
+      const { data: order, error } = await sb
+        .from('orders')
+        .select('id, order_number, order_items(product_slug, quantity, unit_price_cents, variant, variant_id)')
+        .eq('cart_restore_token', String(q.cart_token))
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!order) return json(404, { error: 'invalid_cart_token' });
+      const items = (order.order_items || []).map((it) => ({
+        slug: it.product_slug,
+        qty: it.quantity,
+        price_cents: it.unit_price_cents,
+        variant: it.variant || '',
+        variant_id: it.variant_id || null
+      }));
+      return json(200, { items });
+    }
+
+    return json(400, { error: 'Missing session_id, email or cart_token' });
   } catch (err) {
     console.error('orders.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

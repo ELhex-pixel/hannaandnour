@@ -23,6 +23,22 @@
     return key;
   }
 
+  function track(type, slug) {
+    try {
+      if (window.navigator && typeof window.navigator.sendBeacon === 'function') {
+        var payload = JSON.stringify({ type: type, product_slug: slug || null, path: window.location.pathname + window.location.search });
+        window.navigator.sendBeacon(apiUrl('track'), new Blob([payload], { type: 'application/json' }));
+      } else {
+        fetch(apiUrl('track'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: type, product_slug: slug || null, path: window.location.pathname + window.location.search }),
+          keepalive: true
+        }).catch(function () {});
+      }
+    } catch (e) { /* tracking is best-effort */ }
+  }
+
   function readLS(key) {
     try {
       var raw = window.localStorage.getItem(key);
@@ -335,9 +351,10 @@
     if (cart[index]) {
       var cap = cart[index].maxQty != null ? cart[index].maxQty : 10;
       cart[index].qty = Math.min(cap || 1, 10, Math.max(1, parseInt(qty, 10) || 1));
-      saveCart(cart);
-      refreshBadge();
-      emit('hn:cart');
+saveCart(cart);
+    refreshBadge();
+    emit('hn:cart');
+    track('add_to_cart', product.slug);
     }
     return cart;
   }
@@ -506,6 +523,7 @@
     loadPromos: loadPromos,
     promos: promos,
     promoRate: promoRate,
+    track: track,
     isAuthConfigured: isAuthConfigured
   };
 })();

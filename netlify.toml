@@ -102,6 +102,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/track"
+  to = "/.netlify/functions/track"
+  status = 200
+
+[[redirects]]
   from = "/api/newsletter"
   to = "/.netlify/functions/newsletter"
   status = 200

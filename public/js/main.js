@@ -552,4 +552,8 @@
 
   initSearch();
 
+  if (window.HN && window.HN.track) {
+    window.HN.track('pageview');
+  }
+
 })();

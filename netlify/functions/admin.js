@@ -473,6 +473,48 @@ case 'deleteMessage': {
         return json(200, { ok: true });
       }
 
+      case 'analyticsSummary': {
+        const day = 24 * 60 * 60 * 1000;
+        const summary = {};
+        const ranges = { all: 0, d7: 7 * day, d30: 30 * day };
+        for (const key of Object.keys(ranges)) {
+          let q = sb.from('analytics_events').select('event_type, product_slug');
+          if (ranges[key] > 0) q = q.gte('created_at', new Date(Date.now() - ranges[key]).toISOString());
+          const { data, error } = await q;
+          if (error) throw error;
+          const counts = { pageview: 0, product_view: 0, add_to_cart: 0, checkout_attempt: 0, purchase: 0 };
+          const topBySlug = {};
+          for (const e of data || []) {
+            if (typeof counts[e.event_type] === 'number') counts[e.event_type]++;
+            if (e.event_type === 'product_view' && e.product_slug) topBySlug[e.product_slug] = (topBySlug[e.product_slug] || 0) + 1;
+          }
+          summary[key] = {
+            counts,
+            topProducts: Object.keys(topBySlug)
+              .sort((a, b) => topBySlug[b] - topBySlug[a])
+              .slice(0, 10)
+              .map((slug) => ({ slug, views: topBySlug[slug] }))
+          };
+        }
+        const { data: paths, error: pathsErr } = await sb
+          .from('analytics_events')
+          .select('path')
+          .eq('event_type', 'pageview')
+          .gte('created_at', new Date(Date.now() - 30 * day).toISOString())
+          .limit(2000);
+        if (pathsErr) throw pathsErr;
+        const byPath = {};
+        for (const p of paths || []) {
+          const k = p.path || '(vide)';
+          byPath[k] = (byPath[k] || 0) + 1;
+        }
+        summary.d30.topPaths = Object.keys(byPath)
+          .sort((a, b) => byPath[b] - byPath[a])
+          .slice(0, 10)
+          .map((path) => ({ path, views: byPath[path] }));
+        return json(200, { summary });
+      }
+
       default:
         return json(400, { error: 'Unknown action' });
     }

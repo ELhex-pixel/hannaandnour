@@ -19,6 +19,7 @@ paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Func
    - `supabase/migration_variants_admin.sql` (variantes/stock, settings, livraison — idempotent)
    - `supabase/rls_accounts.sql` (comptes clients : table `user_wishlist` + RLS sur la commande et les favoris — défense en profondeur)
    - `supabase/migration_promos_refunds.sql` (remboursements : RPC `increment_stock` pour re-stocker une commande remboursée)
+   - `supabase/migration_relance_analytics.sql` (relance panier + analytics maison : colonnes `cart_restore_token`/`relance_sent_at` sur `orders`, table `analytics_events`)
 3. Récupérez dans **Settings > API** :
    - `Project URL` → `SUPABASE_URL`
    - `anon public key` → à mettre dans `js/config.js` (client)
@@ -125,6 +126,8 @@ netlify deploy --prod
 - Livraison standard : gratuite ≥ 7500 ¢ sinon 699 ¢ ; express 1200 ¢ ; J+1 2500 ¢.
 - Codes promo : gérés dans la table `promo_codes` depuis **/admin → Promos** (% non limité en usage). Le client les charge via `/api/promos` (`HN.promoRate`), annonce dans le header réalimentée dynamiquement ; `WELCOME15` reste le seed et le fallback hors-ligne.
 - Tout changement de prix/taxe/frais doit être répercuté dans le JS client **et** les fonctions Netlify, sinon le total affiché ≠ total facturé.
+- **Relance panier** : `netlify/functions/relance.js` (fonction **planifiée Netlify**, quotidienne à 08:30 UTC — pas de cron externe). Commande `pending` créée il y a > 2 h et jamais relancée → **1 email** avec lien `cart.html?restore=<token>` qui remet les articles dans le panier ; puis `relance_sent_at` est posé. Nécessite `RESEND_API_KEY` + `SITE_URL`.
+- **Analytics maison** (pas de GA4) : le client envoie `pageview`/`product_view`/`add_to_cart`/`checkout_attempt` à `/api/track` (`sendBeacon`), le webhook ajoute `purchase` ; table `analytics_events`, onglet **/admin → Stats** (7 j / 30 j / total, produits et pages les plus vus).
 
 ## Commandes de dev
 

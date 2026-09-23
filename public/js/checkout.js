@@ -262,6 +262,8 @@
       btn.disabled = true;
       btn.textContent = tr('processing');
 
+      if (HN.track) HN.track('checkout_attempt');
+
       fetch(HN.api('checkout'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

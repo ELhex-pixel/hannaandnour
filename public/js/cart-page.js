@@ -208,11 +208,32 @@
     if (promoInput && getPromo()) promoInput.value = getPromo();
   }
 
+  /* Abandoned-cart recovery: `?restore=<cart_token>` re-adds the exact items. */
+  function restoreFromUrl() {
+    var m = (window.location.search || '').match(/[?&]restore=([0-9a-f]{40,64})/);
+    if (!m) return;
+    fetch(HN.api('orders') + '?cart_token=' + encodeURIComponent(m[1]))
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res.items || !res.items.length) return;
+        res.items.forEach(function (it) {
+          HN.cart.add({ slug: it.slug, name: '', price_cents: it.price_cents, image: '' }, { qty: it.qty, variantId: it.variant_id });
+        });
+        showToast(tr('cartRestored'), tr('cartRestoredMsg'), 'success');
+        try {
+          window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+        } catch (e) { /* ignore */ }
+        renderItems();
+      })
+      .catch(function () { /* invalid/expired token: ignore */ });
+  }
+
   /* The static demo rows are replaced on load by renderItems(). */
   HN.loadConfig()
     .then(applyConfig)
     .catch(function () { /* offline: defaults */ })
     .finally(function () {
+      restoreFromUrl();
       renderItems();
       wireEvents();
       seedPromoInput();

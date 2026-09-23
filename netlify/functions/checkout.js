@@ -248,10 +248,12 @@ exports.handler = async function (event) {
     // ---- Persist order draft ----
     const orderId = randomUUID();
     const orderNumber = 'HN-' + randomBytes(3).toString('hex').toUpperCase();
+    const cartToken = randomBytes(24).toString('hex');
 
     const { error: orderError } = await sb.from('orders').insert({
       id: orderId,
       order_number: orderNumber,
+      cart_restore_token: cartToken,
       email,
       customer_name: customerName,
       phone: String(body.phone || '').slice(0, 40),
