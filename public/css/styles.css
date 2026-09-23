@@ -425,11 +425,29 @@ p {
   transition: all var(--transition-fast);
 }
 
-/* Mobile Navigation */
+/* Mobile Navigation - slide-in drawer from the right */
+.nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(34, 31, 26, 0.45);
+  z-index: 998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal);
+}
+
+.nav-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .nav-mobile {
   display: none;
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(380px, 86vw);
   background-color: var(--color-white);
   z-index: 999;
   padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-lg);
@@ -439,6 +457,7 @@ p {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   flex-direction: column;
+  box-shadow: -12px 0 34px rgba(34, 31, 26, 0.12);
 }
 
 .nav-mobile.active {
