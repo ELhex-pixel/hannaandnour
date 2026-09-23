@@ -113,6 +113,7 @@
   var DEMO_PROMOS = { WELCOME15: 15 };
   var promosList = [];
   var promosInit = null;
+  var promosFromServer = false;
 
   // Expose active promos (code -> %) from /api/promos, cached for offline.
   function loadPromos() {
@@ -126,6 +127,7 @@
       })
       .then(function (data) {
         promosList = Array.isArray(data.promos) ? data.promos : [];
+        promosFromServer = true;
         try { writeLS(PROMOS_CACHE_KEY, promosList); } catch (e) {}
         refreshPromoAnnounce(promosList);
         return promosList;
@@ -142,8 +144,9 @@
     return promosList.slice();
   }
 
-  // Discount rate (0..1) for a code. Falls back to the legacy WELCOME15 demo
-  // code when the API is unreachable so the offline preview still works.
+  // Discount rate (0..1) for a code. The server list is authoritative: a
+  // deleted/unknown code is rejected. The legacy WELCOME15 demo rate only
+  // applies when the API is unreachable (offline preview).
   function promoRate(codeRaw) {
     var code = String(codeRaw || '').toUpperCase();
     if (!code) return 0;
@@ -155,7 +158,8 @@
       }
     }
     if (pct > 0) return pct / 100;
-    return (DEMO_PROMOS[code] || 0) / 100;
+    if (!promosFromServer) return (DEMO_PROMOS[code] || 0) / 100;
+    return 0;
   }
 
   // Announces the first active promo in the header bar instead of a hardcoded
@@ -168,8 +172,9 @@
         if (active) return;
         if (p && p.percent_off && (!p.expires_at || new Date(p.expires_at).getTime() > Date.now())) active = p;
       });
-      if (!active) return;
-      var text = window.I18n.t('announcePromo', { code: active.code, pct: active.percent_off });
+      var text = active
+        ? window.I18n.t('announcePromo', { code: active.code, pct: active.percent_off })
+        : window.I18n.t('announce');
       document.querySelectorAll('[data-i18n="announce"]').forEach(function (el) {
         if (el && el.textContent) el.textContent = text;
       });
@@ -343,6 +348,7 @@
     saveCart(cart);
     refreshBadge();
     emit('hn:cart');
+    track('add_to_cart', product.slug);
     return cart;
   }
 
@@ -351,10 +357,9 @@
     if (cart[index]) {
       var cap = cart[index].maxQty != null ? cart[index].maxQty : 10;
       cart[index].qty = Math.min(cap || 1, 10, Math.max(1, parseInt(qty, 10) || 1));
-saveCart(cart);
-    refreshBadge();
-    emit('hn:cart');
-    track('add_to_cart', product.slug);
+      saveCart(cart);
+      refreshBadge();
+      emit('hn:cart');
     }
     return cart;
   }

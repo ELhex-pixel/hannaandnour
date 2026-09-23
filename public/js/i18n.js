@@ -17,7 +17,7 @@
       navCollections: 'Collections',
       navStory: 'Our Story',
       navBlog: 'Blog',
-      announce: 'Free shipping on orders over $75 | Use code WELCOME15 for 15% off',
+      announce: 'Free shipping on orders over $75 | New styles every week',
       announcePromo: 'Free shipping on orders over $75 | Use code {code} for {pct}% off',
       langLabel: 'Language',
 
@@ -369,7 +369,7 @@
       noCode: 'No Code Entered',
       noCodeMsg: 'Please enter a promo code.',
       reviewThanks: 'Thank You!',
-      reviewThanksMsg: 'Your review was received (demo site \u2013 not published).',
+      reviewThanksMsg: 'Your review will be published after moderation.',
       endCatalogTitle: 'All Items Loaded',
       endCatalogMsg: 'You\'ve reached the end of our catalog. More coming soon!',
 
@@ -469,7 +469,7 @@
       navCollections: 'Collections',
       navStory: 'Notre histoire',
       navBlog: 'Blog',
-      announce: 'Livraison gratuite dès 75 $ | Utilisez le code WELCOME15 pour -15 %',
+      announce: 'Livraison gratuite dès 75 $ | Nouveautés chaque semaine',
       announcePromo: 'Livraison gratuite dès 75 $ | Utilisez le code {code} pour -{pct} %',
       langLabel: 'Langue',
       footerTagline: 'Nous habillons les musulmanes modernes avec élégance et pudeur, en célébrant la foi et le style.',
@@ -798,7 +798,7 @@
       noCode: 'Aucun code saisi',
       noCodeMsg: 'Veuillez saisir un code promo.',
       reviewThanks: 'Merci !',
-      reviewThanksMsg: 'Votre avis a été reçu (site de démonstration \u2013 non publié).',
+      reviewThanksMsg: 'Votre avis sera publié après validation par notre équipe.',
       endCatalogTitle: 'Tout est chargé',
       endCatalogMsg: 'Vous êtes arrivé·e à la fin de notre catalogue. D\'autres pièces arrivent bientôt !',
 
@@ -898,7 +898,7 @@
       navCollections: 'المجموعات',
       navStory: 'قصتنا',
       navBlog: 'المدونة',
-      announce: 'شحن مجاني للطلبات فوق 75 دولارًا | استخدمي كود WELCOME15 لخصم 15%',
+      announce: 'شحن مجاني للطلبات فوق 75 دولارًا | تشكيلة جديدة كل أسبوع',
       announcePromo: 'شحن مجاني للطلبات فوق 75 دولارًا | استخدمي كود {code} لخصم {pct}%',
       langLabel: 'اللغة',
       footerTagline: 'نُلبس المرأة المسلمة العصرية بأناقة تستحضر الحياء، محتفيةً بالإيمان والأناقة.',
@@ -1227,7 +1227,7 @@
       noCode: 'لم تُدخلِ كودًا',
       noCodeMsg: 'يرجى إدخال كود الخصم.',
       reviewThanks: 'شكرًا لكِ!',
-      reviewThanksMsg: 'تم استلام تقييمك (موقع تجريبي \u2013 لا يُنشر).',
+      reviewThanksMsg: 'سَيُنشر تقييمك بعد المراجعة.',
       endCatalogTitle: 'تم تحميل كل شيء',
       endCatalogMsg: 'وصلتِ إلى نهاية كتالوجنا. المزيد قادم قريبًا!',
 

@@ -300,18 +300,5 @@
     grid.innerHTML = products.map(wishlistCard).join('');
   }
 
-  function init() {
-    wireOrderLookup();
-    wireWishlistGrid();
-    HN.loadProducts().then(function () {
-      renderWishlist();
-    }).catch(function () {
-      renderWishlist();
-    });
-    document.addEventListener('langchange', function () { renderWishlist(); });
-    // Re-render live when a heart is toggled (hex, event bubbles from store.js).
-    document.addEventListener('hn:wishlist', function () { renderWishlist(); });
-  }
-
   init();
 })();
