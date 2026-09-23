@@ -140,6 +140,37 @@
 
     // Title
     document.title = HN.productName(p) + ' | Hanna & Nour';
+
+    injectProductSchema(p);
+  }
+
+  function injectProductSchema(p) {
+    var head = document.getElementsByTagName('head')[0];
+    var old = document.getElementById('product-jsonld');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+
+    var schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: p.name_en || p.slug,
+      image: [p.image || 'https://hannaandnour.netlify.app/images/hero.jpg'],
+      description: p.description_en || '',
+      sku: p.sku || p.slug,
+      brand: { '@type': 'Brand', name: 'Hanna & Nour' },
+      offers: {
+        '@type': 'Offer',
+        url: 'https://hannaandnour.netlify.app/product.html?slug=' + encodeURIComponent(p.slug),
+        priceCurrency: 'USD',
+        price: ((parseInt(p.price_cents, 10) || 0) / 100).toFixed(2),
+        availability: 'https://schema.org/InStock'
+      }
+    };
+
+    var script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'product-jsonld';
+    script.textContent = JSON.stringify(schema);
+    head.appendChild(script);
   }
 
   function renderDetails(p) {
@@ -401,6 +432,12 @@
   function init() {
     var slug = getSlug();
     if (!slug) return;
+
+    // Apply the persisted wishlist state to the detail heart right away,
+    // without waiting for the catalog (slug is already known from the URL).
+    var infoEl = document.querySelector('.product-info');
+    if (infoEl) infoEl.setAttribute('data-slug', slug);
+    HN.updateWishlistHearts();
 
     HN.loadProducts()
       .then(function (products) {

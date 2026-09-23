@@ -160,6 +160,133 @@
   }
 
   /* ==============================================
+     Search modal (catalog-wide)
+     ============================================== */
+
+  function buildSearchModal() {
+    if (document.getElementById('searchModal')) return;
+    const modal = document.createElement('div');
+    modal.className = 'search-overlay';
+    modal.id = 'searchModal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.innerHTML =
+      '<div class="search-box" role="search">' +
+      '  <div class="search-box-header">' +
+      '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>' +
+      '    <input type="search" class="search-input" id="searchInput" autocomplete="off" spellcheck="false">' +
+      '    <button class="search-close" id="searchClose" aria-label="Close">\u00d7</button>' +
+      '  </div>' +
+      '  <div class="search-results" id="searchResults"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    return modal;
+  }
+
+  function searchMatches(p, q) {
+    const query = String(q || '').toLowerCase().trim();
+    if (!query) return false;
+    const fields = [
+      p.name_en, p.name_fr, p.name_ar, p.name,
+      p.description_en, p.description_fr, p.description_ar,
+      p.category
+    ];
+    return fields.some(function (f) {
+      return f && String(f).toLowerCase().indexOf(query) >= 0;
+    }) || [].concat(p.colors || [], p.occasions || [], p.sizes || []).some(function (t) {
+      return t && String(t).toLowerCase().indexOf(query) >= 0;
+    });
+  }
+
+  function renderSearchResults(list, q, box) {
+    if (!box) return;
+    if (list.length === 0) {
+      box.innerHTML = '<p class="search-result-empty">' + tr('searchEmpty') + '</p>';
+      return;
+    }
+    box.innerHTML = list.map(function (p) {
+      const name = window.HN.productName(p);
+      const url = 'product.html?slug=' + encodeURIComponent(p.slug);
+      return '<a class="search-result" href="' + url + '">' +
+        '  <img class="search-result-img" src="' + (p.image || 'images/hero.jpg') + '" alt="' + name.replace(/"/g, '&quot;') + '" loading="lazy">' +
+        '  <div class="search-result-body">' +
+        '    <p class="search-result-name">' + name + '</p>' +
+        '    <p class="search-result-meta">' + window.HN.money(p.price_cents) + '</p>' +
+        '  </div>' +
+        '</a>';
+    }).join('');
+  }
+
+  function initSearch() {
+    const modal = buildSearchModal();
+    if (!modal) return;
+    const input = document.getElementById('searchInput');
+    const results = document.getElementById('searchResults');
+    const closeBtn = document.getElementById('searchClose');
+
+    function setPlaceholder() {
+      input.setAttribute('placeholder', tr('searchPlaceholder'));
+    }
+
+    function openSearch() {
+      setPlaceholder();
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      setTimeout(function () { input.focus(); }, 30);
+      if (window.HN) {
+        window.HN.loadProducts()
+          .then(function () { if (input.value) runSearch(input.value); })
+          .catch(function () { /* offline: no catalog to search */ });
+      }
+    }
+
+    function closeSearch() {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function runSearch(q) {
+      const query = String(q || '').trim();
+      if (query.length < 2 || !window.HN) {
+        renderSearchResults([], query, results);
+        return;
+      }
+      const all = (window.HN.products ? window.HN.products() : []) || [];
+      const list = all.filter(function (p) { return p.active !== false && searchMatches(p, query); }).slice(0, 12);
+      renderSearchResults(list, query, results);
+    }
+
+    let debounceTimer;
+    input.addEventListener('input', function () {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function () {
+        if (input.value.trim().length >= 2) renderSearchResults([], input.value, results);
+        runSearch(input.value);
+      }, 160);
+    });
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeSearch();
+    });
+
+    closeBtn.addEventListener('click', closeSearch);
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) closeSearch();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.classList.contains('active')) closeSearch();
+    });
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('.header-action-btn[aria-label="Search"]');
+      if (btn) {
+        e.preventDefault();
+        openSearch();
+      }
+    });
+    document.addEventListener('langchange', setPlaceholder);
+  }
+
+  /* ==============================================
      Wishlist toggle (persisted by store.js)
      ============================================== */
 
@@ -422,5 +549,7 @@
   if (window.HN) {
     window.HN.refreshBadge();
   }
+
+  initSearch();
 
 })();

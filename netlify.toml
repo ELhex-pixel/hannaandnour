@@ -1,4 +1,5 @@
 # Static site: no build step required
+# Note: Netlify auto-excludes dot-directories (.agents/) from the deploy.
 [build]
   publish = "."
 

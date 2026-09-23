@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -14,12 +14,45 @@
   <meta property="og:title" content="Hanna &amp; Nour | Modest Fashion for the Modern Woman">
   <meta property="og:description" content="Elegant modest fashion - Hanna &amp; Nour.">
   <title>Hanna &amp; Nour | Modest Fashion for the Modern Woman</title>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://hannaandnour.netlify.app/#organization",
+        "name": "Hanna & Nour",
+        "url": "https://hannaandnour.netlify.app/",
+        "logo": "https://hannaandnour.netlify.app/images/favicon.svg",
+        "sameAs": []
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://hannaandnour.netlify.app/#website",
+        "url": "https://hannaandnour.netlify.app/",
+        "name": "Hanna & Nour",
+        "description": "Elegant modest fashion for the modern Muslim woman.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://hannaandnour.netlify.app/shop.html",
+          "query-input": "required name=search_term_string"
+        },
+        "publisher": { "@id": "https://hannaandnour.netlify.app/#organization" }
+      }
+    ]
+  }
+  </script>
   
   <!-- Local Fonts (self-hosted) -->
   <link rel="stylesheet" href="fonts/fonts.css">
   
   <!-- Stylesheet -->
   <link rel="stylesheet" href="css/styles.css">
+  <meta property="og:image" content="https://hannaandnour.netlify.app/images/hero.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="800">
+  <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
   <!-- Header -->
