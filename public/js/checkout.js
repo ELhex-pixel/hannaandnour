@@ -235,7 +235,8 @@
         shipping_method: isPickup ? 'pickup' : state.method,
         pickup_point: isPickup ? pickupPoint : '',
         delivery_type: isPickup ? 'pickup' : 'home',
-        promo: getPromo()
+        promo: getPromo(),
+        auth_token: window.HN_AUTH && HN_AUTH.isAuthed() ? HN_AUTH.token() : ''
       };
 
       if (!email || !name) {

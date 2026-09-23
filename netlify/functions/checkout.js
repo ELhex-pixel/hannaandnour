@@ -14,7 +14,7 @@
  */
 const { randomUUID, randomBytes } = require('crypto');
 const Stripe = require('stripe');
-const { json, getSupabase, isConfigured, readBody, getSetting, intEnv, floatEnv } = require('./shared');
+const { json, getSupabase, isConfigured, readBody, getSetting, intEnv, floatEnv, requireUser } = require('./shared');
 
 const STRIPE = () => new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -38,6 +38,14 @@ exports.handler = async function (event) {
     const siteUrl = (process.env.SITE_URL || 'http://localhost:8888').replace(/\/$/, '');
     const sb = getSupabase();
     const body = readBody(event);
+
+    // ---- Auth: link the order to the account when a valid session is sent ----
+    let orderUserId = null;
+    if (body.auth_token) {
+      const auth = await requireUser(sb, String(body.auth_token));
+      if (!auth.ok) return json(401, { error: auth.error });
+      orderUserId = auth.user.id;
+    }
 
     // ---- Currency (admin-editable `settings` key, then env, then usd) ----
     let currencyCode = String(process.env.STRIPE_PRICE_CURRENCY || 'usd').toLowerCase();
@@ -264,7 +272,7 @@ exports.handler = async function (event) {
       currency: currencyCode,
       status: 'pending',
       promo_code: promoCode,
-      user_id: body.user_id || null
+      user_id: orderUserId
     });
     if (orderError) throw orderError;
 

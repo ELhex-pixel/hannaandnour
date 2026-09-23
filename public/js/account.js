@@ -94,6 +94,151 @@
     });
   }
 
+  /* ---------------- Auth-backed account ---------------- */
+
+  function loadAccountOrders() {
+    if (!window.HN_AUTH || !HN_AUTH.isAuthed()) return;
+    HN_AUTH.call({ action: 'orders' }, true)
+      .then(function (data) { renderOrders(data.orders || []); })
+      .catch(function () {
+        renderOrders([]);
+        window.hnToast && hnToast(tr('ordersError'), tr('demoMsg'), 'error');
+      });
+  }
+
+  function setAuthError(msg) {
+    var el = document.getElementById('authError');
+    if (!el) return;
+    if (msg) {
+      el.textContent = msg;
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  function setBusy(form, busy) {
+    var btn = form ? form.querySelector('button[type="submit"]') : null;
+    if (btn) btn.disabled = busy;
+  }
+
+  function renderAuthState() {
+    var user = window.HN_AUTH ? HN_AUTH.currentUser() : null;
+    var authPanel = document.getElementById('authPanel');
+    var accountPanel = document.getElementById('accountPanel');
+    var orderForm = document.getElementById('accountOrderForm');
+    var box = document.getElementById('accountOrders');
+
+    if (user) {
+      if (authPanel) authPanel.style.display = 'none';
+      if (accountPanel) accountPanel.style.display = 'block';
+      if (orderForm) orderForm.style.display = 'none';
+      if (box) {
+        var greet = document.getElementById('accountGreeting');
+        if (greet) greet.textContent = tr('authWelcome').replace('{n}', user.first_name || user.email || '');
+      }
+      loadAccountOrders();
+    } else {
+      if (authPanel) authPanel.style.display = 'block';
+      if (accountPanel) accountPanel.style.display = 'none';
+      if (orderForm) orderForm.style.display = 'flex';
+    }
+  }
+
+  function wireAuth() {
+    var tabLogin = document.getElementById('authTabLogin');
+    var tabSignup = document.getElementById('authTabSignup');
+    var loginForm = document.getElementById('loginForm');
+    var signupForm = document.getElementById('signupForm');
+    var intro = document.getElementById('authIntro');
+    var logoutBtn = document.getElementById('logoutBtn');
+
+    function showTab(isSignup) {
+      if (tabLogin) tabLogin.classList.toggle('is-active', !isSignup);
+      if (tabSignup) tabSignup.classList.toggle('is-active', isSignup);
+      if (loginForm) loginForm.style.display = isSignup ? 'none' : 'flex';
+      if (signupForm) signupForm.style.display = isSignup ? 'flex' : 'none';
+      if (intro) {
+        intro.removeAttribute('data-i18n');
+        intro.setAttribute('data-i18n', isSignup ? 'authCreateIntro' : 'authLoginIntro');
+        intro.textContent = tr(isSignup ? 'authCreateIntro' : 'authLoginIntro');
+      }
+    }
+
+    if (tabLogin) tabLogin.addEventListener('click', function () { setAuthError(''); showTab(false); });
+    if (tabSignup) tabSignup.addEventListener('click', function () { setAuthError(''); showTab(true); });
+
+    if (loginForm) loginForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      setAuthError('');
+      setBusy(loginForm, true);
+      HN_AUTH.login(
+        document.getElementById('loginEmail').value.trim(),
+        document.getElementById('loginPassword').value
+      ).then(function () {
+        setBusy(loginForm, false);
+        setAuthError('');
+        renderAuthState();
+        window.hnToast && hnToast(tr('cartAdd'), tr('authWelcome').replace('{n}', '').trim(), 'success');
+      }).catch(function (err) {
+        setBusy(loginForm, false);
+        setAuthError(err && err.code === 'bad_credentials' ? tr('authBadCredentials') : tr('authGenericError'));
+      });
+    });
+
+    if (signupForm) signupForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      setAuthError('');
+      setBusy(signupForm, true);
+      HN_AUTH.signup(
+        document.getElementById('signupName').value.trim(),
+        document.getElementById('signupEmail').value.trim(),
+        document.getElementById('signupPassword').value
+      ).then(function () {
+        setBusy(signupForm, false);
+        setAuthError('');
+        renderAuthState();
+        window.hnToast && hnToast(tr('cartAdd'), tr('authGenericError'), 'success');
+      }).catch(function (err) {
+        setBusy(signupForm, false);
+        setAuthError(
+          err && err.code === 'email_taken' ? tr('authEmailTaken') : tr('authGenericError')
+        );
+      });
+    });
+
+    if (logoutBtn) logoutBtn.addEventListener('click', function () {
+      HN_AUTH.logout().then(function () {
+        renderOrders(null);
+        renderAuthState();
+        window.hnToast && hnToast(tr('cartAdd'), tr('authLogout'), 'success');
+      });
+    });
+
+    document.addEventListener('hn:auth', renderAuthState);
+  }
+
+  function init() {
+    wireOrderLookup();
+    wireWishlistGrid();
+    wireAuth();
+
+    if (window.HN_AUTH && HN_AUTH.ready) {
+      HN_AUTH.ready.then(function () { renderAuthState(); }).catch(function () { renderAuthState(); });
+    } else {
+      renderAuthState();
+    }
+
+    HN.loadProducts().then(function () {
+      renderWishlist();
+    }).catch(function () {
+      renderWishlist();
+    });
+    document.addEventListener('langchange', function () { renderWishlist(); renderAuthState(); });
+    // Re-render live when a heart is toggled (hex, event bubbles from store.js).
+    document.addEventListener('hn:wishlist', function () { renderWishlist(); });
+  }
+
   function wishlistCard(p) {
     var name = HN.productName(p);
     var url = 'product.html?slug=' + encodeURIComponent(p.slug);

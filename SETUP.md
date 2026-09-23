@@ -17,6 +17,7 @@ paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Func
    - `supabase/seed.sql` (6 produits + promo `WELCOME15`)
    - `supabase/seed_products_2.sql` (6 produits supplémentaires)
    - `supabase/migration_variants_admin.sql` (variantes/stock, settings, livraison — idempotent)
+   - `supabase/rls_accounts.sql` (comptes clients : table `user_wishlist` + RLS sur la commande et les favoris — défense en profondeur)
 3. Récupérez dans **Settings > API** :
    - `Project URL` → `SUPABASE_URL`
    - `anon public key` → à mettre dans `js/config.js` (client)

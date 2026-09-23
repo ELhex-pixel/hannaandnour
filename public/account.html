@@ -97,6 +97,32 @@
             <h2 class="account-content-title" id="orders" data-i18n="orderHistory">Order History</h2>
           </div>
 
+          <!-- Auth panels -->
+          <div id="authPanel" class="auth-panel" style="display: none;">
+            <div class="auth-tabs">
+              <button type="button" class="auth-tab is-active" id="authTabLogin" data-i18n="authSignIn">Sign in</button>
+              <button type="button" class="auth-tab" id="authTabSignup" data-i18n="authCreate">Create account</button>
+            </div>
+            <p class="auth-intro" id="authIntro" data-i18n="authLoginIntro">Sign in to access your orders and favorites.</p>
+            <form id="loginForm" class="auth-form">
+              <input type="email" class="form-input" id="loginEmail" autocomplete="email" placeholder="you@example.com" required data-i18n-placeholder="authEmail">
+              <input type="password" class="form-input" id="loginPassword" autocomplete="current-password" placeholder="••••••••" required data-i18n-placeholder="authPassword">
+              <button type="submit" class="btn btn-primary" id="loginBtn" data-i18n="authLoginCta">Sign in</button>
+            </form>
+            <form id="signupForm" class="auth-form" style="display: none;">
+              <input type="text" class="form-input" id="signupName" autocomplete="given-name" placeholder="Amina" required data-i18n-placeholder="authFirstName">
+              <input type="email" class="form-input" id="signupEmail" autocomplete="email" placeholder="you@example.com" required data-i18n-placeholder="authEmail">
+              <input type="password" class="form-input" id="signupPassword" autocomplete="new-password" placeholder="••••••••" required data-i18n-placeholder="authPassword">
+              <button type="submit" class="btn btn-primary" id="signupBtn" data-i18n="authSignupCta">Create my account</button>
+            </form>
+            <p id="authError" class="auth-error" style="display: none;"></p>
+          </div>
+
+          <div id="accountPanel" class="account-hello" style="display: none;">
+            <p id="accountGreeting"></p>
+            <button type="button" class="btn btn-outline" id="logoutBtn" data-i18n="authLogout">Sign out</button>
+          </div>
+
           <form id="accountOrderForm" style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg);">
             <input type="email" class="form-input" id="accountEmail" name="email" placeholder="you@example.com" required data-i18n-placeholder="emailPlaceholder2">
             <button type="submit" class="btn btn-primary" data-i18n="findOrders">Find My Orders</button>
@@ -174,6 +200,7 @@
   <script src="js/config.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/store.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/main.js"></script>
   <script src="js/account.js"></script>
 </body>

@@ -8,7 +8,7 @@ const crypto = require('crypto');
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
 };
 
@@ -115,6 +115,27 @@ function requireAdmin(event) {
   return ok ? { ok: true } : { ok: false, error: 'Not authorized' };
 }
 
+/* ---------------- Client sessions (Supabase Auth) ----------------
+ * Uses the Supabase Auth API (access/refresh tokens issued to the end user).
+ * The service-role client validates tokens server-side; nothing is trusted
+ * from the browser except the token string itself.
+ */
+
+// Resolves the authenticated Supabase user from a client access token.
+// Returns { ok, user } or { ok:false, error }.
+async function requireUser(sb, token) {
+  if (!token) return { ok: false, error: 'Not authenticated' };
+  try {
+    const { data, error } = await sb.auth.getUser(String(token));
+    if (error || !data || !data.user) {
+      return { ok: false, error: error && error.message ? error.message : 'Invalid session' };
+    }
+    return { ok: true, user: data.user };
+  } catch (e) {
+    return { ok: false, error: e.message || 'Invalid session' };
+  }
+}
+
 /* ---------------- Settings (admin-editable, env fallback) ---------------- */
 
 // Reads a settings row (jsonb). Falls back to `fallback` when the row is missing.
@@ -149,4 +170,4 @@ function floatEnv(name, fallback) {
 }
 
 module.exports = { json, getSupabase, isConfigured, readBody, sendEmail, CORS_HEADERS,
-  signToken, verifyToken, getBearer, requireAdmin, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv };
+  signToken, verifyToken, getBearer, requireAdmin, requireUser, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv };
