@@ -78,8 +78,16 @@
     return el && el.value ? el.value.trim() : '';
   }
 
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
   function loadAccountOrders() {
-    if (!window.HN_AUTH || !HN_AUTH.isAuthed()) return;
+    if (!window.HN_AUTH) return;
+    var box = document.getElementById('accountOrders');
+    if (box) {
+      box.innerHTML = '<p style="color: var(--color-gray); padding: var(--spacing-lg) 0;">' + tr('ordersLoading') + '</p>';
+    }
     var payload = { action: 'orders' };
     var from = dateVal('orderFilterFrom');
     var to = dateVal('orderFilterTo');
@@ -88,8 +96,11 @@
     HN_AUTH.call(payload, true)
       .then(function (data) { renderOrders(data.orders || []); })
       .catch(function (err) {
-        renderOrders([]);
-        window.hnToast && hnToast(tr('ordersError'), (err && err.message) || tr('demoMsg'), 'error');
+        var msg = (err && err.message) || tr('ordersError');
+        if (box) {
+          box.innerHTML = '<p style="color: var(--color-burgundy); padding: var(--spacing-lg) 0;">' + tr('ordersError') + '<span style="display:block; font-size:0.875rem;">' + esc(msg) + '</span></p>';
+        }
+        window.hnToast && hnToast(tr('ordersError'), msg, 'error');
       });
   }
 
