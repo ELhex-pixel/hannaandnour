@@ -164,6 +164,8 @@
       renderWishlist();
     });
     document.addEventListener('langchange', function () { renderWishlist(); });
+    // Re-render live when a heart is toggled (hex, event bubbles from store.js).
+    document.addEventListener('hn:wishlist', function () { renderWishlist(); });
   }
 
   init();

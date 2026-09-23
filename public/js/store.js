@@ -108,11 +108,8 @@
     if (!force && productsPromise) return productsPromise;
     var cfg = configPromise || loadConfig();
     productsPromise = cfg.then(function () {
-      var cached = !force ? readLS(PROD_CACHE_KEY) : null;
-      if (cached && Array.isArray(cached) && cached.length) {
-        productsList = cached;
-        return cached;
-      }
+      // Online: always re-fetch so admin edits (add/delete/price/featured)
+      // appear immediately. The localStorage cache is only an offline fallback.
       return fetch(apiUrl('products'))
         .then(function (res) {
           if (!res.ok) throw new Error('products request failed');
@@ -129,6 +126,12 @@
           return productsList;
         });
     }).catch(function (err) {
+      // Offline / API down: fall back to the last known catalog, then rethrow.
+      var cached = readLS(PROD_CACHE_KEY);
+      if (cached && Array.isArray(cached) && cached.length) {
+        productsList = cached;
+        return cached;
+      }
       productsPromise = null;
       throw err;
     });
@@ -149,6 +152,60 @@
       }
     } catch (e) {}
     return null;
+  }
+
+  /* ---------------- Shared product card ---------------- */
+
+  function escAttr(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function catKey(cat) {
+    return { hijab: 'catHijabs', abaya: 'catAbayas', dress: 'catDresses', prayer: 'catPrayerWear', accessory: 'catAccessories' }[cat] || 'catHijabs';
+  }
+
+  function badgeFor(p) {
+    if (p && p.is_bestseller) return 'Bestseller';
+    var b = p && p.badge;
+    if (b && String(b).toLowerCase() === 'bestseller') return 'Bestseller';
+    return b || null;
+  }
+
+  // Canonical product card used by shop.js, the home page feeds and anywhere
+  // else the API catalog is rendered. Keep markup in sync with shop static cards.
+  function buildCard(p) {
+    var link = 'product.html?slug=' + encodeURIComponent(p.slug);
+    var name = productName(p);
+    var price = money(p.price_cents);
+    var original = p.compare_at_price_cents ? money(p.compare_at_price_cents) : null;
+    var badge = badgeFor(p);
+    var stars = Math.round(parseFloat(p.rating) || 0);
+    if (stars < 1) stars = 0;
+    var starStr = '';
+    for (var s = 0; s < stars; s++) starStr += '\u2605';
+    for (var e = stars; e < 5; e++) starStr += '\u2606';
+    var count = p.review_count || 0;
+
+    return '' +
+      '<div class="product-card" data-slug="' + escAttr(p.slug) + '" data-category="' + escAttr(p.category) + '" data-price-cents="' + (p.price_cents || 0) + '" data-rating="' + (p.rating || 0) + '">' +
+      '  <a href="' + link + '" class="product-card-image" style="display:block;">' +
+      '    <img src="' + escAttr(p.image || 'images/hero.jpg') + '" alt="' + escAttr(name) + '" loading="lazy">' +
+      (badge ? '    <span class="product-badge">' + escAttr(badge) + '</span>' : '') +
+      '  </a>' +
+      '  <button class="product-wishlist" aria-label="' + escAttr(tr('wishAdd')) + '"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>' +
+      '  <div class="product-card-quick-add"><button class="btn btn-primary btn-sm">' + escAttr(tr('quickAdd')) + '</button></div>' +
+      '  <div class="product-card-info">' +
+      '    <span class="product-card-category">' + escAttr(tr(catKey(p.category))) + '</span>' +
+      '    <a href="' + link + '"><h3 class="product-card-title">' + escAttr(name) + '</h3></a>' +
+      '    <div class="product-card-price">' +
+      '      <span class="product-price-current">' + price + '</span>' +
+      (original ? '<span class="product-price-original">' + original + '</span>' : '') +
+      '    </div>' +
+      '    <div class="product-card-rating"><span class="stars">' + starStr + '</span><span class="rating-count">(' + count + ')</span></div>' +
+      '  </div>' +
+      '</div>';
   }
 
   /* ---------------- Cart ---------------- */
@@ -349,6 +406,8 @@
     productName: productName,
     loadProducts: loadProducts,
     getProduct: getProduct,
+    card: buildCard,
+    catKey: catKey,
     products: function () { return productsList; },
     cart: {
       list: getCart,

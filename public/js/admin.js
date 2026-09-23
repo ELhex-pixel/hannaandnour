@@ -559,15 +559,11 @@
       if (cur.code === 'usd' || cur.code === 'eur') {
         document.getElementById('setCurrency').value = cur.code;
       }
-      var colors = (res.catalog && res.catalog.colors) || [];
-      document.getElementById('setCatalogColors').value = colors.join(', ');
     }).catch(function (e) { toast(e.message, 'err'); });
   }
 
   function wireSettings() {
     document.getElementById('saveSettingsBtn').addEventListener('click', function () {
-      var colorsVal = getVal('setCatalogColors');
-      var colors = colorsVal ? colorsVal.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
       call('saveSettings', {
         shipping: {
           standard_cents: toCents(getVal('setStd')),
@@ -578,7 +574,6 @@
           tax_rate: (parseFloat(getVal('setTax')) || 0) / 100,
           pickup_enabled: document.getElementById('setPickupEnabled').checked
         },
-        catalog: { colors: colors },
         currency: { code: document.getElementById('setCurrency').value }
       }).then(function (res) {
         if (res && res.currency) ADMIN_CURRENCY_SYMBOL = res.currency.symbol || ADMIN_CURRENCY_SYMBOL;

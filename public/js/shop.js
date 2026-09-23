@@ -125,36 +125,7 @@
   }
 
   function buildCard(p) {
-    var link = 'product.html?slug=' + encodeURIComponent(p.slug);
-    var name = HN.productName(p);
-    var price = HN.money(p.price_cents);
-    var original = p.compare_at_price_cents ? HN.money(p.compare_at_price_cents) : null;
-    var badge = p.badge ? (p.badge.toLowerCase() === 'bestseller' ? 'Bestseller' : p.badge) : null;
-    var stars = Math.round(parseFloat(p.rating) || 0);
-    if (stars < 1) stars = 0;
-    var starStr = '';
-    for (var s = 0; s < stars; s++) starStr += '\u2605';
-    for (var e = stars; e < 5; e++) starStr += '\u2606';
-    var count = p.review_count || 0;
-
-    return '' +
-      '<div class="product-card" data-slug="' + p.slug + '" data-category="' + p.category + '" data-price-cents="' + p.price_cents + '" data-rating="' + (p.rating || 0) + '">' +
-      '  <a href="' + link + '" class="product-card-image" style="display:block;">' +
-      '    <img src="' + (p.image || 'images/hero.jpg') + '" alt="' + name.replace(/"/g, '&quot;') + '" loading="lazy">' +
-      (badge ? '    <span class="product-badge">' + badge + '</span>' : '') +
-      '  </a>' +
-      '  <button class="product-wishlist" aria-label="Wishlist"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>' +
-      '  <div class="product-card-quick-add"><button class="btn btn-primary btn-sm">' + tr('quickAdd') + '</button></div>' +
-      '  <div class="product-card-info">' +
-      '    <span class="product-card-category">' + tr(catKey(p.category)) + '</span>' +
-      '    <a href="' + link + '"><h3 class="product-card-title">' + name + '</h3></a>' +
-      '    <div class="product-card-price">' +
-      '      <span class="product-price-current">' + price + '</span>' +
-      (original ? '<span class="product-price-original">' + original + '</span>' : '') +
-      '    </div>' +
-      '    <div class="product-card-rating"><span class="stars">' + starStr + '</span><span class="rating-count">(' + count + ')</span></div>' +
-      '  </div>' +
-      '</div>';
+    return HN.card(p);
   }
 
   /* ---- Load items: API first, static cards as fallback ---- */
@@ -212,6 +183,10 @@
         case 'price-desc': return (b.price_cents || 0) - (a.price_cents || 0);
         case 'rating': return (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0);
         case 'newest': return String(b.created_at || '').localeCompare(String(a.created_at || ''));
+        case 'featured':
+          // Admin "Mettre en avant" first, then rating as a tiebreak.
+          return ((b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0)) ||
+            ((parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
         default: return 0;
       }
     });
