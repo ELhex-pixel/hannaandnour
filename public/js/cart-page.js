@@ -12,6 +12,9 @@
   var TAX_RATE = 0.07;
   var FREE_SHIPPING_CENTS = 7500;
   var STD_SHIPPING_CENTS = 699;
+  var EXPRESS_SHIPPING_CENTS = 1200;
+  var NEXTDAY_SHIPPING_CENTS = 2500;
+  var PICKUP_SHIPPING_CENTS = 0;
   var PROMO_LOCAL = { WELCOME15: 0.15 };
   var PROMO_KEY = 'hn-promo';
 
@@ -21,6 +24,9 @@
     if (typeof s.tax_rate === 'number') TAX_RATE = s.tax_rate;
     if (typeof s.free_threshold_cents === 'number') FREE_SHIPPING_CENTS = s.free_threshold_cents;
     if (typeof s.standard_cents === 'number') STD_SHIPPING_CENTS = s.standard_cents;
+    if (typeof s.express_cents === 'number') EXPRESS_SHIPPING_CENTS = s.express_cents;
+    if (typeof s.nextday_cents === 'number') NEXTDAY_SHIPPING_CENTS = s.nextday_cents;
+    if (typeof s.pickup_cents === 'number') PICKUP_SHIPPING_CENTS = s.pickup_cents;
   }
 
   var itemsEl = document.querySelector('.cart-items');

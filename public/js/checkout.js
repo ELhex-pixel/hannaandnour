@@ -299,9 +299,11 @@
     HN.loadConfig()
       .then(function (data) {
         if (data && data.settings) {
+          state.settings = {};
           Object.keys(DEFAULTS).forEach(function (k) {
-            if (data.settings[k] !== undefined) DEFAULTS[k] = data.settings[k];
+            state.settings[k] = data.settings[k] !== undefined ? data.settings[k] : DEFAULTS[k];
           });
+        } else {
           state.settings = DEFAULTS;
         }
       })

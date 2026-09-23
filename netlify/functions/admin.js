@@ -403,6 +403,10 @@ case 'deleteMessage': {
         if (!code || code.length > 30) return json(400, { error: 'Code invalide' });
         const percent = parseInt(body.percent_off, 10);
         if (!(percent >= 1 && percent <= 100)) return json(400, { error: 'Pourcentage invalide (1-100)' });
+        const original = body.original_code ? String(body.original_code).trim().toUpperCase() : null;
+        if (original && original !== code) {
+          await sb.from('promo_codes').delete().eq('code', original);
+        }
         const fields = {
           code,
           percent_off: percent,

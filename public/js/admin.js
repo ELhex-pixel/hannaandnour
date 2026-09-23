@@ -768,6 +768,7 @@
       btn.disabled = true;
       call('savePromo', {
         code: code,
+        original_code: editingPromo && editingPromo.code ? editingPromo.code : null,
         percent_off: percent,
         active: document.getElementById('p-active').checked,
         expires_at: expires ? new Date(expires + 'T23:59:59').toISOString() : null

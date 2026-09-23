@@ -17,8 +17,8 @@
       navCollections: 'Collections',
       navStory: 'Our Story',
       navBlog: 'Blog',
-      announce: 'Free shipping on orders over $75 | New styles every week',
-      announcePromo: 'Free shipping on orders over $75 | Use code {code} for {pct}% off',
+      announce: 'Free shipping on orders over {ship} | New styles every week',
+      announcePromo: 'Free shipping on orders over {ship} | Use code {code} for {pct}% off',
       langLabel: 'Language',
 
       /* Footer */
@@ -150,7 +150,7 @@
       buyNow: 'Buy Now',
       sizeGuideBtn: 'Size Guide',
       metaShipTitle: 'Free Shipping',
-      metaShipText: 'On all orders over $75. Ships within 24 hours.',
+      metaShipText: 'On all orders over {ship}. Ships within 24 hours.',
       metaReturnTitle: '30-Day Returns',
       metaReturnText: 'Easy returns and exchanges, no questions asked.',
       metaEthicalTitle: 'Ethically Made',
@@ -469,8 +469,8 @@
       navCollections: 'Collections',
       navStory: 'Notre histoire',
       navBlog: 'Blog',
-      announce: 'Livraison gratuite dès 75 $ | Nouveautés chaque semaine',
-      announcePromo: 'Livraison gratuite dès 75 $ | Utilisez le code {code} pour -{pct} %',
+      announce: 'Livraison gratuite dès {ship} | Nouveautés chaque semaine',
+      announcePromo: 'Livraison gratuite dès {ship} | Utilisez le code {code} pour -{pct} %',
       langLabel: 'Langue',
       footerTagline: 'Nous habillons les musulmanes modernes avec élégance et pudeur, en célébrant la foi et le style.',
       footerShop: 'Boutique',
@@ -592,7 +592,7 @@
       buyNow: 'Acheter maintenant',
       sizeGuideBtn: 'Guide des tailles',
       metaShipTitle: 'Livraison gratuite',
-      metaShipText: 'Pour toute commande de plus de 75 $. Expédition sous 24 h.',
+      metaShipText: 'Pour toute commande de plus de {ship}. Expédition sous 24 h.',
       metaReturnTitle: 'Retours sous 30 jours',
       metaReturnText: 'Retours et échanges faciles, sans questions.',
       metaEthicalTitle: 'Confection éthique',
@@ -898,8 +898,8 @@
       navCollections: 'المجموعات',
       navStory: 'قصتنا',
       navBlog: 'المدونة',
-      announce: 'شحن مجاني للطلبات فوق 75 دولارًا | تشكيلة جديدة كل أسبوع',
-      announcePromo: 'شحن مجاني للطلبات فوق 75 دولارًا | استخدمي كود {code} لخصم {pct}%',
+      announce: 'شحن مجاني للطلبات فوق {ship} | تشكيلة جديدة كل أسبوع',
+      announcePromo: 'شحن مجاني للطلبات فوق {ship} | استخدمي كود {code} لخصم {pct}%',
       langLabel: 'اللغة',
       footerTagline: 'نُلبس المرأة المسلمة العصرية بأناقة تستحضر الحياء، محتفيةً بالإيمان والأناقة.',
       footerShop: 'المتجر',
@@ -1021,7 +1021,7 @@
       buyNow: 'اشترِ الآن',
       sizeGuideBtn: 'دليل المقاسات',
       metaShipTitle: 'شحن مجاني',
-      metaShipText: 'لجميع الطلبات فوق 75 دولارًا، الشحن خلال 24 ساعة.',
+      metaShipText: 'لجميع الطلبات فوق {ship}، الشحن خلال 24 ساعة.',
       metaReturnTitle: 'إرجاع خلال 30 يومًا',
       metaReturnText: 'إرجاع واستبدال بسهولة دون أسئلة.',
       metaEthicalTitle: 'صناعة أخلاقية',
@@ -1352,8 +1352,30 @@
         str = str.split('{' + p + '}').join(params[p]);
       });
     }
-    if (key === 'announce' || key === 'metaShipText' || key === 'announcePromo') str = applySymbol(str);
+    if (key === 'announce' || key === 'metaShipText' || key === 'announcePromo') {
+      if (str.indexOf('{ship}') >= 0) str = str.split('{ship}').join(shipStr());
+      str = applySymbol(str);
+    }
     return str;
+  }
+
+  var SHIP_THRESHOLD = 75;
+
+  // Sets the "free shipping from" amount (in currency units) from /api/config,
+  // e.g. 80 for a 8000-cents threshold.
+  function setShipThreshold(cents) {
+    var v = parseInt(cents, 10);
+    if (!isNaN(v) && v > 0) SHIP_THRESHOLD = v / 100;
+  }
+
+  // Formats the ship threshold for the current language + currency symbol.
+  function shipStr() {
+    var sym = window.HN && typeof window.HN.symbol === 'function' ? window.HN.symbol() : '$';
+    var v = Math.round(SHIP_THRESHOLD * 100) / 100;
+    var amount = (v % 1 === 0) ? String(v) : v.toFixed(2);
+    if (lang === 'fr') return amount + ' ' + sym;
+    if (lang === 'ar') return amount + ' ' + (sym === '$' ? 'دولارًا' : sym);
+    return sym + amount;
   }
 
   // Replaces the hard-coded currency amount ($75 / 75 $ / 75 دولارًا) with the
@@ -1409,7 +1431,8 @@
     t: t,
     setLang: setLang,
     apply: applyTranslations,
-    refreshCurrency: refreshCurrencyLabels
+    refreshCurrency: refreshCurrencyLabels,
+    setShipThreshold: setShipThreshold
   };
 
   document.addEventListener('DOMContentLoaded', function() {

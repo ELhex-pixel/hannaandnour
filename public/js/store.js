@@ -88,19 +88,28 @@
             CURRENCY_SYMBOL = data.currency.symbol;
           }
         } catch (e) {}
-        // Refresh the "$75" announcement copy with the admin currency symbol.
-        try {
-          if (window.I18n && typeof window.I18n.refreshCurrency === 'function') {
-            window.I18n.refreshCurrency();
-          }
-        } catch (e) {}
+        applyConfigCopy(data || {});
         return data || {};
       })
       .catch(function () {
         configPromise = null;
+        applyConfigCopy(cachedCfg || {});
         return cachedCfg || {};
       });
     return configPromise;
+  }
+
+  function applyConfigCopy(cfg) {
+    try {
+      if (window.I18n && typeof window.I18n.setShipThreshold === 'function' &&
+          cfg.settings && typeof cfg.settings.free_threshold_cents === 'number') {
+        window.I18n.setShipThreshold(cfg.settings.free_threshold_cents);
+      }
+      if (window.I18n && typeof window.I18n.refreshCurrency === 'function') {
+        window.I18n.refreshCurrency();
+        if (typeof refreshPromoAnnounce === 'function') refreshPromoAnnounce();
+      }
+    } catch (e) {}
   }
 
   function currentLang() {
@@ -407,10 +416,12 @@
     var idx = w.indexOf(slug);
     if (idx >= 0) {
       w.splice(idx, 1);
+      writeLS(WISH_KEY, w);
       emit('hn:wishlist');
       return { active: false };
     }
     w.push(slug);
+    writeLS(WISH_KEY, w);
     emit('hn:wishlist');
     return { active: true };
   }
