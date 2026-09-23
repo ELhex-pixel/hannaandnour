@@ -97,23 +97,38 @@
     });
   }
 
+  document.body.setAttribute('data-menu-open', 'false');
+  if (menuToggle) menuToggle.setAttribute('aria-controls', 'navMobile');
+  if (menuToggle) menuToggle.setAttribute('aria-label', 'Menu');
+
+  function setMenuOpen(open) {
+    document.body.setAttribute('data-menu-open', open ? 'true' : 'false');
+    if (menuToggle) menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
   if (menuToggle && navMobile) {
     menuToggle.addEventListener('click', function() {
-      navMobile.classList.add('active');
-      document.body.style.overflow = 'hidden';
+      setMenuOpen(document.body.getAttribute('data-menu-open') !== 'true');
     });
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && navMobile.classList.contains('active')) {
-        navMobile.classList.remove('active');
-        document.body.style.overflow = '';
+      if (e.key === 'Escape' && document.body.getAttribute('data-menu-open') === 'true') {
+        setMenuOpen(false);
       }
     });
+    var mediaDesktop = window.matchMedia('(min-width: 768px)');
+    var onDesktopChange = function(e) {
+      if (e.matches) setMenuOpen(false);
+    };
+    if (mediaDesktop.addEventListener) {
+      mediaDesktop.addEventListener('change', onDesktopChange);
+    } else {
+      mediaDesktop.addListener(onDesktopChange);
+    }
   }
 
   if (navClose && navMobile) {
     navClose.addEventListener('click', function() {
-      navMobile.classList.remove('active');
-      document.body.style.overflow = '';
+      setMenuOpen(false);
     });
   }
 
@@ -122,8 +137,7 @@
 
     navMobile.addEventListener('click', function(e) {
       if (e.target.closest('.nav-mobile-link, .nav-mobile-footer-link, .nav-mobile-signin')) {
-        navMobile.classList.remove('active');
-        document.body.style.overflow = '';
+        setMenuOpen(false);
       }
     });
   }
