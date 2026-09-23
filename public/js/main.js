@@ -98,48 +98,20 @@
   }
 
   if (menuToggle && navMobile) {
-    var navBackdrop = null;
-    function makeBackdrop() {
-      if (document.getElementById('navBackdrop')) return;
-      var bd = document.createElement('div');
-      bd.className = 'nav-backdrop';
-      bd.id = 'navBackdrop';
-      if (document.body.firstChild) {
-        document.body.insertBefore(bd, document.body.firstChild);
-      } else {
-        document.body.appendChild(bd);
-      }
-      navBackdrop = bd;
-    }
-    function openNav() {
-      makeBackdrop();
-      navBackdrop.classList.add('active');
+    menuToggle.addEventListener('click', function() {
       navMobile.classList.add('active');
       document.body.style.overflow = 'hidden';
-    }
-    function closeNav() {
-      if (navBackdrop) navBackdrop.classList.remove('active');
-      navMobile.classList.remove('active');
-      document.body.style.overflow = '';
-    }
-    menuToggle.addEventListener('click', openNav);
-    navMobile.addEventListener('click', function(e) {
-      if (e.target.closest('.nav-mobile-close')) closeNav();
-    });
-    document.addEventListener('click', function(e) {
-      if (navBackdrop && navBackdrop.classList.contains('active') && e.target === navBackdrop) {
-        closeNav();
-      }
     });
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && navMobile.classList.contains('active')) closeNav();
+      if (e.key === 'Escape' && navMobile.classList.contains('active')) {
+        navMobile.classList.remove('active');
+        document.body.style.overflow = '';
+      }
     });
   }
 
   if (navClose && navMobile) {
     navClose.addEventListener('click', function() {
-      var bd = document.getElementById('navBackdrop');
-      if (bd) bd.classList.remove('active');
       navMobile.classList.remove('active');
       document.body.style.overflow = '';
     });
@@ -150,8 +122,6 @@
 
     navMobile.addEventListener('click', function(e) {
       if (e.target.closest('.nav-mobile-link, .nav-mobile-footer-link')) {
-        var bd = document.getElementById('navBackdrop');
-        if (bd) bd.classList.remove('active');
         navMobile.classList.remove('active');
         document.body.style.overflow = '';
       }
