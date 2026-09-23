@@ -71,29 +71,6 @@
     box.innerHTML = html;
   }
 
-  function wireOrderLookup() {
-    var form = document.getElementById('accountOrderForm');
-    var emailEl = document.getElementById('accountEmail');
-    if (!form || !emailEl) return;
-
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var email = emailEl.value.trim().toLowerCase();
-      if (!email) return;
-
-      fetch(HN.api('orders') + '?email=' + encodeURIComponent(email))
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          if (data.error) throw new Error(data.error);
-          renderOrders(data.orders || []);
-        })
-        .catch(function () {
-          renderOrders([]);
-          window.hnToast && hnToast(tr('ordersError'), tr('demoMsg'), 'error');
-        });
-    });
-  }
-
   /* ---------------- Auth-backed account ---------------- */
 
   function loadAccountOrders() {
@@ -126,22 +103,27 @@
     var user = window.HN_AUTH ? HN_AUTH.currentUser() : null;
     var authPanel = document.getElementById('authPanel');
     var accountPanel = document.getElementById('accountPanel');
-    var orderForm = document.getElementById('accountOrderForm');
     var box = document.getElementById('accountOrders');
+    var wishSection = document.getElementById('wishlist');
+    var wishLink = document.querySelector('.account-nav-link[href="#wishlist"]');
+    if (wishLink) wishLink.style.display = user ? '' : 'none';
 
     if (user) {
       if (authPanel) authPanel.style.display = 'none';
       if (accountPanel) accountPanel.style.display = 'block';
-      if (orderForm) orderForm.style.display = 'none';
       if (box) {
         var greet = document.getElementById('accountGreeting');
         if (greet) greet.textContent = tr('authWelcome').replace('{n}', user.first_name || user.email || '');
       }
+      if (wishSection) wishSection.style.display = 'block';
       loadAccountOrders();
     } else {
       if (authPanel) authPanel.style.display = 'block';
       if (accountPanel) accountPanel.style.display = 'none';
-      if (orderForm) orderForm.style.display = 'flex';
+      if (box) {
+        box.innerHTML = '<p style="color: var(--color-gray); padding: var(--spacing-lg) 0;">' + tr('authLoginIntro') + '</p>';
+      }
+      if (wishSection) wishSection.style.display = 'none';
     }
   }
 
@@ -219,7 +201,6 @@
   }
 
   function init() {
-    wireOrderLookup();
     wireWishlistGrid();
     wireAuth();
 

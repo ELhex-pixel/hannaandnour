@@ -290,12 +290,12 @@
      Wishlist toggle (persisted by store.js)
      ============================================== */
 
-  // Header wishlist icon: if it's still a <button>, make it open the wishlist page.
+  // Header wishlist icon: favorites need an account, so it opens the login page.
   document.addEventListener('click', function(e) {
     const hb = e.target.closest('.header-action-btn[aria-label="Wishlist"]');
     if (hb && hb.tagName === 'BUTTON' && hb.classList.contains('header-action-btn') && !hb.closest('.product-wishlist')) {
       e.preventDefault();
-      window.location.href = 'account.html#wishlist';
+      window.location.href = 'account.html';
     }
   });
 
@@ -303,6 +303,14 @@
     const wishlistBtn = e.target.closest('.product-wishlist');
     if (!wishlistBtn) return;
     e.preventDefault();
+
+    // Favorites require an account: redirect guests to the login page.
+    const authed = window.HN && typeof window.HN.isAuthed === 'function' ? window.HN.isAuthed() : false;
+    if (!authed) {
+      showToast(tr('wishlistLoginRequired'), tr('authLoginIntro'), 'info');
+      window.location.href = 'account.html#orders';
+      return;
+    }
 
     const card = wishlistBtn.closest('.product-card, [data-slug]');
     const slug = card ? card.getAttribute('data-slug') : null;

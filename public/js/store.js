@@ -99,6 +99,14 @@
     return configPromise;
   }
 
+  function isAuthed() {
+    try {
+      return !!(window.localStorage && window.localStorage.getItem('hn-auth'));
+    } catch (e) {
+      return false;
+    }
+  }
+
   function applyConfigCopy(cfg) {
     try {
       if (window.I18n && typeof window.I18n.setShipThreshold === 'function' &&
@@ -540,6 +548,7 @@
     promos: promos,
     promoRate: promoRate,
     track: track,
+    isAuthed: isAuthed,
     isAuthConfigured: isAuthConfigured
   };
 })();
