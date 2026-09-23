@@ -203,6 +203,7 @@
     currentUser: currentUser,
     isAuthed: isAuthed,
     token: getToken,
+    call: call,
     login: login,
     signup: signup,
     logout: logout,
