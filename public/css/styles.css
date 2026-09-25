@@ -85,6 +85,11 @@ body {
   background-color: var(--color-cream);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Guard: no horizontal scroll on small viewports even if a child overflows.
+     `clip` (unlike `hidden`) does not turn <body> into a scroll container, so
+     position:fixed/sticky children keep working. */
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 img {
@@ -726,6 +731,25 @@ body[data-menu-open="true"] .nav-mobile {
   margin-bottom: var(--spacing-xl);
 }
 
+.featured-banner-image {
+  flex-shrink: 0;
+  width: 400px;
+  height: 300px;
+  background: rgba(255,255,255,0.1);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.featured-banner-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+}
+
 .btn-white {
   background-color: var(--color-white);
   color: var(--color-emerald);
@@ -1095,6 +1119,9 @@ body[data-menu-open="true"] .nav-mobile {
   background-color: var(--color-dark);
   color: var(--color-white);
   padding: var(--spacing-3xl) 0 var(--spacing-xl);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .footer-grid {
@@ -1102,6 +1129,10 @@ body[data-menu-open="true"] .nav-mobile {
   grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: var(--spacing-2xl);
   margin-bottom: var(--spacing-3xl);
+}
+
+.footer-grid > * {
+  min-width: 0;
 }
 
 .footer-brand {
@@ -1150,13 +1181,13 @@ body[data-menu-open="true"] .nav-mobile {
 }
 
 .footer-title {
-  font-family: var(--font-body);
-  font-size: 0.875rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 4vw, 1.35rem);
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-transform: none;
   color: var(--color-white);
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
 }
 
 .footer-links {
@@ -1168,6 +1199,7 @@ body[data-menu-open="true"] .nav-mobile {
 .footer-link {
   color: rgba(255,255,255,0.7);
   font-size: 0.875rem;
+  overflow-wrap: anywhere;
   transition: color var(--transition-fast);
 }
 
@@ -1191,6 +1223,7 @@ body[data-menu-open="true"] .nav-mobile {
 
 .footer-payments {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--spacing-sm);
 }
 
@@ -3078,6 +3111,14 @@ body[data-menu-open="true"] .nav-mobile {
     flex-direction: column;
     text-align: center;
   }
+
+  .featured-banner-image {
+    width: 100%;
+    max-width: 420px;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    margin-top: var(--spacing-lg);
+  }
   
   .products-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -3318,6 +3359,7 @@ html[lang="ar"] body {
 
 html[lang="ar"] .logo,
 html[lang="ar"] .footer-logo,
+html[lang="ar"] .footer-title,
 html[lang="ar"] .hero-title,
 html[lang="ar"] .section-title,
 html[lang="ar"] .product-title,
