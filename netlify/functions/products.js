@@ -32,6 +32,17 @@ exports.handler = async function (event) {
     if (q.featured === 'true') query = query.eq('is_featured', true);
     if (q.bestseller === 'true') query = query.eq('is_bestseller', true);
 
+    // ?slug= returns the matching active product(s) instead of the whole
+    // catalog (documented in AGENTS.md; the product page fetch can use it).
+    if (q.slug) {
+      if (String(q.slug).includes(',')) {
+        const slugs = String(q.slug).split(',').map((s) => s.trim()).filter(Boolean);
+        if (slugs.length) query = query.in('slug', slugs);
+      } else {
+        query = query.eq('slug', String(q.slug).trim());
+      }
+    }
+
     if (q.ids) {
       const ids = String(q.ids).split(',').map((s) => s.trim()).filter(Boolean);
       if (ids.length) query = query.in('id', ids);

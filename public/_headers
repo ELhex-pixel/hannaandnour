@@ -6,6 +6,10 @@
   Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(),
   Cross-Origin-Opener-Policy: same-origin
   Strict-Transport-Security: max-age=63072000; includeSubDomains;
+  Cache-Control: public, max-age=86400
+
+/*.html
+  Cache-Control: public, no-cache
 
 /.well-known/security.txt
   Content-Type: text/plain

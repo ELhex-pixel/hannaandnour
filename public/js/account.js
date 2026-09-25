@@ -39,7 +39,7 @@
           '<div class="order-item">' +
           '  <div class="order-item-image"><img src="' + (it.image || 'images/hero.jpg') + '" alt=""></div>' +
           '  <div class="order-item-info">' +
-          '    <p class="order-item-name">' + (it.product_name || '') + '</p>' +
+          '    <p class="order-item-name">' + esc(it.product_name || '') + '</p>' +
           '    <p class="order-item-variant">' + tr('qtyVar', { n: it.quantity || 1 }) + '</p>' +
           '  </div>' +
           '  <span class="order-item-price">' + HN.money(it.unit_price_cents) + '</span>' +
@@ -49,14 +49,14 @@
       html +=
         '<div class="order-card">' +
         '  <div class="order-header">' +
-        '    <div><p class="order-number">' + (o.order_number || '') + '</p>' +
+        '    <div><p class="order-number">' + esc(o.order_number || '') + '</p>' +
         '    <p class="order-date">' + tr('placedOnN', { d: date }) + '</p></div>' +
         '    <div style="text-align: right;"><span class="order-status">' + statusText(o.status) + '</span>' +
         (o.shipping_status && shippingText(o.shipping_status) ? '<span class="order-status" style="display:block; margin-top:6px;">' + shippingText(o.shipping_status) + '</span>' : '') +
         '    </div>' +
         '  </div>' +
-        (o.tracking_number ? '<p style="margin: 8px 0 0; font-size: 0.875rem; color: var(--color-gray);">' + tr('trackingN', { n: o.tracking_number }) + '</p>' : '') +
-        (o.delivery_type === 'pickup' && o.pickup_point ? '<p style="margin: 6px 0 0; font-size: 0.875rem; color: var(--color-gray);">' + tr('pickupPoint') + ' : ' + o.pickup_point + '</p>' : '') +
+        (o.tracking_number ? '<p style="margin: 8px 0 0; font-size: 0.875rem; color: var(--color-gray);">' + tr('trackingN', { n: esc(o.tracking_number) }) + '</p>' : '') +
+        (o.delivery_type === 'pickup' && o.pickup_point ? '<p style="margin: 6px 0 0; font-size: 0.875rem; color: var(--color-gray);">' + tr('pickupPoint') + ' : ' + esc(o.pickup_point) + '</p>' : '') +
         '  <div class="order-items">' + itemsHtml +
         '    <div class="order-item">' +
         '      <div style="flex: 1;"></div>' +

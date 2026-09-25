@@ -6,6 +6,15 @@
  */
 const { json, getSupabase, isConfigured, readBody, sendEmail } = require('./shared');
 
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204 };
@@ -50,10 +59,10 @@ exports.handler = async function (event) {
         subject: 'Nouveau message du site : ' + (subject || '(sans objet)'),
         html:
           '<p><strong>De :</strong> ' +
-          name.replace(/</g, '&lt;') +
-          ' &lt;' + email.replace(/</g, '&lt;') + '&gt;</p>' +
-          '<p><strong>Sujet :</strong> ' + (subject || '') + '</p>' +
-          '<p><strong>Message :</strong></p><p>' + message.replace(/\n/g, '<br>') + '</p>'
+          esc(name) +
+          ' &lt;' + esc(email) + '&gt;</p>' +
+          '<p><strong>Sujet :</strong> ' + esc(subject) + '</p>' +
+          '<p><strong>Message :</strong></p><p>' + esc(message).replace(/\n/g, '<br>') + '</p>'
       });
     } catch (mailErr) {
       console.error('Contact email forward failed:', mailErr.message);

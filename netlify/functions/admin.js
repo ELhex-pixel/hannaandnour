@@ -190,12 +190,29 @@ exports.handler = async function (event) {
         const mime = String(body.mime || '');
         const allowed = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
         const ext = allowed[mime];
-        if (!ext) return json(400, { error: 'Type de fichier non supporté (JPG, PNG ou WEBP)' });
+if (!ext) return json(400, { error: 'Type de fichier non supporté (JPG, PNG ou WEBP)' });
 
         const b64 = String(body.data_base64 || '').replace(/^data:[^;]+;base64,/, '');
         if (!b64) return json(400, { error: 'Image manquante' });
+        // Reject oversized payloads BEFORE decoding (a huge base64 string would
+        // otherwise allocate a big buffer just to fail the size check).
+        if (b64.length > Math.ceil(4 * 1024 * 1024 * 1.34) + 8) {
+          return json(400, { error: 'Image trop lourde (max 4 Mo)' });
+        }
         const buf = Buffer.from(b64, 'base64');
         if (!buf.length) return json(400, { error: 'Image vide' });
+        // Never trust the client-declared mime: validate the file signature.
+        const sig = (n) => buf.slice(0, n).toString('hex');
+        const isJpeg = buf.length > 3 && sig(3) === 'ffd8ff';
+        const isPng = buf.length > 8 && sig(8) === '89504e470d0a1a0a';
+        const isWebp =
+          buf.length > 12 &&
+          sig(4) === '52494646' /* RIFF */ &&
+          buf.toString('ascii', 8, 12) === 'WEBP';
+        const detected = isJpeg ? 'image/jpeg' : isPng ? 'image/png' : isWebp ? 'image/webp' : null;
+        if (!detected || (mime && detected !== mime)) {
+          return json(400, { error: 'Fichier corrompu ou type non supporté (JPG, PNG ou WEBP)' });
+        }
         if (buf.length > 4 * 1024 * 1024) return json(400, { error: 'Image trop lourde (max 4 Mo)' });
 
         await ensureBucket(sb);
@@ -240,12 +257,25 @@ case 'getOrder': {
         if (body.delivery_type !== undefined) update.delivery_type = body.delivery_type === 'pickup' ? 'pickup' : 'home';
         if (body.pickup_point !== undefined) update.pickup_point = String(body.pickup_point || '').trim() || null;
 
-        if (body.shipping_status !== undefined) {
+if (body.shipping_status !== undefined) {
           const f = ['new', 'shipped', 'delivered'].includes(body.shipping_status) ? body.shipping_status : 'new';
           update.shipping_status = f;
-          if (f === 'shipped' && !body.shipped_at_keep) update.shipped_at = new Date().toISOString();
+          if (f === 'shipped' || f === 'delivered') {
+            // Preserve the original shipped timestamp if the order already has
+            // one; otherwise stamp it now. This avoids overwriting the real
+            // dispatch date every time the status is touched.
+            let prevShippedAt = null;
+            try {
+              const { data: existing } = await sb
+                .from('orders')
+                .select('shipped_at')
+                .eq('id', body.id)
+                .maybeSingle();
+              prevShippedAt = existing && existing.shipped_at;
+            } catch (e) { /* keep null */ }
+            update.shipped_at = prevShippedAt || new Date().toISOString();
+          }
           if (f === 'delivered') {
-            update.shipped_at = update.shipped_at || new Date().toISOString();
             update.delivered_at = new Date().toISOString();
           }
           if (f === 'new') { update.shipped_at = null; update.delivered_at = null; }
@@ -456,10 +486,17 @@ case 'deleteMessage': {
           if (!/already been refunded|anymore/i.test(refundErr.message)) throw refundErr;
         }
 
-        const { error: updErr } = await sb.from('orders')
+        // Guarded update: only a still-paid order may become refunded, so two
+        // refunds racing each other cannot double-restock or double-email.
+        const { data: refunded, error: updErr } = await sb.from('orders')
           .update({ status: 'refunded' })
-          .eq('id', order.id);
+          .eq('id', order.id)
+          .eq('status', 'paid')
+          .select('id');
         if (updErr) throw updErr;
+        if (!refunded || refunded.length === 0) {
+          return json(200, { ok: true, already: true });
+        }
 
         await restockOrder(sb, order);
 
@@ -484,6 +521,8 @@ case 'deleteMessage': {
         for (const key of Object.keys(ranges)) {
           let q = sb.from('analytics_events').select('event_type, product_slug');
           if (ranges[key] > 0) q = q.gte('created_at', new Date(Date.now() - ranges[key]).toISOString());
+          // Cap huge tables so the summary stays responsive.
+          q = q.limit(20000);
           const { data, error } = await q;
           if (error) throw error;
           const counts = { pageview: 0, product_view: 0, add_to_cart: 0, checkout_attempt: 0, purchase: 0 };

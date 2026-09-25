@@ -36,6 +36,15 @@
     return p ? HN.productName(p) : (item.name || item.slug);
   }
 
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function totals() {
     var s = state.settings;
     var items = HN.cart.list();
@@ -101,8 +110,8 @@
       var variant = [it.color, it.size].filter(Boolean).join(' \u2022 ');
       html += '<div style="display: flex; gap: var(--spacing-md); align-items: center;">' +
         '<img src="' + (it.image || 'images/hero.jpg') + '" alt="" style="width: 60px; height: 80px; object-fit: cover; border-radius: var(--radius-sm);">' +
-        '<div style="flex: 1;"><p style="font-size: 0.9375rem; font-weight: 600;">' + localizedName(it) + '</p>' +
-        (variant ? '<p style="font-size: 0.875rem; color: var(--color-gray);">' + variant + ' \u2022 Qty: ' + (it.qty || 1) + '</p>' : '') +
+        '<div style="flex: 1;"><p style="font-size: 0.9375rem; font-weight: 600;">' + esc(localizedName(it)) + '</p>' +
+        (variant ? '<p style="font-size: 0.875rem; color: var(--color-gray);">' + esc(variant) + ' \u2022 Qty: ' + (it.qty || 1) + '</p>' : '') +
         '</div><span>' + HN.money(it.priceCents) + '</span></div>';
     }
     holder.innerHTML = html;

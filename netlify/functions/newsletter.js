@@ -31,7 +31,7 @@ exports.handler = async function (event) {
     const sb = getSupabase();
     const { error } = await sb
       .from('newsletter')
-      .upsert({ email, source: body.source || 'footer' }, { onConflict: 'email' });
+      .upsert({ email, source: String(body.source || 'footer').slice(0, 50) }, { onConflict: 'email' });
 
     if (error) throw error;
 

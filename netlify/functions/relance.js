@@ -41,6 +41,7 @@ async function handler() {
       .eq('status', 'pending')
       .lte('created_at', cutoff)
       .is('relance_sent_at', null)
+      .order('created_at', { ascending: true })
       .limit(50);
     if (error) throw error;
 
@@ -50,12 +51,23 @@ async function handler() {
       if (!order.email || !order.cart_restore_token) continue;
       const link = siteUrl + '/cart.html?restore=' + order.cart_restore_token;
       try {
+        // Claim the order atomically BEFORE sending so two overlapping runs
+        // can never email the same cart twice: only the run that marks
+        // relance_sent_at first proceeds.
+        const { data: claimed, error: claimErr } = await sb
+          .from('orders')
+          .update({ relance_sent_at: new Date().toISOString() })
+          .eq('id', order.id)
+          .is('relance_sent_at', null)
+          .select('id');
+        if (claimErr) throw claimErr;
+        if (!claimed || claimed.length === 0) continue; // already claimed
+
         await sendEmail({
           to: order.email,
           subject: 'Votre panier vous attend \u2014 Hanna & Nour',
           html: buildHtml(order, link)
         });
-        await sb.from('orders').update({ relance_sent_at: new Date().toISOString() }).eq('id', order.id);
         sent++;
       } catch (e) {
         console.error('relance email failed for ' + order.id + ':', e.message);

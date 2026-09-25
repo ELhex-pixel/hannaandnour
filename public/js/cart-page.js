@@ -38,6 +38,15 @@
     return item.name || item.slug;
   }
 
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function variantText(item) {
     var parts = [];
     if (item.color) parts.push(tr('colorVar', { v: item.color }));
@@ -94,10 +103,10 @@
       var it = items[i];
       html +=
         '<div class="cart-item" data-index="' + i + '">' +
-        '  <div class="cart-item-image"><img src="' + (it.image || 'images/hero.jpg') + '" alt="' + localizedName(it) + '"></div>' +
+        '  <div class="cart-item-image"><img src="' + (it.image || 'images/hero.jpg') + '" alt="' + esc(localizedName(it)) + '"></div>' +
         '  <div class="cart-item-info">' +
-        '    <a href="product.html?slug=' + encodeURIComponent(it.slug) + '"><h2 class="cart-item-title">' + localizedName(it) + '</h2></a>' +
-        '    <span class="cart-item-variant">' + variantText(it) + '</span>' +
+        '    <a href="product.html?slug=' + encodeURIComponent(it.slug) + '"><h2 class="cart-item-title">' + esc(localizedName(it)) + '</h2></a>' +
+        '    <span class="cart-item-variant">' + esc(variantText(it)) + '</span>' +
         '    <span class="cart-item-price">' + HN.money(it.priceCents) + '</span>' +
         '  </div>' +
         '  <div class="cart-item-actions">' +
