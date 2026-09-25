@@ -103,8 +103,9 @@ function getBearer(event) {
   const h = event.headers ? (event.headers.authorization || event.headers.Authorization || '') : '';
   const m = String(h).match(/^Bearer\s+(.+)$/i);
   if (m) return m[1];
-  const q = event.queryStringParameters || {};
-  return q.token || '';
+  // NOTE: no `?token=` fallback — tokens in URLs leak into server logs,
+  // browser history and referrers. Admin and user sessions use the header.
+  return '';
 }
 
 // Admin routes check `requireAdmin(event).ok` before doing anything.

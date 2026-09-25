@@ -74,14 +74,9 @@ exports.handler = async function (event) {
         });
       if (insertError) throw insertError;
 
-      // Update the product aggregate (moving average).
-      const newCount = product.review_count + 1;
-      const newRating = Math.round(((product.rating * product.review_count + rating) / newCount) * 10) / 10;
-      await sb
-        .from('products')
-        .update({ rating: newRating, review_count: newCount })
-        .eq('id', product.id);
-
+      // Do NOT touch the aggregate here: only approved reviews count towards
+      // rating / review_count (recomputed in admin.js when a review is
+      // approved). Counting pending reviews would inflate ratings.
       return json(201, { ok: true });
     }
 

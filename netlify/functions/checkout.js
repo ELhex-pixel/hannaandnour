@@ -37,7 +37,9 @@ exports.handler = async function (event) {
 
     const proto = String((event.headers && (event.headers['x-forwarded-proto'] || event.headers['X-Forwarded-Proto'])) || 'https').split(',')[0].trim();
     const host = String(event.headers && (event.headers.host || event.headers.Host) || '').split(',')[0].trim();
-    const siteUrl = (host ? proto + '://' + host : (process.env.SITE_URL || 'https://hannanour.netlify.app')).replace(/\/$/, '');
+    // Site URL is a trusted setting, never derived from the caller-controlled
+    // Host header (would allow a forged redirect to a phishing domain).
+    const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
     const sb = getSupabase();
     const body = readBody(event);
 
@@ -147,6 +149,10 @@ exports.handler = async function (event) {
           return json(400, { error: 'Cette variante n\u2019est pas disponible' });
         }
         // No variant rows for this product => unlimited legacy product.
+      } else if (productsWithVariants.has(product.id)) {
+        // Managed-stock product sent without color/size: the client-side
+        // variant control was bypassed, so refuse instead of selling unbounded.
+        return json(400, { error: 'Cette variante n\u2019est pas disponible' });
       }
 
       const parts = [];
@@ -191,7 +197,6 @@ exports.handler = async function (event) {
     // ---- Promo code ----
     let discountCents = 0;
     let promoCode = null;
-    const discounts = [];
 
     const promoRaw = String(body.promo || '').trim().toUpperCase();
     if (promoRaw) {
@@ -199,7 +204,7 @@ exports.handler = async function (event) {
         .from('promo_codes')
         .select('code, percent_off, active, expires_at')
         .eq('code', promoRaw)
-        .single();
+        .maybeSingle();
       if (promoError) throw promoError;
 
       const valid = promoRow &&
@@ -207,26 +212,44 @@ exports.handler = async function (event) {
         (!promoRow.expires_at || new Date(promoRow.expires_at) > new Date());
 
       if (!valid) {
-        return json(400, { error: 'Invalid promo code' });
+        return json(400, { error: 'Invalid promo code', message: 'Ce code promo est invalide ou expiré' });
       }
 
       promoCode = promoRow.code;
       discountCents = Math.round((subtotal * promoRow.percent_off) / 100);
+    }
 
-      // Create (or reuse) a Stripe coupon for this code.
-      const couponId = 'hn_coupon_' + promoRow.code.toLowerCase();
-      try {
-        await STRIPE().coupons.create({
-          id: couponId,
-          name: promoRow.code,
-          percent_off: promoRow.percent_off,
-          duration: 'once'
-        });
-      } catch (e) {
-        // Coupon already exists - reuse it.
-        await STRIPE().coupons.retrieve(couponId);
+    // Apply the discount directly to the product line items so the amount
+    // Stripe charges matches total_cents exactly. Using a Stripe coupon
+    // instead would also discount the added "Tax" line, so the charged total
+    // would drift from what the client shows and the order records.
+    if (discountCents > 0) {
+      const n = lineItems.length;
+      const lineTotals = lineItems.map(function (li) { return li.price_data.unit_amount * li.quantity; });
+      const sumLines = lineTotals.reduce(function (a, b) { return a + b; }, 0);
+      if (sumLines > 0) {
+        const alloc = lineTotals.map(function (t) { return Math.floor((t * discountCents) / sumLines); });
+        const fracs = lineTotals.map(function (t, i) { return (t * discountCents) / sumLines - alloc[i]; });
+        const order = lineTotals.map(function (_, i) { return i; }).sort(function (a, b) { return fracs[b] - fracs[a]; });
+        let remaining = discountCents;
+        for (var di = 0; di < n; di++) remaining -= alloc[di];
+        for (var dk = 0; dk < remaining; dk++) alloc[order[dk % n]] += 1;
+        let leftovers = 0;
+        for (var dli = 0; dli < n; dli++) {
+          const perUnit = Math.floor(alloc[dli] / lineItems[dli].quantity);
+          alloc[dli] -= perUnit * lineItems[dli].quantity;
+          leftovers += alloc[dli];
+          lineItems[dli].price_data.unit_amount = Math.max(1, lineItems[dli].price_data.unit_amount - perUnit);
+        }
+        // Absorb penny-leftovers on a single-unit line for an exact match.
+        for (var dl2 = 0; dl2 < n && leftovers > 0; dl2++) {
+          if (lineItems[dl2].quantity === 1 && lineItems[dl2].price_data.unit_amount - leftovers >= 1) {
+            lineItems[dl2].price_data.unit_amount -= leftovers;
+            leftovers = 0;
+          }
+        }
+        if (leftovers > 0) console.warn('checkout discount rounding leftover:', leftovers, 'cents');
       }
-      discounts.push({ coupon: couponId });
     }
 
     // ---- Tax ----
@@ -310,7 +333,6 @@ exports.handler = async function (event) {
           }
         }
       ],
-      discounts: discounts.length ? discounts : undefined,
       metadata: {
         order_id: orderId,
         shipping_method: shippingMethod,

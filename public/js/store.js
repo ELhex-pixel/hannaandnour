@@ -170,7 +170,10 @@
     var pct = 0;
     for (var i = 0; i < promosList.length; i++) {
       if (String(promosList[i].code).toUpperCase() === code) {
-        pct = parseInt(promosList[i].percent_off, 10) || 0;
+        var expires = promosList[i].expires_at;
+        if (!expires || new Date(expires).getTime() > Date.now()) {
+          pct = parseInt(promosList[i].percent_off, 10) || 0;
+        }
         break;
       }
     }
@@ -460,6 +463,14 @@
     }
 
     if (!product) return;
+
+    // Products with managed variant stock need a color/size selection: the
+    // one-tap button cannot pick a valid variant, so open the product page.
+    if (product.product_variants && product.product_variants.length) {
+      window.location.href = 'product.html?slug=' + encodeURIComponent(product.slug);
+      return;
+    }
+
     addToCart(product, { qty: 1 });
     showToastSafe(tr('cartAdd'), productName(product) + ' ' + tr('cartAddMsg'), 'success');
     updateWishlistHearts();

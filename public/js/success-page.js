@@ -22,6 +22,15 @@
       if (numEl) numEl.textContent = order.order_number || order.id || '-';
       if (totalEl) totalEl.textContent = window.HN.money(order.total_cents);
       if (box) box.style.display = '';
+
+      // Paid=true is the transition moment: clear the cart and the applied
+      // promo so the next order starts fresh. Skip for pending/abandoned
+      // (an in-progress payment must not wipe the cart).
+      if (order.status === 'paid' && window.HN.cart) {
+        window.HN.cart.clear();
+        sessionStorage.removeItem('hn-promo');
+        if (window.HN.refreshBadge) window.HN.refreshBadge();
+      }
     })
     .catch(function () {});
 })();

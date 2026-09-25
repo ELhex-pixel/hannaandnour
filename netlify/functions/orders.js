@@ -1,6 +1,10 @@
 /**
  * GET /api/orders?session_id=...   -> single order (for the success/thank-you page)
- * GET /api/orders?email=...        -> all orders for a customer (account page)
+ * GET /api/orders?cart_token=...   -> abandoned-cart items (restore link)
+ *
+ * NOTE: there is intentionally NO `?email=` lookup anymore. Orders belong to
+ * the client's account (see /api/auth "orders") and exposing them by email on
+ * an unauthenticated endpoint would leak PII (addresses, totals) to anyone.
  */
 const { json, getSupabase, isConfigured } = require('./shared');
 
@@ -31,23 +35,15 @@ exports.handler = async function (event) {
       return json(200, { order: orders && orders[0] ? orders[0] : null });
     }
 
-    if (q.email) {
-      const { data: orders, error } = await sb
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('email', String(q.email).toLowerCase().trim())
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return json(200, { orders });
-    }
-
     // Abandoned-cart recovery: `?cart_token=` restores the exact order items.
+    // Only pending/abandoned orders can be restored (paid ones must not be
+    // silently re-added to the cart, and `status` guards the token).
     if (q.cart_token) {
       const { data: order, error } = await sb
         .from('orders')
         .select('id, order_number, order_items(product_slug, quantity, unit_price_cents, variant, variant_id)')
         .eq('cart_restore_token', String(q.cart_token))
+        .in('status', ['pending', 'abandoned'])
         .limit(1)
         .maybeSingle();
       if (error) throw error;
@@ -62,7 +58,7 @@ exports.handler = async function (event) {
       return json(200, { items });
     }
 
-    return json(400, { error: 'Missing session_id, email or cart_token' });
+    return json(400, { error: 'Missing session_id or cart_token' });
   } catch (err) {
     console.error('orders.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

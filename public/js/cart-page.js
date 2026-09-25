@@ -225,8 +225,18 @@
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (!res.items || !res.items.length) return;
+        HN.cart.clear();
         res.items.forEach(function (it) {
-          HN.cart.add({ slug: it.slug, name: '', price_cents: it.price_cents, image: '' }, { qty: it.qty, variantId: it.variant_id });
+          var variantParts = String(it.variant || '').split(' / ');
+          HN.cart.add(
+            { slug: it.slug, name: '', price_cents: it.price_cents, image: '' },
+            {
+              qty: it.qty,
+              variantId: it.variant_id,
+              color: variantParts[0] || '',
+              size: variantParts[1] || ''
+            }
+          );
         });
         showToast(tr('cartRestored'), tr('cartRestoredMsg'), 'success');
         try {

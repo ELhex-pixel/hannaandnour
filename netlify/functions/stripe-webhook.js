@@ -100,80 +100,38 @@ exports.handler = async function (event) {
     const sb = getSupabase();
     const session = stripeEvent.data.object;
 
-    if (stripeEvent.type === 'checkout.session.completed') {
+    // Accept non-instant payments (e.g. card that goes through an async
+    // verification): Stripe delivers these under a distinct event type.
+    if (stripeEvent.type === 'checkout.session.async_payment_succeeded') {
+      return markPaid(session, sb);
+    }
+
+    if (stripeEvent.type === 'checkout.session.async_payment_failed') {
       const orderId = session.client_reference_id;
-      if (!orderId) return json(200, { received: true });
-
-      const paymentStatus =
-        session.payment_status === 'paid' || session.payment_status === 'no_payment_required'
-          ? 'paid'
-          : 'pending';
-
-      const customerEmail = (session.customer_details && session.customer_details.email) || null;
-
-      const update = {
-        status: paymentStatus,
-        paid_at: paymentStatus === 'paid' ? new Date().toISOString() : null,
-        stripe_session_id: session.id
-      };
-      if (customerEmail) update.email = customerEmail.toLowerCase();
-
-      const { error } = await sb.from('orders').update(update).eq('id', orderId);
-      if (error) throw error;
-
-      // Send order confirmation email (best-effort — never fails the webhook).
-      if (paymentStatus === 'paid') {
-        try {
-          const { data: paidOrder, error: fetchErr } = await sb
-            .from('orders')
-            .select('*, order_items(*)')
-            .eq('id', orderId)
-            .single();
-          if (fetchErr) throw fetchErr;
-
-          // Record the purchase for in-house analytics.
-          await sb.from('analytics_events').insert({
-            event_type: 'purchase',
-            product_slug: null,
-            path: orderId,
-            referrer: 'stripe-webhook'
-          }).then(function () {}, function () {});
-
-          // Decrement per-variant stock (atomic, guarded by stock >= qty).
-          const items = paidOrder.order_items || [];
-          for (const it of items) {
-            if (it.variant_id) {
-              const { data: decremented, error: decErr } = await sb
-                .rpc('decrement_stock', { p_variant_id: it.variant_id, p_qty: it.quantity });
-              if (decErr) {
-                console.error('Stock decrement failed:', decErr.message, 'variant', it.variant_id);
-              } else if (decremented === false) {
-                console.error('Stock decrement rejected (insufficient stock) for variant', it.variant_id);
-              }
-            }
-          }
-
-          const toEmail = paidOrder.email || customerEmail;
-          if (toEmail) {
-            const result = await sendEmail({
-              to: toEmail,
-              subject: 'Commande ' + (paidOrder.order_number || orderId) + ' confirm\u00E9e \u2014 Hanna & Nour',
-              html: buildOrderEmail(paidOrder, paidOrder.order_items || [])
-            });
-            if (result && result.skipped) {
-              console.log('Order email skipped (RESEND_API_KEY not set) for ' + toEmail);
-            }
-          }
-        } catch (mailErr) {
-          console.error('Order confirmation email failed:', mailErr.message);
-        }
+      if (orderId) {
+        await sb
+          .from('orders')
+          .update({ status: 'payment_failed' })
+          .eq('id', orderId)
+          .eq('status', 'pending');
       }
+      return json(200, { received: true });
+    }
+
+    if (stripeEvent.type === 'checkout.session.completed') {
+      return markPaid(session, sb);
     }
 
     if (stripeEvent.type === 'checkout.session.expired') {
       const orderId = session.client_reference_id;
+      // Never overwrite an already-paid order (Stripe may deliver `expired`
+      // after `completed` in races).
       if (orderId) {
-        await sb.from('orders').update({ status: 'abandoned' }).eq('id', orderId);
+        await sb
+          .from('orders')
+          .update({ status: 'abandoned' })
+          .eq('id', orderId)
+          .neq('status', 'paid');
       }
     }
 
@@ -183,3 +141,94 @@ exports.handler = async function (event) {
     return json(500, { error: err.message || 'Internal error' });
   }
 };
+
+/**
+ * Marks an order paid exactly once and runs the paid-order side effects.
+ * Idempotent: a repeated event (Stripe retries, async succeeded arriving after
+ * a previous succeeded/completed delivery) sees status already `paid` and does
+ * nothing — no double stock decrement, no duplicate confirmation email.
+ */
+async function markPaid(session, sb) {
+  const orderId = session.client_reference_id;
+  if (!orderId) return json(200, { received: true });
+
+  const paymentStatus =
+    session.payment_status === 'paid' || session.payment_status === 'no_payment_required'
+      ? 'paid'
+      : 'pending';
+
+  const customerEmail = (session.customer_details && session.customer_details.email) || null;
+
+  const update = {
+    status: paymentStatus,
+    paid_at: paymentStatus === 'paid' ? new Date().toISOString() : null,
+    stripe_session_id: session.id
+  };
+  if (customerEmail) update.email = customerEmail.toLowerCase();
+
+  // Guarded update: only a pending/abandoned order may transition to paid.
+  // If the order is already paid (or refunded), zero rows match and we stop.
+  const { data: updatedRows, error } = await sb
+    .from('orders')
+    .update(update)
+    .eq('id', orderId)
+    .neq('status', 'paid')
+    .neq('status', 'refunded')
+    .in('status', ['pending', 'abandoned'])
+    .select('id');
+  if (error) throw error;
+
+  if (!updatedRows || updatedRows.length === 0) {
+    return json(200, { received: true });
+  }
+
+  // Send order confirmation email (best-effort — never fails the webhook).
+  if (paymentStatus === 'paid') {
+    try {
+      const { data: paidOrder, error: fetchErr } = await sb
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('id', orderId)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      // Record the purchase for in-house analytics.
+      await sb.from('analytics_events').insert({
+        event_type: 'purchase',
+        product_slug: null,
+        path: orderId,
+        referrer: 'stripe-webhook'
+      }).then(function () {}, function () {});
+
+      // Decrement per-variant stock (atomic, guarded by stock >= qty).
+      const items = paidOrder.order_items || [];
+      for (const it of items) {
+        if (it.variant_id) {
+          const { data: decremented, error: decErr } = await sb
+            .rpc('decrement_stock', { p_variant_id: it.variant_id, p_qty: it.quantity });
+          if (decErr) {
+            console.error('Stock decrement failed:', decErr.message, 'variant', it.variant_id);
+          } else if (decremented === false) {
+            console.error('Stock decrement rejected (insufficient stock) for variant', it.variant_id);
+          }
+        }
+      }
+
+      const toEmail = paidOrder.email || customerEmail;
+      if (toEmail) {
+        const result = await sendEmail({
+          to: toEmail,
+          subject: 'Commande ' + (paidOrder.order_number || orderId) + ' confirm\u00E9e \u2014 Hanna & Nour',
+          html: buildOrderEmail(paidOrder, paidOrder.order_items || [])
+        });
+        if (result && result.skipped) {
+          console.log('Order email skipped (RESEND_API_KEY not set) for ' + toEmail);
+        }
+      }
+    } catch (mailErr) {
+      console.error('Order confirmation email failed:', mailErr.message);
+    }
+  }
+
+  return json(200, { received: true });
+}
