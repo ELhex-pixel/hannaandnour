@@ -6,16 +6,18 @@
   Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(),
   Cross-Origin-Opener-Policy: same-origin
   Strict-Transport-Security: max-age=63072000; includeSubDomains;
-  Cache-Control: public, max-age=86400
 
 /*.html
   Cache-Control: public, no-cache
 
-*.js
+/css/*
   Cache-Control: public, max-age=0, must-revalidate
 
-*.css
+/js/*
   Cache-Control: public, max-age=0, must-revalidate
+
+/images/*
+  Cache-Control: public, max-age=86400
 
 /.well-known/security.txt
   Content-Type: text/plain
@@ -26,5 +28,5 @@
 /sitemap.xml
   Content-Type: application/xml
 
-*.woff2
+/fonts/*
   Content-Type: font/woff2
