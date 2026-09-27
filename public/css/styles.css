@@ -4340,3 +4340,33 @@ select.lang-switcher {
   border-color: #E0D6C4;
   color: #141414;
 }
+
+/* ---- Header home : retour transparent intégré à la photo (le solide était cassé) ---- */
+.header.header-overlay {
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+  box-shadow: none;
+}
+.header.header-overlay .header-top {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+}
+.header.header-overlay.scrolled {
+  background-color: rgba(253, 248, 245, 0.98);
+  backdrop-filter: blur(10px);
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+}
+.header.header-overlay.scrolled .header-top {
+  max-height: 48px;
+  opacity: 1;
+  padding: var(--spacing-sm) 0;
+}
+.header.header-overlay .lang-switcher {
+  background-color: #fff;
+  border-color: #E0D6C4;
+  color: #141414;
+}
