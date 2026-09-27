@@ -4256,3 +4256,58 @@ html[dir="rtl"] .model-footer .footer-brand { align-items: flex-end; text-align:
 .collection-card-desc { margin-top: 0.4rem; font-size: 0.9rem; color: rgba(248,243,236,0.78); }
 .collection-card-more { display: inline-block; margin-top: 1rem; border-bottom: 1px solid #D4B483; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #D4B483; opacity: 0; transition: opacity 0.3s ease; }
 .collection-card:hover .collection-card-more { opacity: 1; }
+
+/* ---- Retouches header (client) : logo/liens noirs, & doré, langue sans flèche ---- */
+.logo { color: #141414; }
+.logo-accent { color: #D4B483; }
+
+.header-overlay .logo,
+.header-overlay .nav-link { color: #141414; text-shadow: none; }
+.header-overlay .logo-accent { color: #D4B483; }
+.header-overlay .nav-link:hover,
+.header-overlay .nav-link.active { color: #D4B483; }
+.header-overlay .header-action-btn svg { stroke: #141414; filter: none; }
+.header-overlay .header-action-btn:hover { background: rgba(34,31,28,0.06); }
+.header-overlay .menu-toggle span { background-color: #141414; }
+.header-overlay.scrolled .menu-toggle span { background-color: #141414; }
+.header-overlay.scrolled .logo-accent { color: #D4B483; }
+
+.lang-switcher,
+.header-overlay .lang-switcher,
+.header-overlay.scrolled .lang-switcher {
+  background-image: none;
+  padding-right: 0.75rem;
+}
+.header-overlay .lang-switcher {
+  background-color: #fff;
+  border-color: #E0D6C4;
+  color: #141414;
+}
+
+/* ---- Mobile : logo + panier + hamburger à droite (le reste est dans le menu) ---- */
+@media (max-width: 767.98px) {
+  .header-inner { justify-content: space-between; }
+  .header-actions { margin-left: auto; }
+  .header-actions .lang-switcher,
+  .header-action-btn[aria-label="Search"],
+  .header-action-btn[aria-label="Account"],
+  .header-action-btn[aria-label="Wishlist"] { display: none; }
+  .menu-toggle { display: flex; order: 6; }
+}
+
+/* ---- Menu mobile : Recherche (+ séparateur) ---- */
+.nav-mobile-divider {
+  height: 1px;
+  background: var(--color-sage-light);
+  margin: var(--spacing-sm) 0;
+}
+.nav-mobile-action {
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+.nav-mobile-action::after { content: none; }
+.nav-mobile-action svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}

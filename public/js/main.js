@@ -339,7 +339,7 @@
       if (e.key === 'Escape' && modal.classList.contains('active')) closeSearch();
     });
     document.addEventListener('click', function (e) {
-      const btn = e.target.closest('.header-action-btn[aria-label="Search"]');
+      const btn = e.target.closest('.header-action-btn[aria-label="Search"], [data-search-open]');
       if (btn) {
         e.preventDefault();
         openSearch();
