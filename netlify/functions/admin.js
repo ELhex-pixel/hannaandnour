@@ -333,7 +333,8 @@ case 'getSettings': {
           pickup_cents: Math.max(0, parseInt(shipping.pickup_cents, 10) || 0),
           free_threshold_cents: Math.max(0, parseInt(shipping.free_threshold_cents, 10) || 0),
           tax_rate: Math.max(0, Math.min(1, parseFloat(shipping.tax_rate) || 0)),
-          pickup_enabled: shipping.pickup_enabled !== false
+          pickup_enabled: shipping.pickup_enabled !== false,
+          returns_days: Math.max(7, Math.min(90, parseInt(shipping.returns_days, 10) || 30))
         };
         const { error } = await sb.from('settings').upsert({ key: 'shipping', value, updated_at: new Date().toISOString() });
         if (error) throw error;
@@ -577,6 +578,7 @@ async function loadSettings(sb) {
     pickup_cents: 0,
     free_threshold_cents: intEnv('FREE_SHIPPING_THRESHOLD_CENTS', 7500),
     tax_rate: floatEnv('TAX_RATE', 0.07),
+    returns_days: 30,
     pickup_enabled: true
   };
 }

@@ -622,6 +622,23 @@
 
   initSearch();
 
+  /* ==============================================
+     Scroll-to-top (footer du modèle) + footer trust
+     ============================================== */
+
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-scroll-top]');
+    if (!btn) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  if (window.HN && typeof window.HN.refreshFooterTrust === 'function') {
+    window.HN.refreshFooterTrust();
+    document.addEventListener('langchange', function () {
+      window.HN.refreshFooterTrust();
+    });
+  }
+
   if (window.HN && window.HN.track) {
     window.HN.track('pageview');
   }

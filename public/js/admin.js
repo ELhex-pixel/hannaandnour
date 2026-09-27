@@ -574,6 +574,7 @@
       setVal('setPickup', dollars(s.pickup_cents));
       setVal('setFree', dollars(s.free_threshold_cents));
       setVal('setTax', (parseFloat(s.tax_rate) || 0) * 100);
+      setVal('setReturns', parseInt(s.returns_days, 10) || 30);
       document.getElementById('setPickupEnabled').checked = s.pickup_enabled !== false;
       var cur = res.currency || {};
       ADMIN_CURRENCY_SYMBOL = cur.symbol || (cur.code === 'eur' ? '\u20AC' : '$');
@@ -593,6 +594,7 @@
           pickup_cents: toCents(getVal('setPickup')),
           free_threshold_cents: toCents(getVal('setFree')),
           tax_rate: (parseFloat(getVal('setTax')) || 0) / 100,
+          returns_days: parseInt(getVal('setReturns'), 10) || 30,
           pickup_enabled: document.getElementById('setPickupEnabled').checked
         },
         currency: { code: document.getElementById('setCurrency').value }

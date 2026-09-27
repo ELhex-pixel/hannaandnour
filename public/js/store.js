@@ -60,6 +60,7 @@
 
   var CURRENCY_SYMBOL = '$';
   var CONFIG_CACHE_KEY = 'hn-config';
+  var CONFIG_DATA = {};
   var configPromise = null;
 
   function money(cents) {
@@ -109,6 +110,7 @@
 
   function applyConfigCopy(cfg) {
     try {
+      CONFIG_DATA = (cfg && cfg.settings) || {};
       if (window.I18n && typeof window.I18n.setShipThreshold === 'function' &&
           cfg.settings && typeof cfg.settings.free_threshold_cents === 'number') {
         window.I18n.setShipThreshold(cfg.settings.free_threshold_cents);
@@ -117,6 +119,7 @@
         window.I18n.refreshCurrency();
         if (typeof refreshPromoAnnounce === 'function') refreshPromoAnnounce();
       }
+      refreshFooterTrust();
     } catch (e) {}
   }
 
@@ -147,11 +150,13 @@
         promosFromServer = true;
         try { writeLS(PROMOS_CACHE_KEY, promosList); } catch (e) {}
         refreshPromoAnnounce(promosList);
+        refreshFooterTrust();
         return promosList;
       })
       .catch(function () {
         promosInit = null;
         refreshPromoAnnounce(promosList);
+        refreshFooterTrust();
         return promosList;
       });
     return promosInit;
@@ -198,6 +203,35 @@
       document.querySelectorAll('[data-i18n="announce"]').forEach(function (el) {
         if (el && el.textContent) el.textContent = text;
       });
+    } catch (e) {}
+  }
+
+  // Fills the footer trust row: admin-editable returns window (returns_days from
+  // /api/config) and the active promo code, refreshed on config/promo changes and
+  // language switches. The free-shipping text is handled by i18n 'trustFree'.
+  function refreshFooterTrust() {
+    try {
+      if (!window.I18n || typeof window.I18n.t !== 'function') return;
+      var el = document.getElementById('footerTrustReturns');
+      if (el) {
+        var days = parseInt(CONFIG_DATA.returns_days, 10);
+        if (isNaN(days) || days <= 0) days = 30;
+        el.textContent = window.I18n.t('trustReturns', { n: days });
+      }
+      el = document.getElementById('footerTrustPromo');
+      if (el) {
+        var active = null;
+        for (var i = 0; i < promosList.length; i++) {
+          var p = promosList[i];
+          if (p && p.percent_off && (!p.expires_at || new Date(p.expires_at).getTime() > Date.now())) {
+            active = p;
+            break;
+          }
+        }
+        var code = active ? active.code : 'WELCOME15';
+        var pct = active ? (parseInt(active.percent_off, 10) || 15) : 15;
+        el.textContent = window.I18n.t('trustPromo', { code: String(code).toUpperCase(), pct: pct });
+      }
     } catch (e) {}
   }
 
@@ -509,7 +543,7 @@
     // Load promo codes so the header announce and cart preview use live codes.
     loadPromos();
     // Re-announce the promo after a language switch (i18n resets [data-i18n]).
-    document.addEventListener('langchange', function () { refreshPromoAnnounce(promosList); });
+    document.addEventListener('langchange', function () { refreshPromoAnnounce(promosList); refreshFooterTrust(); });
     // Load the catalog in the background (rendering scripts call it too).
     if (!window.HN_CONFIG_SUPPRESS_AUTOLOAD) {
       loadProducts().catch(function () { /* offline preview: static content remains */ });
@@ -558,6 +592,7 @@
     loadPromos: loadPromos,
     promos: promos,
     promoRate: promoRate,
+    refreshFooterTrust: refreshFooterTrust,
     track: track,
     isAuthed: isAuthed,
     isAuthConfigured: isAuthConfigured

@@ -102,49 +102,153 @@
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <a href="index.html" class="footer-logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
-          <p class="footer-description" data-i18n="footerTagline">Empowering modern Muslim women through elegant, modest fashion that celebrates faith and style.</p>
+  
+<!-- Footer (modèle : photo femme, scroll top, réseaux sociaux) -->
+  <footer class="footer model-footer">
+    <div class="footer-photo-band">
+      <img src="images/hero.jpg" alt="Hanna &amp; Nour — Mode modeste élégante" loading="lazy">
+      <div class="footer-photo-overlay"></div>
+    </div>
+    <div class="footer-wrap">
+      <button type="button" class="footer-scroll-top" data-scroll-top data-i18n-aria-label="scrollTopLabel" aria-label="Retour en haut">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"></path></svg>
+      </button>
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <a href="index.html" class="footer-logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+            <p class="footer-description" data-i18n="footerTagline">Mode modeste intemporelle, conçue avec soin pour célébrer votre foi, votre élégance et votre confiance au quotidien.</p>
+            <div class="footer-contact">
+              <a href="mailto:care@hannaandnour.com">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 5L2 7"></path></svg>
+                <span>care@hannaandnour.com</span>
+              </a>
+              <a href="https://hannanour.netlify.app" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20"></path><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                <span data-i18n="footerWebsite">hannanour.netlify.app</span>
+              </a>
+              <span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                <span data-i18n="footerCity">Paris, France</span>
+              </span>
+            </div>
+            <div class="footer-social">
+              <a href="#" aria-label="Instagram" data-i18n-aria-label="socialInstagram">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><path d="M17.5 6.5h.01"></path></svg>
+              </a>
+              <a href="#" aria-label="Facebook" data-i18n-aria-label="socialFacebook">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+              </a>
+              <a href="#" aria-label="X (Twitter)" data-i18n-aria-label="socialX">
+                <svg class="footer-icon-fill" viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 2H22l-7.6 8.7L23.3 22h-6.9l-5.4-6.6L4.7 22H1.6l8.1-9.3L1 2h7.1l4.9 6.1L18.9 2zm-1.2 18h1.9L7.4 4H5.4l12.3 16z"></path></svg>
+              </a>
+              <a href="#" aria-label="YouTube" data-i18n-aria-label="socialYoutube">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17z"></path><path d="m10 15 5-3-5-3z"></path></svg>
+              </a>
+            </div>
+          </div>
+
+          <div class="footer-column">
+            <div class="footer-col-desktop">
+              <h3 class="footer-title" data-i18n="footerShop">Boutique</h3>
+              <ul class="footer-links">
+                <li><a href="shop.html" class="footer-link" data-i18n="linkHijabs">Hijabs</a></li>
+                <li><a href="shop.html" class="footer-link" data-i18n="linkAbayas">Abayas</a></li>
+                <li><a href="shop.html" class="footer-link" data-i18n="linkPrayerWear">Tenues de prière</a></li>
+                <li><a href="shop.html" class="footer-link" data-i18n="linkNewArrivals">Nouveautés</a></li>
+                <li><a href="shop.html" class="footer-link" data-i18n="linkPromotions">Promotions</a></li>
+              </ul>
+            </div>
+            <details class="footer-col-acc">
+              <summary class="footer-title"><span data-i18n="footerShop">Boutique</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></summary>
+              <ul class="footer-links">
+                <li><a href="shop.html" class="footer-link" data-i18n="linkHijabs">Hijabs</a></li>
+                <li><a href="shop.html" class="footer-link" data-i18n="linkAbayas">Abayas</a></li>
+                <li><a href="shop.html" class="footer-link" data-i18n="linkPrayerWear">Tenues de prière</a></li>
+                <li><a href="shop.html" class="footer-link" data-i18n="linkNewArrivals">Nouveautés</a></li>
+                <li><a href="shop.html" class="footer-link" data-i18n="linkPromotions">Promotions</a></li>
+              </ul>
+            </details>
+          </div>
+
+          <div class="footer-column">
+            <div class="footer-col-desktop">
+              <h3 class="footer-title" data-i18n="footerHelp">Aide &amp; Support</h3>
+              <ul class="footer-links">
+                <li><a href="account.html" class="footer-link" data-i18n="linkTrackOrder">Suivi de commande</a></li>
+                <li><a href="terms.html" class="footer-link" data-i18n="linkReturns">Livraison &amp; Retours</a></li>
+                <li><a href="terms.html" class="footer-link" data-i18n="linkSizeGuide">Guide des tailles</a></li>
+                <li><a href="contact.html" class="footer-link" data-i18n="linkFaqs">FAQ</a></li>
+                <li><a href="contact.html" class="footer-link" data-i18n="linkContact">Nous contacter</a></li>
+              </ul>
+            </div>
+            <details class="footer-col-acc">
+              <summary class="footer-title"><span data-i18n="footerHelp">Aide &amp; Support</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></summary>
+              <ul class="footer-links">
+                <li><a href="account.html" class="footer-link" data-i18n="linkTrackOrder">Suivi de commande</a></li>
+                <li><a href="terms.html" class="footer-link" data-i18n="linkReturns">Livraison &amp; Retours</a></li>
+                <li><a href="terms.html" class="footer-link" data-i18n="linkSizeGuide">Guide des tailles</a></li>
+                <li><a href="contact.html" class="footer-link" data-i18n="linkFaqs">FAQ</a></li>
+                <li><a href="contact.html" class="footer-link" data-i18n="linkContact">Nous contacter</a></li>
+              </ul>
+            </details>
+          </div>
+
+          <div class="footer-column">
+            <div class="footer-col-desktop">
+              <h3 class="footer-title" data-i18n="footerAbout">À propos</h3>
+              <ul class="footer-links">
+                <li><a href="about.html" class="footer-link" data-i18n="linkOurStory">Notre histoire</a></li>
+                <li><a href="about.html" class="footer-link" data-i18n="linkSustainability">Durabilité</a></li>
+                <li><a href="blog.html" class="footer-link" data-i18n="linkLoyalty">Programme fidélité</a></li>
+                <li><a href="about.html" class="footer-link" data-i18n="linkCareers">Carrières</a></li>
+                <li><a href="blog.html" class="footer-link" data-i18n="linkPress">Presse</a></li>
+              </ul>
+            </div>
+            <details class="footer-col-acc">
+              <summary class="footer-title"><span data-i18n="footerAbout">À propos</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></summary>
+              <ul class="footer-links">
+                <li><a href="about.html" class="footer-link" data-i18n="linkOurStory">Notre histoire</a></li>
+                <li><a href="about.html" class="footer-link" data-i18n="linkSustainability">Durabilité</a></li>
+                <li><a href="blog.html" class="footer-link" data-i18n="linkLoyalty">Programme fidélité</a></li>
+                <li><a href="about.html" class="footer-link" data-i18n="linkCareers">Carrières</a></li>
+                <li><a href="blog.html" class="footer-link" data-i18n="linkPress">Presse</a></li>
+              </ul>
+            </details>
+          </div>
         </div>
-        <div class="footer-column">
-          <h3 class="footer-title" data-i18n="footerShop">Shop</h3>
-          <ul class="footer-links">
-            <li><a href="shop.html" class="footer-link" data-i18n="linkAllProducts">All Products</a></li>
-            <li><a href="collections.html" class="footer-link" data-i18n="linkHijabs">Hijabs</a></li>
-            <li><a href="collections.html" class="footer-link" data-i18n="linkAbayas">Abayas</a></li>
-            <li><a href="collections.html" class="footer-link" data-i18n="linkDresses">Dresses</a></li>
-            <li><a href="collections.html" class="footer-link" data-i18n="linkPrayerWear">Prayer Wear</a></li>
-            <li><a href="collections.html" class="footer-link" data-i18n="linkAccessories">Accessories</a></li>
-          </ul>
+
+        <div class="footer-trust-row">
+          <div class="footer-chips">
+            <span>Visa</span><span>Mastercard</span><span>PayPal</span><span>Apple&nbsp;Pay</span><span>CB</span>
+          </div>
+          <div class="footer-trust">
+            <span class="footer-trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="6.5" cy="18.5" r="1.8"/><circle cx="17.5" cy="18.5" r="1.8"/></svg>
+              <span data-i18n="trustFree">Livraison offerte dès 80 €</span>
+            </span>
+            <span class="footer-trust-item trust-highlight">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>
+              <span id="footerTrustPromo">-15 % avec le code WELCOME15</span>
+            </span>
+            <span class="footer-trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l1.4-1.4L9 11.2 18.6 1.6 20 3z"/><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9"/></svg>
+              <span id="footerTrustReturns">Retours sous 30 jours</span>
+            </span>
+            <span class="footer-trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <span data-i18n="trustSecure">Paiement 100 % sécurisé</span>
+            </span>
+          </div>
         </div>
-        <div class="footer-column">
-          <h3 class="footer-title" data-i18n="footerHelp">Help</h3>
-          <ul class="footer-links">
-            <li><a href="contact.html" class="footer-link" data-i18n="linkContact">Contact Us</a></li>
-            <li><a href="mailto:care@hannaandnour.com" class="footer-link">care@hannaandnour.com</a></li>
-            <li><a href="https://hannanour.netlify.app" class="footer-link" target="_blank" rel="noopener">hannanour.netlify.app</a></li>
-          </ul>
-        </div>
-        <div class="footer-column">
-          <h3 class="footer-title" data-i18n="footerAbout">About</h3>
-          <ul class="footer-links">
-            <li><a href="about.html" class="footer-link" data-i18n="linkOurStory">Our Story</a></li>
-            <li><a href="blog.html" class="footer-link" data-i18n="linkBlog">Blog</a></li>
-            <li><a href="privacy.html" class="footer-link" data-i18n="linkPrivacy">Privacy Policy</a></li>
-            <li><a href="terms.html" class="footer-link" data-i18n="linkTerms">Terms of Service</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <p class="footer-copyright" data-i18n="footerCopyright">&copy; 2026 Hanna &amp; Nour. All rights reserved.</p>
-        <div class="footer-payments">
-          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Visa</span>
-          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Mastercard</span>
-          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">PayPal</span>
-          <span style="padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; font-size: 12px;">Apple Pay</span>
+
+        <div class="footer-legal">
+          <p class="footer-copyright" data-i18n="footerCopyright">&copy; 2026 Hanna &amp; Nour. Tous droits réservés.</p>
+          <div class="footer-legal-links">
+            <a href="privacy.html" data-i18n="linkPrivacy">Confidentialité</a>
+            <a href="terms.html" data-i18n="linkTerms">Conditions générales</a>
+            <a href="privacy.html" data-i18n="linkCookies">Cookies</a>
+          </div>
         </div>
       </div>
     </div>

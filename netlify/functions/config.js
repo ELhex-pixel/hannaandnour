@@ -30,6 +30,7 @@ exports.handler = async function (event) {
       pickup_cents: 0,
       free_threshold_cents: intEnv('FREE_SHIPPING_THRESHOLD_CENTS', 7500),
       tax_rate: floatEnv('TAX_RATE', 0.07),
+      returns_days: 30,
       pickup_enabled: true
     };
     if (row) Object.assign(settings, row);
