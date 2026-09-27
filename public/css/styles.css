@@ -4311,3 +4311,32 @@ html[dir="rtl"] .model-footer .footer-brand { align-items: flex-end; text-align:
   height: 20px;
   flex: 0 0 auto;
 }
+
+/* ---- Header : fond solide crème au top (plus de texture photo derrière les boutons) ---- */
+.header.header-overlay,
+.header.header-overlay.scrolled {
+  background-color: rgba(253, 248, 245, 0.98);
+  backdrop-filter: blur(10px);
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+}
+.header.header-overlay .header-top,
+.header.header-overlay.scrolled .header-top {
+  max-height: 48px;
+  opacity: 1;
+  padding: var(--spacing-sm) 0;
+}
+
+/* ---- Sélecteur de langue : aucune flèche (native ou SVG), pilule blanche propre ---- */
+select.lang-switcher {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none !important;
+}
+.header.header-overlay .lang-switcher,
+.header.header-overlay.scrolled .lang-switcher {
+  background-color: #fff;
+  border-color: #E0D6C4;
+  color: #141414;
+}
