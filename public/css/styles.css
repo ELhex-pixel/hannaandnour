@@ -4484,3 +4484,9 @@ select.lang-switcher {
 .header.header-overlay:not(.scrolled) .menu-toggle span {
   background-color: #F8F3EC !important;
 }
+
+/* Logo : taille et lettrage du modele (text-2xl 24px + tracking-wide 0.025em) */
+.logo {
+  font-size: 1.5rem;
+  letter-spacing: 0.025em;
+}
