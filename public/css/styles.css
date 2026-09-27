@@ -4463,3 +4463,24 @@ select.lang-switcher {
 
 /* ---- Menu mobile : espace entre la ligne du haut et les 5 boutons ---- */
 .nav-mobile-actions { margin-top: var(--spacing-md); }
+
+/* ---- Header home : blanc quand intégré à la photo, noir au scroll ---- */
+.header.header-overlay:not(.scrolled) .logo,
+.header.header-overlay:not(.scrolled) .nav-link {
+  color: #F8F3EC !important;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.4) !important;
+}
+.header.header-overlay:not(.scrolled) .nav-link:hover,
+.header.header-overlay:not(.scrolled) .nav-link.active {
+  color: #D4B483 !important;
+}
+.header.header-overlay:not(.scrolled) .logo-accent {
+  color: #D4B483 !important;
+}
+.header.header-overlay:not(.scrolled) .header-action-btn svg {
+  stroke: #F8F3EC !important;
+  filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.4));
+}
+.header.header-overlay:not(.scrolled) .menu-toggle span {
+  background-color: #F8F3EC !important;
+}
