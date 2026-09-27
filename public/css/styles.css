@@ -5,30 +5,33 @@
 
 /* CSS Custom Properties */
 :root {
-  /* Primary Colors - Beige & Gold */
-  --color-blush: #D9CCB2;
-  --color-blush-light: #F1EBDE;
-  --color-cream: #FBF8F1;
-  --color-sage: #7F6200;
-  --color-sage-light: #E8DBBB;
+  /* Primary Colors - Cream, Charcoal & Gold  (= modèle Arena) */
+  --color-blush: #D4B483;
+  --color-blush-light: #EFE6D8;
+  --color-cream: #F8F3EC;
+  --color-sage: #B78A4A;
+  --color-sage-light: #E7DCC8;
   
   /* Gold Tones */
-  --color-emerald: #7E5500;
-  --color-emerald-dark: #85630F;
-  --color-burgundy: #5A470F;
-  --color-burgundy-light: #7A602A;
+  --color-emerald: #B78A4A;
+  --color-emerald-dark: #A3793B;
+  --color-burgundy: #221F1C;
+  --color-burgundy-light: #3D382F;
   
   /* Neutrals */
-  --color-charcoal: #3B362E;
-  --color-dark: #221F1A;
-  --color-gray: #6E675C;
-  --color-gray-light: #6E6458;
-  --color-off-white: #FAFAFA;
+  --color-charcoal: #221F1C;
+  --color-dark: #221F1C;
+  --color-gray: #6F6657;
+  --color-gray-light: #7A7163;
+  --color-off-white: #FAF7F1;
   --color-white: #FFFFFF;
+  --color-gold: #B78A4A;
+  --color-gold-light: #D4B483;
+  --color-cream-dark: #EFE6D8;
   
   /* Typography */
-  --font-display: 'Cormorant Garamond', 'Georgia', serif;
-  --font-body: 'Montserrat', 'Helvetica Neue', sans-serif;
+  --font-display: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Inter', 'Montserrat', 'Segoe UI', sans-serif;
   
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -40,9 +43,9 @@
   --spacing-3xl: 4rem;
   
   /* Borders */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
   --radius-full: 50%;
   
   /* Shadows */
@@ -3692,3 +3695,270 @@ html[lang="ar"] .search-result-body {
   padding-bottom: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
 }
+
+/* ================================================================
+   SKIN « MODÈLE » — Hanna & Nour (Arena) : crème, charbon, or,
+   Playfair Display italique + Inter. Appliqué sur tout le site.
+   ================================================================ */
+
+.container { max-width: 1280px; }
+
+h1, h2, h3 { font-style: italic; font-weight: 500; }
+
+.subtitle {
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  color: var(--color-gold);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.heading-section { font-style: italic; color: var(--color-dark); }
+
+/* ---- Buttons : pilules ---- */
+.btn { border-radius: 999px; letter-spacing: 0.09em; font-weight: 600; }
+.btn-primary {
+  background-color: var(--color-charcoal);
+  color: #F8F3EC;
+  border: 2px solid var(--color-charcoal);
+}
+.btn-primary:hover {
+  background-color: var(--color-gold);
+  border-color: var(--color-gold);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(183,138,74,0.25);
+}
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-charcoal);
+  border: 2px solid var(--color-charcoal);
+}
+.btn-secondary:hover { background-color: var(--color-charcoal); color: #F8F3EC; }
+.btn-outline {
+  color: var(--color-gold);
+  border: 2px solid var(--color-gold);
+}
+.btn-outline:hover { background-color: var(--color-gold); color: #fff; }
+.btn-white {
+  background-color: var(--color-charcoal);
+  color: #F8F3EC;
+  border: 2px solid var(--color-charcoal);
+}
+.btn-white:hover { background-color: var(--color-gold); border-color: var(--color-gold); }
+
+/* ---- Header ---- */
+.header { background-color: rgba(248,243,236,0.92); }
+.header-top {
+  background-color: #221F1C;
+  color: #D4B483;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.55rem 0;
+}
+.logo { font-size: 1.9rem; letter-spacing: 0.08em; color: var(--color-charcoal); }
+.logo-accent { color: var(--color-gold); }
+.nav-desktop { gap: var(--spacing-xl); }
+.nav-link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: rgba(34,31,28,0.72);
+}
+.nav-link::after { background-color: var(--color-gold); }
+.nav-link:hover, .nav-link.active { color: var(--color-charcoal); }
+.header-action-btn:hover { background-color: var(--color-cream-dark); }
+.header-action-btn svg { stroke: var(--color-charcoal); }
+.cart-count { background-color: var(--color-gold); }
+.lang-switcher {
+  border: 1px solid #E0D6C4;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-charcoal);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ---- Hero (modèle : sombre, image plein écran) ---- */
+.hero { background-color: #221F1C; min-height: calc(100vh - 0px); }
+.hero-title { color: #F8F3EC; font-size: clamp(2.9rem, 7vw, 5.4rem); }
+.hero-title em { color: #D4B483; font-style: italic; }
+.hero-subtitle {
+  background: rgba(255,255,255,0.06);
+  color: #D4B483;
+  border: 1px solid rgba(212,180,131,0.4);
+  border-radius: 999px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+  margin-bottom: var(--spacing-lg);
+}
+.hero-description { color: rgba(248,243,236,0.78); font-size: 1.1rem; }
+.hero-actions .btn {
+  border: 1px solid rgba(248,243,236,0.4);
+  color: #F8F3EC;
+  background: transparent;
+}
+.hero-actions .btn:hover { background: rgba(248,243,236,0.12); border-color: rgba(248,243,236,0.6); }
+.hero-actions .btn.btn-hero-fill { background: #F8F3EC; color: #221F1C; border-color: #F8F3EC; }
+.hero-actions .btn.btn-hero-fill:hover { background: #D4B483; border-color: #D4B483; color: #221F1C; }
+.hero-scroll { color: rgba(248,243,236,0.7); }
+.hero-scroll-line { background: linear-gradient(to bottom, #D4B483, transparent); }
+.hero-glow {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #221F1C 0%, rgba(34,31,28,0.55) 40%, rgba(34,31,28,0.25) 100%),
+              linear-gradient(to right, rgba(34,31,28,0.75), transparent 60%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ---- Story / Featured banner (crème) ---- */
+.featured-banner {
+  background: linear-gradient(135deg, #F8F3EC 0%, #EFE6D8 100%);
+  color: var(--color-charcoal);
+}
+.featured-banner::before { display: none; }
+.featured-banner-content { flex-direction: row-reverse; }
+.featured-banner-text { max-width: 560px; color: var(--color-charcoal); }
+.featured-banner .subtitle { color: var(--color-gold); }
+.featured-banner-title { color: var(--color-charcoal); font-size: clamp(2rem, 4.5vw, 3.4rem); }
+.featured-banner p { color: rgba(34,31,28,0.7); }
+.featured-banner-image {
+  width: 480px;
+  height: 560px;
+  border-radius: 28px;
+  background: #EFE6D8;
+}
+.featured-banner-image img { border-radius: 28px; }
+.featured-banner .btn-white { background-color: var(--color-charcoal); color: #F8F3EC; }
+
+/* ---- Collections / Eid tiles ---- */
+.section[bg-cream-dark] { background-color: #EFE6D8; }
+.collections-grid { grid-template-columns: repeat(3, 1fr); }
+.collection-card { border-radius: 28px; aspect-ratio: 4/5; }
+.collection-card-overlay { background: linear-gradient(to top, rgba(34,31,28,0.85), rgba(34,31,28,0.08) 55%, transparent); }
+.collection-card-title { font-style: italic; font-size: 1.6rem; }
+.collection-card-count { color: rgba(248,243,236,0.75); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* ---- Product cards ---- */
+.products-grid { grid-template-columns: repeat(4, 1fr); gap: var(--spacing-xl); }
+.product-card { border-radius: 20px; background: #EFE6D8; box-shadow: 0 4px 14px rgba(34,31,28,0.04); }
+.product-card:hover { transform: translateY(-6px); box-shadow: 0 16px 34px rgba(34,31,28,0.12); }
+.product-card-image { aspect-ratio: 3/4; background: #EFE6D8; }
+.product-card-image img { transition: transform 0.7s ease; }
+.product-card:hover .product-card-image img { transform: scale(1.06); }
+.product-badge {
+  border-radius: 999px;
+  background: #221F1C;
+  color: #F8F3EC;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+}
+.product-card-quick-add { padding: var(--spacing-md); }
+.product-card-quick-add .btn { border-radius: 999px; }
+.product-card-category { color: var(--color-gold); font-size: 0.7rem; letter-spacing: 0.14em; }
+.product-card-title { font-style: italic; font-size: 1.15rem; font-weight: 500; }
+.product-price-current { font-size: 1.05rem; font-weight: 600; }
+.product-price-original { color: rgba(34,31,28,0.4); }
+.stars { color: var(--color-gold); }
+.stars svg { fill: var(--color-gold); }
+
+/* ---- Testimonials (sombre) ---- */
+.testimonials { background-color: #221F1C; }
+.testimonials .heading-section { color: #F8F3EC; }
+.testimonials .subtitle { color: #D4B483; }
+.testimonials p[data-i18n="testimonialsNote"] { color: rgba(248,243,236,0.35); }
+.testimonial-card {
+  background: rgba(248,243,236,0.05);
+  border: 1px solid rgba(248,243,236,0.12);
+  border-radius: 24px;
+  box-shadow: none;
+  backdrop-filter: blur(6px);
+}
+.testimonial-stars svg { fill: #D4B483; }
+.testimonial-text { color: rgba(248,243,236,0.82); }
+.testimonial-name { color: #F8F3EC; }
+.testimonial-location { color: rgba(248,243,236,0.5); }
+.testimonial-avatar { background-color: var(--color-gold); color: #fff; font-weight: 600; }
+
+/* ---- Newsletter ---- */
+.newsletter { background: #EFE6D8; }
+.newsletter-content { justify-content: center; text-align: center; flex-direction: column; }
+.newsletter-text { max-width: 560px; }
+.newsletter-title { font-style: italic; color: var(--color-charcoal); }
+.newsletter .subtitle { color: var(--color-gold); }
+.newsletter-form { max-width: 480px; }
+.input-group input { border-radius: 999px; }
+.newsletter-form-group .btn { border-radius: 999px; }
+
+/* ---- Footer ---- */
+.footer { background-color: #221F1C; }
+.footer-grid { grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: var(--spacing-2xl); }
+.footer-logo { font-size: 1.9rem; letter-spacing: 0.08em; }
+.footer-title {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #D4B483;
+  font-style: normal;
+}
+.footer-link:hover { color: #D4B483; }
+.footer-bottom { justify-content: space-between; }
+.footer-payments span { border-radius: 8px; }
+
+/* ---- Pages internes ---- */
+.page-header { background-color: #F0E7D9; }
+.page-header-title { font-style: italic; }
+.page-header-breadcrumb { color: rgba(34,31,28,0.55); }
+
+/* Forms & champs */
+.form-input, .form-select, .price-input, .shop-sort select,
+.cart-promo input, .filter-title, .quantity-selector {
+  border-radius: 12px;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--color-gold) !important;
+  outline: none;
+}
+
+/* ---- Responsive du skin ---- */
+@media (max-width: 992px) {
+  .products-grid { grid-template-columns: repeat(2, 1fr); }
+  .collections-grid { grid-template-columns: repeat(2, 1fr); }
+  .featured-banner-content { flex-direction: column; }
+  .featured-banner-image { width: 100%; max-width: 480px; height: auto; aspect-ratio: 4/5; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .products-grid { grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md); }
+  .collections-grid { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr; }
+  .hero { min-height: auto; padding: 140px 0 90px; }
+  .hero-title { font-size: 2.5rem; }
+}
+
+/* Arabe : Cairo partout, titre non italique */
+html[dir="rtl"] h1, html[dir="rtl"] h2, html[dir="rtl"] h3,
+html[dir="rtl"] .product-card-title, html[dir="rtl"] .heading-section,
+html[dir="rtl"] .hero-title, html[dir="rtl"] .featured-banner-title,
+html[dir="rtl"] .collection-card-title, html[dir="rtl"] .page-header-title,
+html[dir="rtl"] .newsletter-title, html[dir="rtl"] .footer-logo,
+html[dir="rtl"] .logo {
+  font-style: normal;
+}
+
+/* ---- Badges de confiance (footer) ---- */
+.footer-trust { display: flex; flex-direction: column; gap: 10px; margin-top: var(--spacing-lg); }
+.footer-trust-item {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.82rem; color: rgba(248,243,236,0.75);
+}
+.footer-trust-item svg { width: 18px; height: 18px; color: #D4B483; flex-shrink: 0; }
