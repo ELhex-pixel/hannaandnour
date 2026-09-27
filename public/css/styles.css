@@ -4424,3 +4424,39 @@ select.lang-switcher {
 }
 .nav-mobile-link { font-size: 1.5rem; }
 .nav-mobile-header .logo { color: #141414; }
+
+/* ---- Forcer logo & liens header/drawer en noir (l'ancien bloc cream #F8F3EC gagnait) ---- */
+.header .logo,
+.header .nav-link,
+.header.header-overlay .logo,
+.header.header-overlay .nav-link,
+.header.header-overlay.scrolled .logo,
+.header.header-overlay.scrolled .nav-link {
+  color: #141414 !important;
+  text-shadow: none !important;
+}
+.header .nav-link:hover,
+.header.header-overlay .nav-link:hover {
+  color: #D4B483 !important;
+}
+.header .logo-accent,
+.header.header-overlay .logo-accent,
+.header.header-overlay.scrolled .logo-accent {
+  color: #D4B483 !important;
+}
+
+/* ---- Liens du menu : remontés juste sous la barre d'actions ---- */
+.nav-mobile-links {
+  justify-content: flex-start;
+  flex: 1 1 auto;
+}
+
+/* ---- Badge panier du menu : petite bulle au coin qui ne cache pas l'icone ---- */
+.nav-mobile-action-btn .nav-mobile-cart-count {
+  top: -7px;
+  right: -9px;
+  width: 17px;
+  height: 17px;
+  font-size: 0.6rem;
+  z-index: 2;
+}
