@@ -4460,3 +4460,6 @@ select.lang-switcher {
   font-size: 0.6rem;
   z-index: 2;
 }
+
+/* ---- Menu mobile : espace entre la ligne du haut et les 5 boutons ---- */
+.nav-mobile-actions { margin-top: var(--spacing-md); }
