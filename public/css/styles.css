@@ -3962,3 +3962,9 @@ html[dir="rtl"] .logo {
   font-size: 0.82rem; color: rgba(248,243,236,0.75);
 }
 .footer-trust-item svg { width: 18px; height: 18px; color: #D4B483; flex-shrink: 0; }
+
+/* Badges de paiement : pilules cohérentes avec le modèle */
+.footer-bottom .footer-payments span { border-radius: 999px !important; }
+
+/* Titres de section en Playfair (pages éditoriales) */
+.heading-display { font-style: italic; }
