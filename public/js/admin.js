@@ -92,6 +92,16 @@
     document.getElementById('loginPassword').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') tryLogin();
     });
+    var eyeBtn = document.getElementById('togglePassword');
+    if (eyeBtn) {
+      eyeBtn.addEventListener('click', function () {
+        var input = document.getElementById('loginPassword');
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        eyeBtn.setAttribute('aria-label', show ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+        eyeBtn.setAttribute('title', show ? 'Masquer' : 'Afficher');
+      });
+    }
     document.getElementById('logoutBtn').addEventListener('click', logout);
   }
 
