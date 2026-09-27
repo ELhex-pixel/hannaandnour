@@ -4083,7 +4083,7 @@ html[dir="rtl"] .model-footer .footer-brand { align-items: flex-end; text-align:
 .footer-col-acc { display: none; }
 
 @media (max-width: 992px) {
-  .model-footer .footer-grid { grid-template-columns: 1fr 1fr; }
+  .model-footer .footer-grid { grid-template-columns: 1fr; }
   .footer-col-desktop { display: none; }
   .footer-col-acc { display: block; border-bottom: 1px solid rgba(248, 243, 236, 0.08); }
   .footer-col-acc summary {
