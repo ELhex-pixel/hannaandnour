@@ -4020,7 +4020,7 @@ html[dir="rtl"] .model-footer .footer-grid { text-align: right; }
   text-align: left;
 }
 html[dir="rtl"] .model-footer .footer-brand { align-items: flex-end; text-align: right; }
-.model-footer .footer-logo { margin-bottom: 16px; }
+.model-footer .footer-logo { margin-bottom: 16px; line-height: 1.2; }
 .model-footer .footer-description {
   color: rgba(248, 243, 236, 0.6);
   font-size: 0.9rem;
