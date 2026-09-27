@@ -228,9 +228,13 @@
             break;
           }
         }
-        var code = active ? active.code : 'WELCOME15';
-        var pct = active ? (parseInt(active.percent_off, 10) || 15) : 15;
-        el.textContent = window.I18n.t('trustPromo', { code: String(code).toUpperCase(), pct: pct });
+        var chip = el.closest('.footer-trust-item');
+        if (active) {
+          el.textContent = window.I18n.t('trustPromo', { code: String(active.code).toUpperCase(), pct: parseInt(active.percent_off, 10) || 0 });
+          if (chip) chip.style.display = '';
+        } else {
+          if (chip) chip.style.display = 'none';
+        }
       }
     } catch (e) {}
   }
