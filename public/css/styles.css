@@ -4370,3 +4370,57 @@ select.lang-switcher {
   border-color: #E0D6C4;
   color: #141414;
 }
+
+/* ---- Menu mobile redesign : 5 actions avant les liens, liens plus petits, logo noir ---- */
+.nav-mobile-actions {
+  display: flex;
+  gap: 8px;
+  padding-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-sage-light);
+}
+.nav-mobile-action-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 2px;
+  background: #fff;
+  border: 1px solid #E7DDCB;
+  border-radius: 12px;
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #141414;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.nav-mobile-action-btn:hover {
+  border-color: #D4B483;
+  background: #FBF6EE;
+}
+.nav-mobile-action-icon { display: inline-flex; }
+.nav-mobile-action-icon svg { width: 20px; height: 20px; }
+.nav-mobile-action-lang { padding: 8px 2px; }
+.nav-mobile-action-lang .lang-switcher {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  background-image: none;
+  color: #141414;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+.nav-mobile-link { font-size: 1.5rem; }
+.nav-mobile-header .logo { color: #141414; }
