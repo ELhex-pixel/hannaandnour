@@ -3974,26 +3974,6 @@ html[dir="rtl"] .logo {
    ============================================ */
 .footer.model-footer { padding: 0; }
 
-.footer-photo-band {
-  position: relative;
-  width: 100%;
-  height: clamp(210px, 38vw, 440px);
-  overflow: hidden;
-  background-color: #221F1C;
-}
-.footer-photo-band img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 20%;
-  display: block;
-}
-.footer-photo-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, #221F1C 0%, rgba(34, 31, 28, 0.35) 55%, rgba(34, 31, 28, 0.05) 100%);
-}
-
 .footer-wrap {
   position: relative;
   background-color: #221F1C;
@@ -4241,3 +4221,38 @@ html[dir="rtl"] .model-footer .footer-brand { align-items: flex-end; text-align:
 
 .header.header-overlay .menu-toggle span { background-color: #F8F3EC; }
 .header.header-overlay.scrolled .menu-toggle span { background-color: var(--color-charcoal); }
+
+/* ---- Home 100% modele : hero pleine page, section Eid 2 colonnes, tuiles ---- */
+#eid,
+#collections,
+#bestsellers { scroll-margin-top: 120px; }
+.hero-image { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-image img { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; }
+.hero-glow { background: linear-gradient(to top, #221F1C 0%, rgba(34,31,28,0.4) 40%, rgba(34,31,28,0.1) 100%); }
+.hero-glow-right { position: absolute; inset: 0; background: linear-gradient(to right, rgba(34,31,28,0.7), transparent 60%); z-index: 1; pointer-events: none; }
+.hero-scroll { bottom: 2rem; gap: 0.5rem; font-size: 0.72rem; letter-spacing: 0.3em; }
+.hero-scroll-arrow { width: 1rem; height: 1rem; animation: scrollArrow 2s ease-in-out infinite; }
+@keyframes scrollArrow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+.hero-actions .btn.btn-hero-fill { background: #D4B483; border-color: #D4B483; color: #fff; box-shadow: 0 10px 30px rgba(212,180,131,0.25); }
+.hero-actions .btn.btn-hero-fill:hover { background: #E2C69A; border-color: #E2C69A; color: #fff; transform: translateY(-2px); }
+
+.eid-section { background-color: #F8F3EC; }
+.eid-grid { display: grid; grid-template-columns: 1fr; gap: 2.5rem; align-items: center; }
+.eid-image { order: 2; border-radius: 24px; overflow: hidden; }
+.eid-image img { width: 100%; height: clamp(340px, 60vw, 520px); object-fit: cover; transition: transform 0.7s ease; }
+.eid-image:hover img { transform: scale(1.05); }
+.eid-content { order: 1; }
+.eid-content .heading-section { margin-top: 1rem; }
+.eid-content p { margin-top: 1.25rem; max-width: 480px; color: rgba(34,31,28,0.7); line-height: 1.9; }
+.btn-charcoal { background: #221F1C; border: 1px solid #221F1C; color: #F8F3EC; }
+.btn-charcoal:hover { background: #D4B483; border-color: #D4B483; color: #fff; }
+@media (min-width: 1024px) {
+  .eid-grid { grid-template-columns: 1fr 1fr; gap: 3rem; }
+  .eid-image { order: 1; }
+  .eid-content { order: 2; }
+  html[dir="rtl"] .eid-image { order: 2; }
+  html[dir="rtl"] .eid-content { order: 1; }
+}
+.collection-card-desc { margin-top: 0.4rem; font-size: 0.9rem; color: rgba(248,243,236,0.78); }
+.collection-card-more { display: inline-block; margin-top: 1rem; border-bottom: 1px solid #D4B483; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #D4B483; opacity: 0; transition: opacity 0.3s ease; }
+.collection-card:hover .collection-card-more { opacity: 1; }

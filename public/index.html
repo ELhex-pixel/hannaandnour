@@ -148,53 +148,53 @@
   </header>
 
   <main>
-    <!-- Hero Section (modele : sombre, image plein ecran) -->
+    <!-- Hero Section (modele : image plein ecran, femme hero.jpg) -->
     <section class="hero">
       <div class="hero-image">
         <img src="images/hero.jpg" alt="Femme élégante portant un hijab moderne">
       </div>
       <div class="hero-glow"></div>
+      <div class="hero-glow-right"></div>
       <div class="container">
         <div class="hero-content">
           <span class="hero-subtitle" data-i18n="heroBadge">Nouvelle Collection 2026</span>
-          <h1 class="hero-title"><span data-i18n="heroPre">L'élégance dans</span> <em data-i18n="heroWord">la Modestie</em></h1>
-          <p class="hero-description" data-i18n="heroDesc">Des pièces intemporelles qui célèbrent votre foi et votre style. Confectionnées avec soin pour la femme musulmane moderne.</p>
+          <h1 class="hero-title"><span data-i18n="heroPre">L'élégance dans</span> <em data-i18n="heroWord">la pudeur</em></h1>
+          <p class="hero-description" data-i18n="heroDesc">Découvrez des pièces intemporelles qui célèbrent votre foi et votre style. Confectionnées avec soin pour la femme musulmane moderne qui refuse de faire des compromis.</p>
           <div class="hero-actions">
-            <a href="shop.html" class="btn btn-primary btn-lg btn-hero-fill" data-i18n="shopNow">Découvrir la collection</a>
-            <a href="collections.html" class="btn btn-secondary btn-lg" data-i18n="viewCollections">Défiler les nouveautés</a>
+            <a href="collections.html" class="btn btn-primary btn-lg btn-hero-fill" data-i18n="shopNow">Découvrir la collection</a>
+            <a href="#bestsellers" class="btn btn-secondary btn-lg" data-i18n="mostLoved">Meilleures ventes</a>
           </div>
         </div>
       </div>
-      <div class="hero-scroll">
+      <a href="#eid" class="hero-scroll">
         <span data-i18n="scrollLabel">Défiler</span>
-        <div class="hero-scroll-line"></div>
-      </div>
+        <svg class="hero-scroll-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </a>
     </section>
 
-    <!-- Histoire / Story (crème) -->
-    <section class="featured-banner">
+    <!-- Édition limitée / Collection Eid 2026 (modele : 2 colonnes) -->
+    <section class="section eid-section" id="eid">
       <div class="container">
-        <div class="featured-banner-content">
-          <div class="featured-banner-text">
-            <span class="subtitle" data-i18n="featuredSubtitle">Notre univers</span>
-            <h2 class="featured-banner-title" data-i18n="storyTitle">L'élégance au quotidien</h2>
-            <p data-i18n="storyDesc">Chaque création Hanna &amp; Nour est pensée dans le moindre détail : des tissus luxueux, des coupes intemporelles et une élégance qui vous accompagne du matin au soir.</p>
-            <a href="collections.html" class="btn btn-white" data-i18n="exploreCollection">Découvrir la collection</a>
+        <div class="eid-grid">
+          <div class="eid-image">
+            <img src="images/eid-abaya.jpg" alt="Collection Eid">
           </div>
-          <div class="featured-banner-image">
-            <img src="images/modest-dress.jpg" alt="Robe modeste élégante">
+          <div class="eid-content">
+            <span class="subtitle" data-i18n="eidLimited">Édition limitée</span>
+            <h2 class="heading-section" data-i18n="eidHeading">Collection Eid 2026</h2>
+            <p data-i18n="eidDesc">Célébrez avec style grâce à notre collection Eid soigneusement sélectionnée. Tissus luxueux, détails minutieux et élégance intemporelle pour vos moments les plus précieux.</p>
+            <a href="collections.html" class="btn btn-charcoal" data-i18n="eidExplore">Explorer la collection</a>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Édition limitée Eid -->
-    <section class="section" bg-cream-dark>
+    <!-- Collections / Achetez par collection -->
+    <section class="section section--collection" bg-cream-dark id="collections">
       <div class="container">
         <div class="text-center" style="margin-bottom: var(--spacing-2xl);">
           <span class="subtitle" data-i18n="eidBadge">Sélectionné pour vous</span>
           <h2 class="heading-section" data-i18n="eidTitle">Achetez par collection</h2>
-          <p class="text-center" style="max-width: 620px; margin: -var(--spacing-md) auto var(--spacing-2xl); color: rgba(34,31,28,0.7);" data-i18n="eidDesc">Des tenues soigneusement sélectionnées pour vos journées les plus précieuses : tissus luxueux, détails minutieux et élégance intemporelle.</p>
         </div>
 
         <div class="collections-grid">
@@ -202,7 +202,8 @@
             <img src="images/collection-prayer.jpg" alt="Tenues de prière">
             <div class="collection-card-overlay">
               <h3 class="collection-card-title" data-i18n="collectionPrayer">Tenues de prière</h3>
-              <p class="collection-card-count" data-i18n="products18">18 Produits</p>
+              <p class="collection-card-desc" data-i18n="collPrayerDesc">Confort et sérénité au quotidien</p>
+              <span class="collection-card-more">Voir plus</span>
             </div>
           </a>
 
@@ -210,7 +211,8 @@
             <img src="images/collection-abayas.jpg" alt="Abayas élégantes">
             <div class="collection-card-overlay">
               <h3 class="collection-card-title" data-i18n="collectionAbayas">Abayas élégantes</h3>
-              <p class="collection-card-count" data-i18n="products28">28 Produits</p>
+              <p class="collection-card-desc" data-i18n="collAbayasDesc">Coupes fluides et intemporelles</p>
+              <span class="collection-card-more">Voir plus</span>
             </div>
           </a>
 
@@ -218,19 +220,16 @@
             <img src="images/collection-hijabs.jpg" alt="Hijabs du quotidien">
             <div class="collection-card-overlay">
               <h3 class="collection-card-title" data-i18n="collectionEveryday">Hijabs du quotidien</h3>
-              <p class="collection-card-count" data-i18n="products42">42 Produits</p>
+              <p class="collection-card-desc" data-i18n="collHijabsDesc">Soie, mousseline et coton premium</p>
+              <span class="collection-card-more">Voir plus</span>
             </div>
           </a>
-        </div>
-
-        <div class="text-center" style="margin-top: var(--spacing-2xl);">
-          <a href="collections.html" class="btn btn-secondary" data-i18n="viewAllCollections">Voir toutes les collections</a>
         </div>
       </div>
     </section>
 
     <!-- Sélection pour vous / bestsellers -->
-    <section class="section" style="background-color: var(--color-cream);">
+    <section class="section" id="bestsellers" style="background-color: var(--color-cream);">
       <div class="container">
         <div class="text-center" style="margin-bottom: var(--spacing-2xl);">
           <span class="subtitle" data-i18n="selectedForYou">Les plus aimés</span>
@@ -433,37 +432,13 @@
         </div>
       </div>
     </section>
-
-    <!-- Newsletter -->
-    <section class="section newsletter">
-      <div class="container">
-        <div class="newsletter-content">
-          <div class="newsletter-text">
-            <span class="subtitle" data-i18n="stayConnected">Restons connectées</span>
-            <h2 class="newsletter-title" data-i18n="joinCommunity">Rejoignez notre communauté</h2>
-            <p data-i18n="newsletterDesc">Abonnez-vous pour des offres exclusives, des conseils de style et un accès en avant-première à nos nouvelles collections.</p>
-          </div>
-          <form class="newsletter-form" id="newsletterForm">
-            <div class="newsletter-form-group">
-              <div class="input-group">
-                <input type="email" name="email" autocomplete="email" placeholder="Votre adresse email" aria-label="Email address" data-i18n-placeholder="emailPlaceholder" required>
-              </div>
-              <button type="submit" class="btn btn-primary" data-i18n="subscribe">S'abonner</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </section>
   </main>
 
   <!-- Footer -->
   
-<!-- Footer (modèle : photo femme, scroll top, réseaux sociaux) -->
+<!-- Footer (modèle : scroll top, réseaux sociaux) -->
   <footer class="footer model-footer">
-    <div class="footer-photo-band">
-      <img src="images/hero.jpg" alt="Hanna &amp; Nour — Mode modeste élégante" loading="lazy">
-      <div class="footer-photo-overlay"></div>
-    </div>
+    
     <div class="footer-wrap">
       <button type="button" class="footer-scroll-top" data-scroll-top data-i18n-aria-label="scrollTopLabel" aria-label="Retour en haut">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"></path></svg>
