@@ -14,8 +14,10 @@
  *   deleteProduct      { id }                                      -> { ok }
  *   uploadImage        { name, mime, data_base64 }                 -> { url }
  *   listOrders         { status?, shipping_status? }                   -> { orders }
- *   getOrder           { id }                                      -> { order }
+ *   getOrder           { id }                                      -> { order } (inclut les retours)
  *   updateOrder        { id, tracking_number?, shipping_status?, delivery_type?, pickup_point? } -> { ok }
+ *   saleStats          { period?, threshold? }                      -> { totals, products, monthly }
+ *   recordReturn       { order_id, order_item_id, quantity, reason?, return_ref } -> { ok, refundCents }
  *   getSettings        {}                                          -> { settings, catalog }
  *   saveSettings       { shipping, catalog? }                       -> { ok }
  *   listMessages       {}                                          -> { messages }
@@ -375,6 +377,15 @@ case 'getOrder': {
           .eq('id', oid)
           .maybeSingle();
         if (error) throw error;
+        if (data) {
+          const { data: returns, error: rErr } = await sb
+            .from('order_returns')
+            .select('*')
+            .eq('order_id', oid)
+            .order('created_at', { ascending: false });
+          if (rErr) throw rErr;
+          data.returns = returns || [];
+        }
         return json(200, { order: data || null });
       }
 
@@ -811,6 +822,232 @@ case 'deleteMessage': {
         }
 
         return json(200, { ok: true, refunded: ref.ok });
+      }
+
+      case 'saleStats': {
+        const day = 24 * 60 * 60 * 1000;
+        const ranges = { d30: 30 * day, d90: 90 * day, y1: 365 * day, all: 0 };
+        const range = ranges[body.period] !== undefined ? ranges[body.period] : ranges.d30;
+        const since = range > 0 ? new Date(Date.now() - range).toISOString() : null;
+        const threshold = Math.max(0, parseInt(body.threshold, 10) || 5);
+
+        const currency = (await getSetting(sb, 'currency', null)) || { code: 'usd', symbol: '$' };
+
+        // Commandes payées (non annulées : un statut 'cancelled'/'refunded' sort
+        // de ce filtre) — période sur la date de paiement.
+        let oq = sb.from('orders')
+          .select('id, order_number, total_cents, subtotal_cents, discount_cents, paid_at, order_items(product_slug, product_name, unit_price_cents, quantity, variant_id)')
+          .eq('status', 'paid');
+        if (since) oq = oq.gte('paid_at', since);
+        oq = oq.order('paid_at', { ascending: true }).limit(5000);
+        const { data: orders, error: oErr } = await oq;
+        if (oErr) throw oErr;
+
+        let rq = sb.from('order_returns').select('*');
+        if (since) rq = rq.gte('created_at', since);
+        rq = rq.limit(2000);
+        const { data: returns, error: rErr } = await rq;
+        if (rErr) throw rErr;
+
+        const { data: products, error: pErr } = await sb
+          .from('products')
+          .select('slug, name_en, name_fr, image, product_variants(id, color, size, stock, active)');
+        if (pErr) throw pErr;
+
+        const productName = {};
+        for (const p of products || []) productName[p.slug] = (p.name_fr || p.name_en || p.slug);
+
+        // Série mensuelle : 12 derniers mois (indépendante du filtre de période).
+        const monthly = [];
+        const now = new Date();
+        for (let i = 11; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          monthly.push({
+            key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'),
+            label: String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getFullYear()).slice(2),
+            revenueCents: 0, returnedCents: 0, unitsSold: 0, returnedUnits: 0
+          });
+        }
+        const bucket = (iso) => {
+          if (!iso) return null;
+          const d = new Date(iso);
+          if (isNaN(d.getTime())) return null;
+          const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+          return monthly.find((m) => m.key === k);
+        };
+
+        const totals = { orders: 0, unitsSold: 0, returnedUnits: 0, revenueCents: 0, returnedCents: 0, stockTotal: 0, lowStock: 0, managedProducts: 0 };
+        const bySlug = {};
+
+        for (const ord of orders || []) {
+          const total = parseInt(ord.total_cents, 10) || 0;
+          totals.orders++;
+          totals.revenueCents += total;
+          const b = bucket(ord.paid_at);
+          if (b) b.revenueCents += total;
+
+          // Au prorata de la remise éventuelle pour le CA par produit.
+          let factor = 1;
+          const sub = parseInt(ord.subtotal_cents, 10) || 0;
+          const disc = parseInt(ord.discount_cents, 10) || 0;
+          if (sub > 0 && disc > 0) factor = (sub - disc) / sub;
+
+          for (const it of ord.order_items || []) {
+            const qty = parseInt(it.quantity, 10) || 0;
+            if (qty <= 0 || !it.product_slug) continue;
+            const line = Math.round((parseInt(it.unit_price_cents, 10) || 0) * qty * factor);
+            const row = bySlug[it.product_slug] || (bySlug[it.product_slug] = {
+              slug: it.product_slug, name: productName[it.product_slug] || it.product_name || it.product_slug, image: null,
+              sold: 0, returned: 0, revenueCents: 0, returnedCents: 0
+            });
+            row.sold += qty;
+            row.revenueCents += line;
+            totals.unitsSold += qty;
+            if (b) b.unitsSold += qty;
+          }
+        }
+
+        for (const r of returns || []) {
+          const qty = parseInt(r.quantity, 10) || 0;
+          const amt = parseInt(r.total_refund_cents, 10) || 0;
+          totals.returnedUnits += qty;
+          totals.returnedCents += amt;
+          const b = bucket(r.created_at);
+          if (b) { b.returnedUnits += qty; b.returnedCents += amt; }
+          const row = bySlug[r.product_slug] || (bySlug[r.product_slug] = {
+            slug: r.product_slug, name: productName[r.product_slug] || r.product_slug, image: null,
+            sold: 0, returned: 0, revenueCents: 0, returnedCents: 0
+          });
+          row.returned += qty;
+          row.returnedCents += amt;
+        }
+
+        const productRows = [];
+        const seen = {};
+        for (const p of products || []) {
+          const variants = p.product_variants || [];
+          const managed = variants.length > 0;
+          const stock = managed ? variants.reduce((n, v) => n + (parseInt(v.stock, 10) || 0), 0) : null;
+          const s = bySlug[p.slug];
+          if (managed) {
+            totals.stockTotal += stock;
+            totals.managedProducts++;
+            if (stock <= threshold) totals.lowStock++;
+          }
+          seen[p.slug] = true;
+          productRows.push({
+            slug: p.slug,
+            name: (p.name_fr || p.name_en || p.slug),
+            image: p.image || null,
+            stock,
+            low: managed && stock <= threshold,
+            sold: s ? s.sold : 0,
+            returned: s ? s.returned : 0,
+            revenueCents: s ? s.revenueCents : 0,
+            returnedCents: s ? s.returnedCents : 0
+          });
+        }
+        // Ventes de produits supprimés : toujours visibles dans le tableau.
+        for (const slug of Object.keys(bySlug)) {
+          if (!seen[slug]) {
+            const s = bySlug[slug];
+            productRows.push({ slug, name: s.name, image: null, stock: null, low: false, sold: s.sold, returned: s.returned, revenueCents: s.revenueCents, returnedCents: s.returnedCents });
+          }
+        }
+        productRows.sort((a, b) => (b.sold + b.returned) - (a.sold + a.returned));
+
+        return json(200, {
+          period: body.period || 'd30',
+          threshold,
+          currency,
+          totals: {
+            orders: totals.orders,
+            unitsSold: totals.unitsSold,
+            returnedUnits: totals.returnedUnits,
+            netUnits: totals.unitsSold - totals.returnedUnits,
+            revenueCents: totals.revenueCents,
+            returnedCents: totals.returnedCents,
+            netRevenueCents: totals.revenueCents - totals.returnedCents,
+            stockTotal: totals.stockTotal,
+            lowStock: totals.lowStock,
+            managedProducts: totals.managedProducts
+          },
+          products: productRows,
+          monthly
+        });
+      }
+
+      case 'recordReturn': {
+        const oid = String(body.order_id || '').trim();
+        const itemId = String(body.order_item_id || '').trim();
+        const qty = parseInt(body.quantity, 10);
+        const reason = String(body.reason || '').trim().slice(0, 200) || 'retour_client';
+        const returnRef = String(body.return_ref || '').trim();
+        if (!oid || !itemId) return json(400, { error: 'order_id et order_item_id requis' });
+        if (!(qty >= 1)) return json(400, { error: 'Quantité invalide' });
+        if (!returnRef) return json(400, { error: 'return_ref requis' });
+
+        const { data: order, error: oErr2 } = await sb
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('id', oid)
+          .maybeSingle();
+        if (oErr2) throw oErr2;
+        if (!order) return json(404, { error: 'Commande introuvable' });
+        if (order.status !== 'paid') return json(400, { error: 'Seules les commandes payées peuvent avoir des retours' });
+
+        const item = (order.order_items || []).find((it) => it.id === itemId);
+        if (!item) return json(404, { error: 'Ligne de commande introuvable' });
+
+        // Ne jamais dépasser la quantité vendue (retours déjà enregistrés déduits).
+        const { data: existingR, error: xErr } = await sb
+          .from('order_returns')
+          .select('quantity')
+          .eq('order_item_id', itemId);
+        if (xErr) throw xErr;
+        const already = (existingR || []).reduce((n, r) => n + (parseInt(r.quantity, 10) || 0), 0);
+        const maxQty = Math.max(0, (parseInt(item.quantity, 10) || 0) - already);
+        if (qty > maxQty) {
+          return json(400, { error: 'Quantité retournée supérieure au restant vendu (' + maxQty + ')' });
+        }
+
+        // Montant recalculé serveur (au prorata de la remise éventuelle).
+        let factor = 1;
+        const sub2 = parseInt(order.subtotal_cents, 10) || 0;
+        const disc2 = parseInt(order.discount_cents, 10) || 0;
+        if (sub2 > 0 && disc2 > 0) factor = (sub2 - disc2) / sub2;
+        const refundCents = Math.round((parseInt(item.unit_price_cents, 10) || 0) * qty * factor);
+
+        // Idempotent : double envoi du même return_ref => DO NOTHING.
+        const { data: inserted, error: insErr } = await sb
+          .from('order_returns')
+          .upsert({
+            return_ref: returnRef,
+            order_id: oid,
+            order_item_id: itemId,
+            product_slug: item.product_slug,
+            quantity: qty,
+            unit_price_cents: parseInt(item.unit_price_cents, 10) || 0,
+            total_refund_cents: refundCents,
+            reason
+          }, { onConflict: 'return_ref', ignoreDuplicates: true })
+          .select('id');
+        if (insErr) throw insErr;
+        if (!inserted || inserted.length === 0) {
+          return json(200, { ok: true, already: true });
+        }
+
+        // Restock automatique (variantes gérées uniquement) — même RPC que le refund.
+        if (item.variant_id) {
+          try {
+            const { error: rpcErr } = await sb.rpc('increment_stock', { p_variant_id: item.variant_id, p_qty: qty });
+            if (rpcErr) console.error('Return restock failed:', rpcErr.message, item.variant_id);
+          } catch (e) {
+            console.error('Return restock failed:', e.message);
+          }
+        }
+
+        return json(200, { ok: true, refundCents });
       }
 
       case 'analyticsSummary': {

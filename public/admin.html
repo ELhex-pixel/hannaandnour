@@ -53,6 +53,10 @@
   .badge-green { background: #E7EFE3; color: #3d7a46; }
   .badge-red { background: #FBE3E0; color: #b03a2e; }
   .badge-gray { background: #EFE6D8; color: #6b5d4a; }
+  .badge-warn { background: #F7EAD0; color: #8a6d1f; }
+  .sales-chart { width: 100%; height: auto; display: block; margin-top: 6px; }
+  .sales-chart .bar { fill: #B78A4A; }
+  .sales-chart text { fill: #9a8c75; font-size: 10px; font-family: Helvetica, Arial, sans-serif; }
 
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
   .form-grid .full { grid-column: 1 / -1; }
@@ -170,6 +174,9 @@
   html[data-theme="dark"] .badge-green { background: #22311F; color: #9FD59A; }
   html[data-theme="dark"] .badge-red { background: #3A201C; color: #F0A59C; }
   html[data-theme="dark"] .badge-gray { background: #2E2820; color: #C9BEAA; }
+  html[data-theme="dark"] .badge-warn { background: #3A3323; color: #E3C77F; }
+  html[data-theme="dark"] .sales-chart .bar { fill: #C79B54; }
+  html[data-theme="dark"] .sales-chart text { fill: #A89A82; }
 
   html[data-theme="dark"] .field label { color: #C9BEAA; }
   html[data-theme="dark"] .field input, html[data-theme="dark"] .field select, html[data-theme="dark"] .field textarea {
@@ -283,6 +290,7 @@
     <div class="admin-tabs">
       <button class="admin-tab active" data-tab="products">Produits</button>
       <button class="admin-tab" data-tab="orders">Commandes</button>
+      <button class="admin-tab" data-tab="sales">Ventes &amp; Stock</button>
       <button class="admin-tab" data-tab="reviews">Avis</button>
       <button class="admin-tab" data-tab="home">Accueil</button>
       <button class="admin-tab" data-tab="blog">Blog</button>
@@ -329,6 +337,22 @@
         <button class="btn btn-secondary" id="refreshOrdersBtn">Actualiser</button>
       </div>
       <div class="card" id="ordersList"><p class="empty">Chargement...</p></div>
+    </div>
+
+    <!-- VENTES & STOCK -->
+    <div class="admin-panel" id="panel-sales">
+      <div class="toolbar">
+        <span style="color:#8a7d66;">Ventes &amp; stock &ndash; unit&eacute;s vendues (commandes pay&eacute;es non annul&eacute;es, retours d&eacute;duits), chiffre d&rsquo;affaires, stock disponible. Graphique : 12 derniers mois.</span>
+        <select id="salesPeriod" style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
+          <option value="d30" selected>30 derniers jours</option>
+          <option value="d90">90 derniers jours</option>
+          <option value="y1">1 an</option>
+          <option value="all">Tout</option>
+        </select>
+        <input type="number" id="salesThreshold" value="5" min="0" style="width:70px; padding:8px; border:1px solid #ddd5c4; border-radius:8px;" title="Seuil stock faible">
+        <button class="btn btn-secondary" id="refreshSalesBtn">Actualiser</button>
+      </div>
+      <div class="card" id="salesList"><p class="empty">Chargement...</p></div>
     </div>
 
     <!-- REVIEWS (moderation) -->

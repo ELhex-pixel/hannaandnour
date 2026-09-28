@@ -26,6 +26,7 @@ paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Func
    - `supabase/migration_order_cancel.sql` (statut `cancelled` + motif/date d'annulation)
    - `supabase/migration_rls_blog_demo.sql` (RLS sur `blog_posts` et `demo_reviews`)
    - `supabase/migration_promo_single_use.sql` (codes promo à usage unique réellement appliqués)
+   - `supabase/migration_order_returns.sql` (retours par ligne : table `order_returns` + RLS pour le tableau de bord « Ventes & Stock »)
 3. Récupérez dans **Settings > API** :
    - `Project URL` → `SUPABASE_URL`
    - `service_role secret` → `SUPABASE_SERVICE_ROLE_KEY` (serveur, **jamais** dans le navigateur)

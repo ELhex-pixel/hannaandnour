@@ -227,6 +227,7 @@
         panel.classList.add('active');
         if (id === 'panel-products') loadProducts();
         if (id === 'panel-orders') loadOrders();
+        if (id === 'panel-sales') loadSales();
         if (id === 'panel-reviews') loadReviews();
         if (id === 'panel-home') loadHome();
         if (id === 'panel-blog') loadBlog();
@@ -822,10 +823,46 @@
       '</tr></thead><tbody>' + ordersAll.map(orderRow).join('') + '</tbody></table>';
   }
 
-  function itemRows(o) {
+  function returnedByItem(o) {
+    var m = {};
+    (o.returns || []).forEach(function (r) {
+      m[r.order_item_id] = (m[r.order_item_id] || 0) + (parseInt(r.quantity, 10) || 0);
+    });
+    return m;
+  }
+
+  function itemRows(o, ret) {
+    var canReturn = o.status === 'paid';
     return (o.order_items || []).map(function (it) {
-      return '<tr><td>' + esc(it.product_name) + '</td><td>' + (parseInt(it.quantity, 10) || 1) + '</td><td>' + money(it.unit_price_cents * it.quantity, o.currency) + '</td></tr>';
+      var qty = parseInt(it.quantity, 10) || 1;
+      var returned = ret[it.id] || 0;
+      var remaining = Math.max(0, qty - returned);
+      var retInfo = returned > 0 ? '<br><span class="badge badge-gray">Retourn\u00e9 : ' + returned + '/' + qty + '</span>' : '';
+      var btn = canReturn && remaining > 0
+        ? '<button class="btn btn-secondary btn-small return-line" data-item="' + esc(it.id) + '" data-remaining="' + remaining + '" data-name="' + esc(it.product_name) + '">Retour</button>'
+        : (canReturn ? '<span style="color:#8a7d66;font-size:12px;">\u2014</span>' : '');
+      return '<tr>' +
+        '<td>' + esc(it.product_name) + (it.variant ? '<br><small style="color:#8a7d66;">' + esc(it.variant) + '</small>' : '') + retInfo + '</td>' +
+        '<td>' + returned + ' / ' + qty + '</td>' +
+        '<td>' + money(it.unit_price_cents * qty, o.currency) + '</td>' +
+        (canReturn ? '<td>' + btn + '</td>' : '') +
+        '</tr>';
     }).join('');
+  }
+
+  function returnFormHtml() {
+    return '<div id="returnRow" style="display:none; margin-top:12px; border-top:1px solid #eee; padding-top:10px;">' +
+      '<strong style="font-size:13px;">Enregistrer un retour</strong>' +
+      '<input type="hidden" id="returnItemId">' +
+      '<div style="display:grid; grid-template-columns:110px 1fr; gap:10px; margin-top:8px; align-items:center; font-size:12px; color:#5c5548;">' +
+      '<label>Quantit\u00e9</label><input type="number" id="returnQty" min="1" value="1" style="width:90px; padding:8px; border:1px solid #ddd5c4; border-radius:8px;">' +
+      '<label>Motif</label>' +
+      '<select id="returnReason" style="width:100%; padding:8px; border:1px solid #ddd5c4; border-radius:8px;">' +
+      '<option value="retour_client">Retour client</option>' +
+      '<option value="defective">D\u00e9fectueux</option>' +
+      '<option value="exchange">\u00c9change / taille</option>' +
+      '<option value="other">Autre</option></select></div>' +
+      '<button class="btn btn-primary btn-small" id="confirmReturnBtn" style="margin-top:8px;">Confirmer le retour (restock auto)</button></div>';
   }
 
   function openOrder(o) {
@@ -835,18 +872,22 @@
       : '<p>' + esc(o.address1) + (o.address2 ? ' ' + esc(o.address2) : '') + '<br>' +
         esc(o.city) + (o.state ? ' ' + esc(o.state) : '') + ' ' + esc(o.postal_code) + '<br>' + esc(o.country) + '</p>';
 
+    var canReturn = o.status === 'paid';
+    var ret = returnedByItem(o);
+
     document.getElementById('orderModalBody').innerHTML =
       '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; font-size:13px;">' +
       '<div><strong>Client</strong><br>' + esc(o.customer_name) + '<br>' + esc(o.email) + (o.phone ? '<br>' + esc(o.phone) : '') + '</div>' +
       '<div><strong>Livraison</strong><br>' + esc(o.shipping_method || 'standard') + '<br>' + addressBlock +
       (o.tracking_number ? '<br><strong>Suivi :</strong> ' + esc(o.tracking_number) : '') + '</div>' +
       '</div>' +
-      '<table><thead><tr><th>Article</th><th>Qt&eacute;</th><th>Total</th></tr></thead><tbody>' + itemRows(o) + '</tbody></table>' +
+      '<table><thead><tr><th>Article</th><th>Qt&eacute;</th><th>Total</th>' + (canReturn ? '<th>Retour</th>' : '') + '</tr></thead><tbody>' + itemRows(o, ret) + '</tbody></table>' +
       '<table style="margin-top:10px;"><tr><td>Sous-total</td><td style="text-align:right;">' + money(o.subtotal_cents, o.currency) + '</td></tr>' +
       (o.discount_cents > 0 ? '<tr><td>Remise</td><td style="text-align:right;">-' + money(o.discount_cents, o.currency) + '</td></tr>' : '') +
       '<tr><td>Livraison</td><td style="text-align:right;">' + money(o.shipping_cents, o.currency) + '</td></tr>' +
       (o.tax_cents > 0 ? '<tr><td>Taxe</td><td style="text-align:right;">' + money(o.tax_cents, o.currency) + '</td></tr>' : '') +
       '<tr><td><strong>Total</strong></td><td style="text-align:right;"><strong>' + money(o.total_cents, o.currency) + '</strong></td></tr></table>' +
+      (canReturn ? returnFormHtml() : '') +
       (o.status === 'paid' ? '<div class="order-actions">' +
         '<button class="btn btn-secondary btn-small" data-act="markShipped">Marquer expédiée</button>' +
         '<button class="btn btn-secondary btn-small" data-act="markDelivered">Marquer livr&eacute;e</button>' +
@@ -922,14 +963,16 @@
         }
       });
     });
-    document.getElementById('confirmShipBtn').addEventListener('click', function () {
+    var shipBtn = document.getElementById('confirmShipBtn');
+    if (shipBtn) shipBtn.addEventListener('click', function () {
       call('updateOrder', {
         id: o.id,
         shipping_status: 'shipped',
         tracking_number: document.getElementById('trackingInput').value.trim()
       }).then(function () { return afterUpdate(o.id, 'Marqu\u00e9e exp\u00e9di\u00e9e'); });
     });
-    document.getElementById('confirmCancelBtn').addEventListener('click', function () {
+    var cancelBtn = document.getElementById('confirmCancelBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', function () {
       call('cancelOrder', {
         id: o.id,
         reason: document.getElementById('cancelReason').value,
@@ -939,6 +982,35 @@
           ? 'Commande annul\u00e9e, remboursement + email envoy\u00e9s'
           : 'Commande annul\u00e9e, email envoy\u00e9 (remboursement manuel requis)');
       });
+    });
+    body.querySelectorAll('.return-line').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var remaining = parseInt(b.getAttribute('data-remaining'), 10) || 1;
+        document.getElementById('returnItemId').value = b.getAttribute('data-item') || '';
+        var q = document.getElementById('returnQty');
+        q.max = remaining;
+        q.value = remaining;
+        document.getElementById('returnReason').value = 'retour_client';
+        document.getElementById('returnRow').style.display = 'block';
+      });
+    });
+    var confirmReturn = document.getElementById('confirmReturnBtn');
+    if (confirmReturn) confirmReturn.addEventListener('click', function () {
+      var itemId = document.getElementById('returnItemId').value;
+      var qty = parseInt(document.getElementById('returnQty').value, 10);
+      if (!itemId || !(qty >= 1)) { toast('S\u00e9lectionnez une ligne et une quantit\u00e9 valide', 'err'); return; }
+      call('recordReturn', {
+        order_id: o.id,
+        order_item_id: itemId,
+        quantity: qty,
+        reason: document.getElementById('returnReason').value,
+        return_ref: o.id + ':' + itemId + ':' + Date.now()
+      }).then(function (res) {
+        toast('Retour enregistr\u00e9' + (res && res.refundCents ? ' (' + money(res.refundCents, o.currency) + ')' : '') + ' \u2014 stock r\u00e9-augment\u00e9', 'ok');
+        call('getOrder', { id: o.id }).then(function (r2) {
+          if (r2.order) openOrder(r2.order);
+        }).catch(function (e) { toast(e.message, 'err'); });
+      }).catch(function (e) { toast(e.message, 'err'); });
     });
   }
 
@@ -995,6 +1067,109 @@
         if (prod) openEditor(prod);
       }
     });
+  }
+
+  /* ---------------- Ventes & Stock ---------------- */
+
+  var salesAll = null;
+  var salesThreshold = 5;
+
+  function periodLabel(p) {
+    return { d30: '30 derniers jours', d90: '90 derniers jours', y1: '1 an', all: 'tout' }[p] || p;
+  }
+
+  function fmtMonth(key) {
+    var m = String(key || '').split('-');
+    if (m.length !== 2) return key || '';
+    var names = ['janv.', 'f\u00e9vr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'ao\u00fbt', 'sept.', 'oct.', 'nov.', 'd\u00e9c.'];
+    return names[parseInt(m[1], 10) - 1] || m[1];
+  }
+
+  function loadSales() {
+    var period = document.getElementById('salesPeriod').value || 'd30';
+    var th = parseInt(document.getElementById('salesThreshold').value, 10);
+    salesThreshold = isNaN(th) ? 5 : th;
+    return call('saleStats', { period: period, threshold: salesThreshold }).then(function (res) {
+      salesAll = res || null;
+      renderSales();
+    }).catch(function (e) {
+      document.getElementById('salesList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+    });
+  }
+
+  function salesKpis(t, cur) {
+    var lowWarn = t.lowStock > 0 ? ' style="border-color:#E6B0A2;"' : '';
+    return '<div class="stat-cards">' +
+      '<div class="stat-card"><strong>' + money(t.netRevenueCents, cur) + '</strong><span>CA net (p\u00e9riode)</span></div>' +
+      '<div class="stat-card"><strong>' + t.netUnits + '</strong><span>Unit\u00e9s vendues (net)</span></div>' +
+      '<div class="stat-card"><strong>' + t.returnedUnits + '</strong><span>Retours (unit\u00e9s)</span></div>' +
+      '<div class="stat-card"><strong>' + t.stockTotal + '</strong><span>Stock disponible</span></div>' +
+      '<div class="stat-card"><strong>' + t.orders + '</strong><span>Commandes pay\u00e9es</span></div>' +
+      '<div class="stat-card"' + lowWarn + '><strong>' + t.lowStock + '</strong><span>Stock faible (&le; ' + salesThreshold + ')</span></div>' +
+      '</div>';
+  }
+
+  function salesChart(monthly, cur) {
+    var W = 720, H = 200, padB = 24, padT = 10;
+    var max = 1;
+    monthly.forEach(function (m) { max = Math.max(max, m.revenueCents || 0); });
+    var bw = W / Math.max(1, monthly.length);
+    var bars = monthly.map(function (m, i) {
+      var hh = max > 0 ? Math.round(((m.revenueCents || 0) / max) * (H - padB - padT)) : 0;
+      var x = i * bw + bw * 0.18;
+      var tip = m.label + ' : ' + money(m.revenueCents, cur) +
+        (m.returnedCents > 0 ? ' (retours -' + money(m.returnedCents, cur) + ')' : '') +
+        ' \u00b7 ' + m.unitsSold + ' unit\u00e9s vendues' +
+        (m.returnedUnits > 0 ? ', ' + m.returnedUnits + ' retourn\u00e9es' : '');
+      return '<rect class="bar" x="' + x.toFixed(1) + '" y="' + (H - padB - hh).toFixed(1) + '" width="' + (bw * 0.64).toFixed(1) + '" height="' + hh + '" rx="3">' +
+        '<title>' + esc(tip) + '</title></rect>' +
+        '<text x="' + (i * bw + bw / 2).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle">' + esc(fmtMonth(m.key)) + '</text>';
+    }).join('');
+    return '<svg class="sales-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Chiffre d\u2019affaires mensuel net">' +
+      '<line x1="0" y1="' + (H - padB) + '" x2="' + W + '" y2="' + (H - padB) + '" stroke="currentColor" stroke-opacity="0.15"/>' +
+      bars + '</svg>';
+  }
+
+  function salesProductsTable(rows, cur) {
+    if (!rows || !rows.length) return '<p class="empty">Aucun produit.</p>';
+    return '<table><thead><tr>' +
+      '<th>Produit</th><th>Stock dispo</th><th>Vendu</th><th>Retourn\u00e9</th><th>Net vendu</th><th>CA net</th>' +
+      '</tr></thead><tbody>' + rows.map(function (r) {
+        var stock = r.stock == null ? '\u2014' :
+          (r.low ? '<span class="badge badge-warn" title="Stock faible">' + r.stock + '</span>' : r.stock);
+        return '<tr>' +
+          '<td>' + (r.image ? '<img src="' + esc(r.image) + '" style="width:34px;height:38px;object-fit:cover;border-radius:6px;vertical-align:middle;margin-right:8px;" alt="">' : '') +
+          '<strong>' + esc(r.name) + '</strong><br><small style="color:#8a7d66;">' + esc(r.slug) + '</small></td>' +
+          '<td>' + stock + '</td>' +
+          '<td>' + r.sold + '</td>' +
+          '<td>' + (r.returned > 0 ? r.returned : '\u2014') + '</td>' +
+          '<td>' + (r.sold - r.returned) + '</td>' +
+          '<td>' + money(r.revenueCents - r.returnedCents, cur) + '</td>' +
+          '</tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function renderSales() {
+    var box = document.getElementById('salesList');
+    if (!box) return;
+    if (!salesAll) { box.innerHTML = '<p class="empty">Aucune donn\u00e9e.</p>'; return; }
+    var t = salesAll.totals || {};
+    var cur = (salesAll.currency && salesAll.currency.code) || 'usd';
+    var html = salesKpis(t, cur);
+    html += '<h3 style="margin:16px 0 6px;">Chiffre d\u2019affaires net \u2014 12 derniers mois</h3>' +
+      salesChart(salesAll.monthly || [], cur);
+    html += '<h3 style="margin:20px 0 8px;">Produits (' + periodLabel(salesAll.period) + ')</h3>' +
+      salesProductsTable(salesAll.products || [], cur);
+    box.innerHTML = html;
+  }
+
+  function wireSales() {
+    var btn = document.getElementById('refreshSalesBtn');
+    if (btn) btn.addEventListener('click', loadSales);
+    var period = document.getElementById('salesPeriod');
+    if (period) period.addEventListener('change', loadSales);
+    var th = document.getElementById('salesThreshold');
+    if (th) th.addEventListener('change', loadSales);
   }
 
   /* ---------------- Settings ---------------- */
@@ -1833,6 +2008,7 @@
   wireTabs();
   wireEditor();
   wireOrders();
+  wireSales();
   wireReviews();
   wireDemoReviews();
   wireHome();
