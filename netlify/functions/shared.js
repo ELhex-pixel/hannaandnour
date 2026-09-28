@@ -4,6 +4,12 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
+// `ws` polyfill: supabase-js instancie toujours un client realtime au
+// constructeur, et @supabase/realtime-js récent exige un WebSocket global
+// (absent sur les runtimes Node < 22 des fonctions Netlify). L'app n'utilise
+// pas realtime, mais sans transport le constructeur lève et fait 500 sur
+// toutes les fonctions.
+const { WebSocket } = require('ws');
 const crypto = require('crypto');
 
 const CORS_HEADERS = {
@@ -23,7 +29,8 @@ function json(statusCode, body) {
 function getSupabase() {
   return createClient(
     process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    { realtime: { transport: WebSocket } }
   );
 }
 
