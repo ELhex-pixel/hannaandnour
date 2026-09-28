@@ -624,6 +624,49 @@ case 'deleteMessage': {
         return json(200, { ok: true });
       }
 
+      case 'cancelOrder': {
+        const oid = String(body.id || '').trim();
+        if (!oid) return json(400, { error: 'Missing id' });
+        const reason = ['defective', 'out_of_stock', 'other'].includes(body.reason) ? body.reason : 'other';
+        const comment = String(body.comment || '').trim();
+        const { data: order, error: oErr } = await sb
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('id', oid)
+          .maybeSingle();
+        if (oErr) throw oErr;
+        if (!order) return json(404, { error: 'Commande introuvable' });
+        if (order.status !== 'paid') return json(400, { error: 'Seules les commandes pay\u00e9es peuvent \u00eatre annul\u00e9es' });
+
+        // Guarded update: two cancels (or a refund race) cannot double-act.
+        const { data: cancelled, error: updErr } = await sb.from('orders')
+          .update({ status: 'cancelled', cancel_reason: reason === 'other' ? comment : reason, cancelled_at: new Date().toISOString() })
+          .eq('id', order.id)
+          .eq('status', 'paid')
+          .select('id');
+        if (updErr) throw updErr;
+        if (!cancelled || cancelled.length === 0) {
+          return json(200, { ok: true, already: true });
+        }
+
+        // Rupture de stock : libère les unités réservées. (Défectueux : en
+        // revanche, on ne remet pas l'article en stock.)
+        if (reason === 'out_of_stock') await restockOrder(sb, order);
+
+        try {
+          const { sendEmail } = require('./shared');
+          await sendEmail({
+            to: order.email,
+            subject: 'Votre commande ' + order.order_number + ' a \u00e9t\u00e9 annul\u00e9e \u2014 Hanna & Nour',
+            html: buildCancelEmail(order, reason, comment)
+          });
+        } catch (mailErr) {
+          console.error('Cancel email failed:', mailErr.message);
+        }
+
+        return json(200, { ok: true });
+      }
+
       case 'analyticsSummary': {
         const day = 24 * 60 * 60 * 1000;
         const summary = {};
@@ -736,4 +779,20 @@ function buildRefundEmail(order) {
     '<strong>' + esc(order.order_number) + '</strong> a bien été effectué (montant restitué sur votre moyen de paiement).</p>' +
     '<p style="font-size:14px;color:#221f1a;">Si la commande avait déjà été expédiée, vous pouvez la conserver ou la retourner selon nos conditions.</p>' +
     '<p style="font-size:12px;color:#8a7d66;">Merci de votre confiance.</p></div></div>';
+}
+
+function buildCancelEmail(order, reason, comment) {
+  const reasons = {
+    defective: 'un article de votre commande s\u2019est r\u00e9v\u00e9l\u00e9 d\u00e9fectueux',
+    out_of_stock: 'un article de votre commande n\u2019est plus disponible (rupture de stock)',
+    other: comment || 'en raison d\u2019une indisponibilit\u00e9 impr\u00e9vue'
+  };
+  const text = reasons[reason] || reasons.other;
+  return '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
+    'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande a \u00e9t\u00e9 annul\u00e9e</h2>' +
+    '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ',</p>' +
+    '<p style="font-size:14px;color:#221f1a;">Nous vous remercions pour votre commande <strong>' + esc(order.order_number) + '</strong>. Nous sommes sinc\u00e8rement navr\u00e9s de devoir vous informer que nous ne sommes malheureusement pas en mesure de la confirmer : ' + esc(text) + '.</p>' +
+    '<p style="font-size:14px;color:#221f1a;">Le paiement, s\u2019il a d\u00e9j\u00e0 \u00e9t\u00e9 effectu\u00e9, vous sera int\u00e9gralement rembours\u00e9 dans les plus brefs d\u00e9lais.</p>' +
+    '<p style="font-size:14px;color:#221f1a;">Nous vous pr\u00e9sentons nos sinc\u00e8res excuses pour ce d\u00e9sagr\u00e9ment et restons \u00e0 votre disposition pour toute question.</p>' +
+    '<p style="font-size:12px;color:#8a7d66;">L\u2019\u00e9quipe Hanna &amp; Nour</p></div></div>';
 }

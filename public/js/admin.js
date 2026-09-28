@@ -491,7 +491,7 @@
   /* ---------------- Orders ---------------- */
 
   function statusLabel(s) {
-    return { pending: 'En attente', paid: 'Pay&eacute;e', abandoned: 'Abandonn&eacute;e', refunded: 'Rembours&eacute;e' }[s] || s;
+    return { pending: 'En attente', paid: 'Pay&eacute;e', abandoned: 'Abandonn&eacute;e', refunded: 'Rembours&eacute;e', cancelled: 'Annul&eacute;e' }[s] || s;
   }
   function shipLabel(s) {
     return { new: '&Agrave; exp&eacute;dier', shipped: 'expédiée', delivered: 'Livr&eacute;e' }[s] || s;
@@ -573,6 +573,7 @@
         '<button class="btn btn-secondary btn-small" data-act="revert">R&eacute;initialiser</button>' +
         '<button class="btn btn-danger btn-small" data-act="refund">Rembourser (complet)</button>' +
         '<button class="btn btn-danger btn-small" data-act="deleteOrder">Supprimer la commande</button>' +
+        '<button class="btn btn-danger btn-small" data-act="cancelOrder">Annuler la commande</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printInvoice">Facture</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printPacking">Bon de livraison</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printLabel">&Eacute;tiquette</button>' +
@@ -580,7 +581,15 @@
       '<div id="trackingRow" style="display:none; margin-top:12px;">' +
       '<label style="font-size:12px; color:#5c5548;">Num&eacute;ro de suivi (facultatif)</label>' +
       '<input type="text" id="trackingInput" style="width:100%; padding:8px; border:1px solid #ddd5c4; border-radius:8px;">' +
-      '<button class="btn btn-primary btn-small" id="confirmShipBtn" style="margin-top:8px;">Confirmer l&rsquo;exp&eacute;dition</button></div>';
+      '<button class="btn btn-primary btn-small" id="confirmShipBtn" style="margin-top:8px;">Confirmer l&rsquo;exp&eacute;dition</button></div>' +
+      '<div id="cancelRow" style="display:none; margin-top:12px;">' +
+      '<label style="font-size:12px; color:#5c5548;">Motif de l&rsquo;annulation (envoy&eacute; au client)</label>' +
+      '<select id="cancelReason" style="width:100%; padding:8px; border:1px solid #ddd5c4; border-radius:8px; margin:6px 0 8px;">' +
+      '<option value="out_of_stock">Article en rupture de stock</option>' +
+      '<option value="defective">Article d&eacute;fectueux</option>' +
+      '<option value="other">Autre motif</option></select>' +
+      '<textarea id="cancelNote" placeholder="Pr&eacute;cision (utilis&eacute;e si motif \u00ab autre \u00bb)" style="width:100%; padding:8px; border:1px solid #ddd5c4; border-radius:8px;"></textarea>' +
+      '<button class="btn btn-danger btn-small" id="confirmCancelBtn" style="margin-top:8px;">Confirmer l&rsquo;annulation + envoyer l&rsquo;email</button></div>';
     document.getElementById('orderModal').classList.add('open');
     wireOrderActions(o);
   }
@@ -599,6 +608,11 @@
         }
         if (act === 'deleteOrder') {
           deleteOrder(o.id, o.order_number);
+          return;
+        }
+        if (act === 'cancelOrder') {
+          if (!confirm('Annuler la commande ' + o.order_number + ' ?\nLe client recevra automatiquement un email avec le motif.')) return;
+          document.getElementById('cancelRow').style.display = 'block';
           return;
         }
         if (act === 'printInvoice' || act === 'printPacking' || act === 'printLabel') {
@@ -634,6 +648,13 @@
         shipping_status: 'shipped',
         tracking_number: document.getElementById('trackingInput').value.trim()
       }).then(function () { return afterUpdate(o.id, 'Marqu\u00e9e exp\u00e9di\u00e9e'); });
+    });
+    document.getElementById('confirmCancelBtn').addEventListener('click', function () {
+      call('cancelOrder', {
+        id: o.id,
+        reason: document.getElementById('cancelReason').value,
+        comment: document.getElementById('cancelNote').value
+      }).then(function () { return afterUpdate(o.id, 'Commande annul\u00e9e, client notifi\u00e9'); });
     });
   }
 
