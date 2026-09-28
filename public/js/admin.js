@@ -506,10 +506,11 @@
       var input = document.getElementById(inputId);
       var img = document.getElementById(imgId);
       if (!input || !img) return;
-      (function show() {
+      function show() {
         var v = (input.value || '').trim();
         if (v) { img.src = v; img.style.display = ''; } else { img.style.display = 'none'; }
-      })();
+      }
+      show();
       input.addEventListener('input', show);
       input.addEventListener('change', show);
     }
