@@ -76,7 +76,12 @@
   .variant-row input { padding: 6px 8px; border: 1px solid #E2D8C5; border-radius: 8px; }
 
   .gallery-item { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; border: 1px solid #E7DECC; border-radius: 10px; padding: 6px; margin: 0 8px 8px 0; }
-  .gallery-item img { width: 56px; height: 72px; object-fit: cover; border-radius: 8px; }
+  .gallery-item img { width: 72px; height: 90px; object-fit: cover; border-radius: 8px; }
+  .gallery-item .g-actions { display: flex; gap: 4px; margin-top: 2px; }
+  .gallery-item .g-actions button { font-size: 12px; padding: 1px 7px; line-height: 1.4; min-width: 26px; }
+  .gallery-item img.err { opacity: 0.35; }
+  #galleryGrid { min-height: 36px; }
+  #galleryGrid .empty { color: #8a7d66; font-size: 13px; padding: 6px 0; }
 
   .login-box { max-width: 380px; margin: 80px auto; background: #fff; border: 1px solid #E7DECC; border-radius: 18px; padding: 28px; }
   .login-box h1 { font-size: 1.3rem; margin: 0 0 4px; color: #B78A4A; font-family: 'Playfair Display', Georgia, serif; }
@@ -540,11 +545,15 @@
             <input type="file" id="fileMain" accept="image/jpeg,image/png,image/webp" style="display:none;">
           </div>
         </div>
-        <div class="field full"><label>Galerie (URLs)</label><input id="f-gallery" placeholder="une URL par ligne">
-          <div style="margin-top:8px;">
-            <button class="btn btn-secondary btn-small" id="uploadGalleryBtn">Ajouter au galerie</button>
+        <div class="field full"><label>Galerie (images du produit)</label>
+          <div id="galleryGrid"></div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+            <input type="text" id="galleryUrl" placeholder="Collez une URL d'image puis Entr&eacute;e&hellip;" style="flex:1; min-width:180px; padding:6px 8px; border:1px solid #E2D8C5; border-radius:8px;">
+            <button class="btn btn-secondary btn-small" id="galleryUrlAdd">Ajouter l'URL</button>
+            <button class="btn btn-secondary btn-small" id="uploadGalleryBtn">Uploader une image</button>
             <input type="file" id="fileGallery" accept="image/jpeg,image/png,image/webp" style="display:none;">
           </div>
+          <textarea id="f-gallery" style="display:none;" placeholder="une URL par ligne"></textarea>
         </div>
         <div class="field full">
           <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:4px;">

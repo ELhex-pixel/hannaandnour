@@ -19,7 +19,33 @@
     pink: '#E8A2B0', gray: '#808080', grey: '#808080', orange: '#C96A2B',
     red: '#B23B3B', maroon: '#7A2E2E', burgundy: '#6E2542', silver: '#C0C0C0',
     teal: '#2E6E6E', mint: '#A8C3A0', terracotta: '#B0603F', sand: '#DECC9C',
-    taupe: '#A79A8C', plum: '#5E3A64', olive: '#7A7A3D', rust: '#9C4E2E'
+    taupe: '#A79A8C', plum: '#5E3A64', olive: '#7A7A3D', rust: '#9C4E2E',
+    pearl: '#F2EBE0', yellow: '#D9B23B', peach: '#F6C9AE', lavender: '#BBA5D8',
+    coral: '#F07A6B', turquoise: '#3FB8AF', copper: '#B87333', camel: '#C19A6B',
+    khaki: '#B5A25E', wine: '#722F37', lilac: '#C8A2C8', indigo: '#3F51B5',
+    mustard: '#D9B34A', bordeaux: '#7A2E2E', magenta: '#C2185B', rosegold: '#B76E79',
+    'rose gold': '#B76E79', 'royal blue': '#4169E1', royalblue: '#4169E1',
+    'sky blue': '#87CEEB', skyblue: '#87CEEB', mintgreen: '#A8C3A0', olivegreen: '#7A7A3D',
+    multicolor: '#9B9B9B',
+    // French
+    blanc: '#FFFFFF', crème: '#F1E7D3', or: '#A67C00', doré: '#A67C00', noir: '#1A1A1A',
+    argent: '#C0C0C0', ivoire: '#FFFFF0', anthracite: '#404040', émeraude: '#3D7A5C',
+    'rose poudré': '#E8B4B8', marron: '#6E5A1C', brun: '#6E5A1C', bleu: '#3B5B9E',
+    'bleu marine': '#1F2A56', 'bleu nuit': '#1F2A56', 'bleu roi': '#4169E1',
+    'bleu ciel': '#87CEEB', 'bleu clair': '#ADD8E6', vert: '#3D7A5C', 'vert forêt': '#2F5233',
+    gris: '#808080', rose: '#C97B84', rouge: '#B23B3B', violet: '#6B4A8A',
+    pourpre: '#6B4A8A', orange: '#C96A2B', jaune: '#D9B23B', sauge: '#8A9A7B',
+    prune: '#5E3A64', olive: '#7A7A3D', sable: '#DECC9C', taupe: '#A79A8C',
+    menthe: '#A8C3A0', sarcelle: '#2E6E6E', rouille: '#9C4E2E', moutarde: '#D9B34A',
+    pêche: '#F6C9AE', lavande: '#BBA5D8', corail: '#F07A6B', turquoise: '#3FB8AF',
+    cannelle: '#9C4A2E', perle: '#F2EBE0', écru: '#EADFC8', baurdeaux: '#7A2E2E',
+    // Arabic
+    'أبيض': '#FFFFFF', 'أسود': '#1A1A1A', 'أزرق': '#3B5B9E', 'أحمر': '#B23B3B',
+    'أخضر': '#3D7A5C', 'أصفر': '#D9B23B', 'وردي': '#E8A2B0', 'برتقالي': '#C96A2B',
+    'بنفسجي': '#6B4A8A', 'رمادي': '#808080', 'بني': '#6E5A1C', 'ذهبي': '#A67C00',
+    'فضي': '#C0C0C0', 'بيج': '#D9CCB2', 'زيتوني': '#7A7A3D', 'فيروزي': '#3FB8AF',
+    'عنابي': '#7A2E2E', 'كحلي': '#1F2A56', 'كريمي': '#F1E7D3', 'عاجي': '#FFFFF0',
+    'وردي فاتح': '#E8B4B8', 'أزرق داكن': '#1F2A56', 'أزرق فاتح': '#ADD8E6'
   };
 
   var RETURNS_DAYS = 30;

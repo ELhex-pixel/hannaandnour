@@ -373,6 +373,7 @@
     setVal('f-rating', editing.rating);
     setVal('f-image', editing.image || 'images/hero.jpg');
     setVal('f-gallery', (editing.gallery || []).join('\n'));
+    renderGalleryGrid();
     document.getElementById('f-featured').checked = !!editing.is_featured;
     document.getElementById('f-bestseller').checked = !!editing.is_bestseller;
     document.getElementById('f-active').checked = editing.active !== false;
@@ -489,6 +490,65 @@
     return p;
   }
 
+  /* ---------------- Galerie visuelle ---------------- */
+
+  function galleryLines() {
+    return String(getVal('f-gallery') || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
+  function saveGalleryLines(lines) {
+    setVal('f-gallery', lines.join('\n'));
+    renderGalleryGrid();
+  }
+
+  function renderGalleryGrid() {
+    var box = document.getElementById('galleryGrid');
+    if (!box) return;
+    var lines = galleryLines();
+    if (!lines.length) {
+      box.innerHTML = '<p class="empty">Aucune image &mdash; ajoutez-en via upload ou URL.</p>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < lines.length; i++) {
+      html += '<div class="gallery-item" data-i="' + i + '">' +
+        '<img src="' + esc(lines[i]) + '" alt="Image ' + (i + 1) + '" onerror="this.classList.add(\'err\');">' +
+        '<div class="g-actions">' +
+        '<button type="button" class="btn btn-secondary btn-small g-up" title="Monter"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+        '<button type="button" class="btn btn-secondary btn-small g-down" title="Descendre"' + (i === lines.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+        '<button type="button" class="btn btn-danger btn-small g-del" title="Supprimer">&times;</button>' +
+        '</div></div>';
+    }
+    box.innerHTML = html;
+  }
+
+  function moveGallery(i, dir) {
+    var lines = galleryLines();
+    var j = i + dir;
+    if (j < 0 || j >= lines.length) return;
+    var tmp = lines[i]; lines[i] = lines[j]; lines[j] = tmp;
+    saveGalleryLines(lines);
+  }
+
+  function deleteGallery(i) {
+    var lines = galleryLines();
+    lines.splice(i, 1);
+    saveGalleryLines(lines);
+  }
+
+  function addGalleryUrl() {
+    var input = document.getElementById('galleryUrl');
+    if (!input) return;
+    var v = (input.value || '').trim();
+    if (!v) return;
+    if (!/^https?:\/\//i.test(v) && v.indexOf('images/') !== 0) { toast('URL invalide (http(s) ou images/…)', 'err'); return; }
+    var lines = galleryLines();
+    if (lines.indexOf(v) >= 0) { input.value = ''; toast('Déjà présente', 'err'); return; }
+    lines.push(v);
+    saveGalleryLines(lines);
+    input.value = '';
+  }
+
   function wireEditor() {
     document.getElementById('closeEditorBtn').addEventListener('click', function () {
       document.getElementById('productEditor').classList.remove('open');
@@ -496,10 +556,21 @@
     // Close by clicking the dark backdrop around the editor.
     document.getElementById('productEditor').addEventListener('click', function (e) {
       if (e.target === this) this.classList.remove('open');
+      var up = e.target.closest('.g-up');
+      if (up) { moveGallery(parseInt(up.closest('.gallery-item').getAttribute('data-i'), 10), -1); return; }
+      var down = e.target.closest('.g-down');
+      if (down) { moveGallery(parseInt(down.closest('.gallery-item').getAttribute('data-i'), 10), 1); return; }
+      var del = e.target.closest('.g-del');
+      if (del) { deleteGallery(parseInt(del.closest('.gallery-item').getAttribute('data-i'), 10)); return; }
+      if (e.target.closest('#galleryUrlAdd')) { addGalleryUrl(); return; }
     });
     document.getElementById('newProductBtn').addEventListener('click', function () { openEditor(null); });
     document.getElementById('f-colors').addEventListener('input', buildVariantGrid);
     document.getElementById('f-sizes').addEventListener('input', buildVariantGrid);
+    var galleryUrlInput = document.getElementById('galleryUrl');
+    if (galleryUrlInput) galleryUrlInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') addGalleryUrl();
+    });
 
     document.getElementById('saveProductBtn').addEventListener('click', function () {
       var btn = this;
@@ -571,8 +642,9 @@
     }
     bind('uploadMainBtn', 'fileMain', function (url) { setVal('f-image', url); });
     bind('uploadGalleryBtn', 'fileGallery', function (url) {
-      var cur = getVal('f-gallery');
-      setVal('f-gallery', cur ? cur + '\n' + url : url);
+      var lines = galleryLines();
+      if (lines.indexOf(url) < 0) lines.push(url);
+      saveGalleryLines(lines);
     });
     bind('uploadPostBtn', 'filePost', function (url) { setVal('b-image', url); }, 'Uploader une image');
     bind('uploadHeroBtn', 'fileHero', function (url) { setVal('s-hero-image', url); }, 'Uploader une image');
