@@ -248,7 +248,7 @@
       (p.active ? '' : '<td><span class="badge badge-red">Inactif</span></td>') +
       '<td style="white-space:nowrap;">' +
       '<button class="btn btn-secondary btn-small edit-product" data-id="' + p.id + '">Modifier</button> ' +
-      '<button class="btn btn-secondary btn-small" title="Dupliquer" data-slug="' + esc(p.slug) + '" data-id="' + p.id + '">Dupliquer</button>' +
+      '<button class="btn btn-secondary btn-small dup-product" title="Dupliquer" data-id="' + p.id + '">Dupliquer</button>' +
       '</td></tr>';
   }
 
@@ -273,6 +273,61 @@
     if (!list.length) { box.innerHTML = '<p class="empty">Aucun produit.</p>'; return; }
     box.innerHTML = '<table><thead><tr><th></th><th>Produit</th><th>Prix</th><th>Cat&eacute;gorie</th><th>Stock</th><th></th><th></th></tr></thead><tbody>' +
       list.map(productRow).join('') + '</tbody></table>';
+  }
+
+  // Copie un produit (nouveau slug unique, copie créée DÉSACTIVÉE pour
+  // relecture avant mise en ligne ; note/reviews remis à zéro).
+  function duplicateProduct(id) {
+    var src = productsAll.filter(function (p) { return p.id === id; })[0];
+    if (!src) return;
+    var baseSlug = (src.slug || '') + '-copie';
+    var taken = {};
+    productsAll.forEach(function (q) { taken[q.slug] = true; });
+    var slug = baseSlug;
+    for (var n = 2; taken[slug]; n++) slug = baseSlug + n;
+    var payload = {
+      slug: slug,
+      sku: src.sku ? src.sku + '-copie' : '',
+      name_en: src.name_en,
+      name_fr: src.name_fr || '',
+      name_ar: src.name_ar || '',
+      description_en: src.description_en || '',
+      description_fr: src.description_fr || '',
+      description_ar: src.description_ar || '',
+      features_en: src.features_en || [],
+      features_fr: src.features_fr || [],
+      features_ar: src.features_ar || [],
+      care_en: src.care_en || [],
+      care_fr: src.care_fr || [],
+      care_ar: src.care_ar || [],
+      fabrics: src.fabrics || [],
+      occasions: src.occasions || [],
+      colors: src.colors || [],
+      sizes: src.sizes || [],
+      fabric_comp_en: src.fabric_comp_en || '',
+      fabric_comp_fr: src.fabric_comp_fr || '',
+      fabric_comp_ar: src.fabric_comp_ar || '',
+      price_cents: src.price_cents,
+      compare_at_price_cents: src.compare_at_price_cents || null,
+      category: src.category || 'hijab',
+      badge: src.badge || null,
+      rating: src.rating || 4.5,
+      review_count: 0,
+      image: src.image || 'images/hero.jpg',
+      gallery: src.gallery || [],
+      is_featured: !!src.is_featured,
+      is_bestseller: !!src.is_bestseller,
+      active: false,
+      variants: (src.variants || []).map(function (v) {
+        return { color: v.color || '', size: v.size || '', stock: parseInt(v.stock, 10) || 0 };
+      })
+    };
+    call('saveProduct', payload)
+      .then(function () {
+        toast('Produit dupliqu\u00e9 (cr\u00e9\u00e9 d\u00e9sactiv\u00e9)', 'ok');
+        return loadProducts();
+      })
+      .catch(function (e) { toast(e.message, 'err'); });
   }
 
   /* ---- Product editor ---- */
@@ -732,6 +787,11 @@
       if (e.target === this) this.classList.remove('open');
     });
     document.addEventListener('click', function (e) {
+      var dupBtn = e.target.closest('.dup-product');
+      if (dupBtn) {
+        duplicateProduct(dupBtn.getAttribute('data-id'));
+        return;
+      }
       var delBtn = e.target.closest('.del-order');
       if (delBtn) {
         deleteOrder(delBtn.getAttribute('data-id'), delBtn.getAttribute('data-number') || '');
