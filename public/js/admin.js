@@ -20,7 +20,11 @@
       body: JSON.stringify(Object.assign({ action: action }, data || {}))
     }).then(function (res) {
       return res.json().then(function (body) {
-        if (!res.ok) throw new Error(body.error || 'Erreur serveur');
+        if (!res.ok) {
+          var e = new Error(body.error || 'Erreur serveur');
+          if (body.detail) e.detail = body.detail;
+          throw e;
+        }
         return body;
       });
     });
@@ -133,7 +137,7 @@
         })
         .catch(function (e2) {
           btn.disabled = false;
-          msgError(e2.message || 'Erreur lors de l\'envoi du code.');
+          msgError(e2.detail || e2.message || 'Erreur lors de l\'envoi du code.');
         });
     });
 
