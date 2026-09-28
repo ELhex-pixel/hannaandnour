@@ -579,21 +579,9 @@ case 'deleteMessage': {
         if (!order) return json(404, { error: 'Commande introuvable' });
         if (order.status !== 'paid') return json(400, { error: 'Seules les commandes payées peuvent être remboursées' });
 
-        let paymentIntent = null;
-        if (order.stripe_session_id) {
-          const sess = await STRIPE().checkout.sessions.retrieve(order.stripe_session_id);
-          paymentIntent = sess && sess.payment_intent;
-        }
-        if (!paymentIntent) {
-          const pi = await STRIPE().paymentIntents.search({ query: 'metadata["order_id"]:"' + order.id + '"' });
-          if (pi && pi.data && pi.data.length) paymentIntent = pi.data[0].id;
-        }
-        if (!paymentIntent) return json(400, { error: 'Aucun paiement associé à cette commande' });
-
-        try {
-          await STRIPE().refunds.create({ payment_intent: paymentIntent });
-        } catch (refundErr) {
-          if (!/already been refunded|anymore/i.test(refundErr.message)) throw refundErr;
+        const ref = await stripeRefund(order);
+        if (!ref.ok && ref.error !== 'Stripe is not configured') {
+          return json(400, { error: ref.error });
         }
 
         // Guarded update: only a still-paid order may become refunded, so two
@@ -621,7 +609,7 @@ case 'deleteMessage': {
           console.error('Refund email failed:', mailErr.message);
         }
 
-        return json(200, { ok: true });
+        return json(200, { ok: true, refunded: ref.ok });
       }
 
       case 'cancelOrder': {
@@ -653,18 +641,22 @@ case 'deleteMessage': {
         // revanche, on ne remet pas l'article en stock.)
         if (reason === 'out_of_stock') await restockOrder(sb, order);
 
+        // Remboursement Stripe automatique (best-effort, non bloquant).
+        const ref = await stripeRefund(order);
+        if (!ref.ok) console.error('Cancel refund failed:', ref.error);
+
         try {
           const { sendEmail } = require('./shared');
           await sendEmail({
             to: order.email,
             subject: 'Votre commande ' + order.order_number + ' a \u00e9t\u00e9 annul\u00e9e \u2014 Hanna & Nour',
-            html: buildCancelEmail(order, reason, comment)
+            html: buildCancelEmail(order, reason, comment, ref.ok)
           });
         } catch (mailErr) {
           console.error('Cancel email failed:', mailErr.message);
         }
 
-        return json(200, { ok: true });
+        return json(200, { ok: true, refunded: ref.ok });
       }
 
       case 'analyticsSummary': {
@@ -759,6 +751,28 @@ async function recomputeRating(sb, productId) {
   await sb.from('products').update({ rating, review_count: count }).eq('id', productId);
 }
 
+// Full Stripe refund for a paid order. Returns { ok, already, error }.
+async function stripeRefund(order) {
+  if (!process.env.STRIPE_SECRET_KEY) return { ok: false, error: 'Stripe is not configured' };
+  let paymentIntent = null;
+  if (order.stripe_session_id) {
+    const sess = await STRIPE().checkout.sessions.retrieve(order.stripe_session_id);
+    paymentIntent = sess && sess.payment_intent;
+  }
+  if (!paymentIntent) {
+    const pi = await STRIPE().paymentIntents.search({ query: 'metadata["order_id"]:"' + order.id + '"' });
+    if (pi && pi.data && pi.data.length) paymentIntent = pi.data[0].id;
+  }
+  if (!paymentIntent) return { ok: false, error: 'Aucun paiement associ\u00e9 \u00e0 cette commande' };
+  try {
+    await STRIPE().refunds.create({ payment_intent: paymentIntent });
+    return { ok: true };
+  } catch (err) {
+    if (/already been refunded|anymore/i.test(err.message)) return { ok: true, already: true };
+    return { ok: false, error: err.message };
+  }
+}
+
 // Puts managed-variant stock back after a refund (only for managed products).
 async function restockOrder(sb, order) {
   const items = (order.order_items || []).filter((it) => it.variant_id);
@@ -781,18 +795,21 @@ function buildRefundEmail(order) {
     '<p style="font-size:12px;color:#8a7d66;">Merci de votre confiance.</p></div></div>';
 }
 
-function buildCancelEmail(order, reason, comment) {
+function buildCancelEmail(order, reason, comment, refunded) {
   const reasons = {
     defective: 'un article de votre commande s\u2019est r\u00e9v\u00e9l\u00e9 d\u00e9fectueux',
     out_of_stock: 'un article de votre commande n\u2019est plus disponible (rupture de stock)',
     other: comment || 'en raison d\u2019une indisponibilit\u00e9 impr\u00e9vue'
   };
   const text = reasons[reason] || reasons.other;
+  const refundLine = refunded
+    ? 'Le remboursement de votre paiement a d\u00e9j\u00e0 \u00e9t\u00e9 lanc\u00e9 automatiquement.'
+    : 'Si un paiement a \u00e9t\u00e9 effectu\u00e9, celui-ci vous sera int\u00e9gralement rembours\u00e9 dans les plus brefs d\u00e9lais.';
   return '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
     'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande a \u00e9t\u00e9 annul\u00e9e</h2>' +
     '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ',</p>' +
     '<p style="font-size:14px;color:#221f1a;">Nous vous remercions pour votre commande <strong>' + esc(order.order_number) + '</strong>. Nous sommes sinc\u00e8rement navr\u00e9s de devoir vous informer que nous ne sommes malheureusement pas en mesure de la confirmer : ' + esc(text) + '.</p>' +
-    '<p style="font-size:14px;color:#221f1a;">Le paiement, s\u2019il a d\u00e9j\u00e0 \u00e9t\u00e9 effectu\u00e9, vous sera int\u00e9gralement rembours\u00e9 dans les plus brefs d\u00e9lais.</p>' +
+    '<p style="font-size:14px;color:#221f1a;">' + refundLine + '</p>' +
     '<p style="font-size:14px;color:#221f1a;">Nous vous pr\u00e9sentons nos sinc\u00e8res excuses pour ce d\u00e9sagr\u00e9ment et restons \u00e0 votre disposition pour toute question.</p>' +
     '<p style="font-size:12px;color:#8a7d66;">L\u2019\u00e9quipe Hanna &amp; Nour</p></div></div>';
 }

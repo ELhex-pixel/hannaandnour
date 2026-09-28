@@ -654,7 +654,11 @@
         id: o.id,
         reason: document.getElementById('cancelReason').value,
         comment: document.getElementById('cancelNote').value
-      }).then(function () { return afterUpdate(o.id, 'Commande annul\u00e9e, client notifi\u00e9'); });
+      }).then(function (res) {
+        return afterUpdate(o.id, res && res.refunded
+          ? 'Commande annul\u00e9e, remboursement + email envoy\u00e9s'
+          : 'Commande annul\u00e9e, email envoy\u00e9 (remboursement manuel requis)');
+      });
     });
   }
 
