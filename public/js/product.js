@@ -391,10 +391,11 @@
       var total = 0;
       for (var i = 0; i < counts.length; i++) total += counts[i];
       for (var j = 0; j < rows.length && j < 5; j++) {
+        var n = j < counts.length ? (counts[j] || 0) : 0;
         var fill = rows[j].querySelector('.review-bar-fill');
-        if (fill) fill.style.width = total ? Math.round(counts[5 - j] / total * 100) + '%' : '0%';
+        if (fill) fill.style.width = total ? Math.round(n / total * 100) + '%' : '0%';
         var countSpan = rows[j].querySelector('.review-bar-count');
-        if (countSpan) countSpan.textContent = String(counts[5 - j]);
+        if (countSpan) countSpan.textContent = String(n);
       }
     }
 
@@ -458,7 +459,15 @@
           setCount(0);
         }
       })
-      .catch(function () { /* keep demo cards as-is (hidden unless enabled) */ });
+      .catch(function () {
+        if (DEMO_ON) {
+          setSummary('5.0', 3, [3, 0, 0, 0, 0]);
+          setCount(3);
+        } else {
+          setSummary('0', 0, [0, 0, 0, 0, 0]);
+          setCount(0);
+        }
+      });
   }
 
   function updateReviewGate(p) {
@@ -505,7 +514,8 @@
         else showGate(tr('reviewGateNotEligible'), false);
       })
       .catch(function () {
-        showGate(tr('reviewGateLogin'), true);
+        if (window.HN_AUTH && HN_AUTH.isAuthed()) showGate(tr('reviewGateNotEligible'), false);
+        else showGate(tr('reviewGateLogin'), true);
       });
   }
 
