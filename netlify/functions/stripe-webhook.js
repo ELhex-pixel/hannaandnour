@@ -18,6 +18,41 @@ function moneyStr(cents, currency) {
   return symbol + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function buildAdminAlertHtml(order, items) {
+  const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
+  const rows = (items || []).map(function (it) {
+    return (
+      '<tr>' +
+      '<td style="padding:10px 8px;font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#221f1a;">' + esc(it.product_name) + ' <span style="color:#8a7d66;">&times; ' + esc(it.quantity) + '</span></td>' +
+      '<td style="padding:10px 8px;font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#221f1a;text-align:right;white-space:nowrap;">' + moneyStr(it.unit_price_cents * it.quantity, order.currency) + '</td>' +
+      '</tr>'
+    );
+  }).join('');
+  const addr = order.delivery_type === 'pickup'
+    ? (order.pickup_point ? 'Retrait &ndash; ' + esc(order.pickup_point) : 'Retrait en point relais')
+    : [order.address1, order.address2, [order.city, order.state].filter(Boolean).join(' '), [order.postal_code, order.country].filter(Boolean).join(' '), order.phone].filter(Boolean).map(esc).join('<br>');
+  return (
+    '<div style="background:#f6f1e8;padding:24px;">' +
+    '<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;font-family:Helvetica,Arial,sans-serif;">' +
+    '<div style="background:#8a2c2c;padding:20px 28px;">' +
+    '<h1 style="margin:0;color:#ffffff;font-family:Georgia,serif;font-size:22px;">Hanna &amp; Nour</h1>' +
+    '<p style="margin:4px 0 0;color:#f3f0e8;font-size:13px;">Alerte vente</p>' +
+    '</div>' +
+    '<div style="padding:28px;">' +
+    '<h2 style="margin:0 0 6px;color:#8a2c2c;font-size:18px;">Nouvelle commande pay&eacute;e</h2>' +
+    '<p style="margin:0 0 6px;color:#221f1a;font-size:14px;line-height:1.5;">' + esc(order.customer_name) + ' (' + esc(order.email) + (order.phone ? ' &middot; ' + esc(order.phone) : '') + ')</p>' +
+    '<p style="margin:0 0 14px;font-size:13px;color:#8a7d66;">Num&eacute;ro : <strong style="color:#221f1a;">' + esc(order.order_number) + '</strong></p>' +
+    '<table style="width:100%;border-collapse:collapse;border-top:1px solid #efe7d8;">' + rows + '</table>' +
+    '<p style="margin:12px 0 0;font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#221f1a;">Total pay&eacute; : <strong>' + moneyStr(order.total_cents, order.currency) + '</strong></p>' +
+    '<p style="margin:6px 0 0;font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#221f1a;">Livraison : ' + (order.delivery_type === 'pickup' ? 'point relais' : esc(order.shipping_method || 'standard')) + '</p>' +
+    (order.delivery_type !== 'pickup' ? '<p style="margin:6px 0 0;font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#221f1a;">' + addr + '</p>' : '') +
+    '<table style="margin:18px 0;" role="presentation" width="100%"><tr><td align="center">' +
+    '<a href="' + siteUrl + '/admin.html" style="background:#221f1a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;display:inline-block;">Voir dans l&rsquo;admin</a>' +
+    '</td></tr></table>' +
+    '</div></div></div>'
+  );
+}
+
 function buildOrderEmail(order, items) {
   const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
   const rows = (items || []).map(function (it) {
@@ -223,6 +258,17 @@ async function markPaid(session, sb) {
         });
         if (result && result.skipped) {
           console.log('Order email skipped (RESEND_API_KEY not set) for ' + toEmail);
+        }
+      }
+      const adminTo = process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'yassinaous92@gmail.com';
+      if (adminTo && adminTo !== toEmail) {
+        const alertResult = await sendEmail({
+          to: adminTo,
+          subject: 'Nouvelle commande ' + (paidOrder.order_number || orderId) + ' \u2014 Hanna & Nour',
+          html: buildAdminAlertHtml(paidOrder, paidOrder.order_items || [])
+        });
+        if (alertResult && alertResult.skipped) {
+          console.log('Sale alert skipped (RESEND_API_KEY not set) for ' + adminTo);
         }
       }
     } catch (mailErr) {
