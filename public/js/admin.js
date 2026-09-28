@@ -1019,6 +1019,13 @@
     return slug;
   }
 
+  function prodImage(slug) {
+    for (var i = 0; i < productsAll.length; i++) {
+      if (productsAll[i].slug === slug) return productsAll[i].image || '';
+    }
+    return '';
+  }
+
   function moveItem(arr, i, d) {
     var j = i + d;
     if (i < 0 || j < 0 || j >= arr.length) return;
@@ -1048,6 +1055,7 @@
         bb.innerHTML = homeState.bestsellers.map(function (slug, i) {
           return '<div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #eee;">' +
             '<span style="min-width:22px; color:#8a7d66;">' + (i + 1) + '.</span>' +
+            '<img src="' + esc(prodImage(slug) || 'images/hero.jpg') + '" style="width:46px; height:34px; object-fit:cover; border-radius:6px;" alt="">' +
             '<span style="flex:1;"><strong>' + esc(prodLabel(slug)) + '</strong> <small style="color:#8a7d66;">' + esc(slug) + '</small></span>' +
             '<button class="btn btn-secondary btn-small b-up" data-idx="' + i + '" ' + (i === 0 ? 'disabled' : '') + '>Monter</button>' +
             '<button class="btn btn-secondary btn-small b-down" data-idx="' + i + '" ' + (i === homeState.bestsellers.length - 1 ? 'disabled' : '') + '>Descendre</button>' +
