@@ -122,6 +122,36 @@
           '<span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">' + countValue(items, 'occasions', o) + '</span></label>';
       }).join('');
     }
+
+    updateCategoryCounts();
+  }
+
+  // Category counts (incl. "All Products") are real, computed from the catalog
+  // that loadProducts fetched from the API, so admin add/delete edits show up.
+  var CATEGORY_OPTIONS = [
+    { value: '', all: true },
+    { value: 'hijab', label: 'catHijabs' },
+    { value: 'abaya', label: 'catAbayas' },
+    { value: 'dress', label: 'catDresses' },
+    { value: 'prayer', label: 'catPrayerWear' },
+    { value: 'accessory', label: 'catAccessories' }
+  ];
+
+  function updateCategoryCounts() {
+    var items = state.items || [];
+    document.querySelectorAll('.filter-option[data-group="category"]').forEach(function (opt) {
+      var val = opt.getAttribute('data-value') || '';
+      var n = -1;
+      for (var i = 0; i < CATEGORY_OPTIONS.length; i++) {
+        if (CATEGORY_OPTIONS[i].value === val) {
+          n = CATEGORY_OPTIONS[i].all ? items.length : countValue(items, 'category', val);
+          break;
+        }
+      }
+      if (n < 0) return;
+      var countEl = opt.querySelector('.filter-count');
+      if (countEl) countEl.textContent = String(n);
+    });
   }
 
   function buildCard(p) {

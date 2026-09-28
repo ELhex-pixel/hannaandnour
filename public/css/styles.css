@@ -1335,6 +1335,12 @@ body[data-menu-open="true"] .nav-mobile {
   color: var(--color-dark);
 }
 
+.filter-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--color-gray-light);
+}
+
 .filter-checkbox {
   width: 18px;
   height: 18px;
