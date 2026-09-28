@@ -422,34 +422,47 @@
       }
     }
 
+    function reviewCardHtml(r) {
+      var date = r.created_at ? new Date(r.created_at).toLocaleDateString() : '';
+      return '<div class="review-card">' +
+        '<div class="review-header"><div class="review-author">' +
+        '<div class="review-avatar">' + esc((r.author_name || '?').charAt(0).toUpperCase()) + '</div>' +
+        '<div><p class="review-name">' + esc(r.author_name) + '</p>' +
+        '<p class="review-date"><span class="review-verified">' + tr('verifiedBadge') + '</span>' + (date ? ' &bull; ' + esc(date) : '') + '</p></div></div>' +
+        '<span class="stars">' + stars(r.rating) + '</span></div>' +
+        '<p class="review-text">' + esc(r.body) + '</p></div>';
+    }
+
+    function sumReviews(reviews, counts) {
+      var sum = 0;
+      reviews.forEach(function (r) {
+        var k = Math.max(1, Math.min(5, parseInt(r.rating, 10) || 0));
+        counts[5 - k]++;
+        sum += k;
+      });
+      return sum;
+    }
+
     fetch(HN.api('reviews') + '?product=' + encodeURIComponent(p.slug))
       .then(function (res) { return res.json(); })
       .then(function (data) {
         var reviews = data.reviews || [];
         if (DEMO_ON) {
-          list.innerHTML = '';
-          setSummary('5.0', 3, [3, 0, 0, 0, 0]);
-          setCount(3);
+          var html = '';
+          reviews.forEach(function (r) { html += reviewCardHtml(r); });
+          list.innerHTML = html;
+          var counts = [3, 0, 0, 0, 0];
+          var sum = 15 + sumReviews(reviews, counts);
+          var total = 3 + reviews.length;
+          setBars(counts);
+          setSummary((sum / total).toFixed(1), total, counts);
+          setCount(total);
         } else if (reviews.length) {
           var html = '';
-          reviews.forEach(function (r) {
-            var date = r.created_at ? new Date(r.created_at).toLocaleDateString() : '';
-            html += '<div class="review-card">' +
-              '<div class="review-header"><div class="review-author">' +
-              '<div class="review-avatar">' + esc((r.author_name || '?').charAt(0).toUpperCase()) + '</div>' +
-              '<div><p class="review-name">' + esc(r.author_name) + '</p>' +
-              '<p class="review-date"><span class="review-verified">' + tr('verifiedBadge') + '</span>' + (date ? ' &bull; ' + esc(date) : '') + '</p></div></div>' +
-              '<span class="stars">' + stars(r.rating) + '</span></div>' +
-              '<p class="review-text">' + esc(r.body) + '</p></div>';
-          });
+          reviews.forEach(function (r) { html += reviewCardHtml(r); });
           list.innerHTML = html;
           var counts = [0, 0, 0, 0, 0];
-          var sum = 0;
-          reviews.forEach(function (r) {
-            var k = Math.max(1, Math.min(5, parseInt(r.rating, 10) || 0));
-            counts[5 - k]++;
-            sum += k;
-          });
+          var sum = sumReviews(reviews, counts);
           setBars(counts);
           setSummary((sum / reviews.length).toFixed(1), reviews.length, counts);
           setCount(reviews.length);
