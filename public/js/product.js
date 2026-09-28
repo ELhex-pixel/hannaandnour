@@ -24,6 +24,8 @@
 
   var RETURNS_DAYS = 30;
   var DEMO_ON = false;
+  var KNOWN_REVIEW_COUNT = 0;
+  var KNOWN_RATING = 0;
 
   var SIZE_DIMS = {
     'one size': [180, 70], '180cm x 70cm': [180, 70], '180 x 70': [180, 70],
@@ -123,9 +125,9 @@
     var ratingWrapper = document.querySelector('.product-rating');
     if (ratingWrapper) {
       var starsEl = ratingWrapper.querySelector('.stars');
-      if (starsEl) starsEl.textContent = stars(p.rating);
+      if (starsEl) starsEl.textContent = KNOWN_REVIEW_COUNT ? stars(KNOWN_RATING) : '';
       var countEl = ratingWrapper.querySelector('.rating-count');
-      if (countEl) countEl.textContent = (p.review_count || 0) + ' ' + tr('reviewsLabel');
+      if (countEl) countEl.textContent = KNOWN_REVIEW_COUNT + ' ' + tr('reviewsLabel');
     }
 
     var priceEl = document.querySelector('.product-price');
@@ -253,9 +255,9 @@
       }
     }
 
-    // Reviews tab heading
+    // Reviews tab heading (real count is applied once reviews load)
     var reviewTabBtn = document.querySelector('.tab-btn[data-tab="reviews"]');
-    if (reviewTabBtn) reviewTabBtn.textContent = tr('tabReviewsN', { n: p.review_count || 0 });
+    if (reviewTabBtn) reviewTabBtn.textContent = tr('tabReviewsN', { n: 0 });
   }
 
   function renderSizeGuide(p) {
@@ -390,14 +392,26 @@
       for (var i = 0; i < counts.length; i++) total += counts[i];
       for (var j = 0; j < rows.length && j < 5; j++) {
         var fill = rows[j].querySelector('.review-bar-fill');
-        if (!fill) continue;
-        fill.style.width = total ? Math.round(counts[5 - j] / total * 100) + '%' : '0%';
+        if (fill) fill.style.width = total ? Math.round(counts[5 - j] / total * 100) + '%' : '0%';
+        var countSpan = rows[j].querySelector('.review-bar-count');
+        if (countSpan) countSpan.textContent = String(counts[5 - j]);
       }
     }
 
-    function setSummary(number, count) {
+    function setCount(n) {
+      KNOWN_REVIEW_COUNT = n;
+      var tab = document.querySelector('.tab-btn[data-tab="reviews"]');
+      if (tab) tab.textContent = tr('tabReviewsN', { n: n });
+    }
+
+    function setSummary(number, count, counts) {
+      KNOWN_REVIEW_COUNT = count;
+      KNOWN_RATING = parseFloat(number) || 0;
       if (numberEl) numberEl.textContent = number;
       if (totalEl) totalEl.textContent = count ? tr('reviewSummaryN', { n: count }) : tr('noReviews');
+      var starsRow = document.querySelector('.reviews-average .stars');
+      if (starsRow) starsRow.style.display = count ? '' : 'none';
+      if (counts) setBars(counts);
       var topCount = document.querySelector('.product-rating .rating-count');
       if (topCount) topCount.textContent = count + ' ' + tr('reviewsLabel');
     }
@@ -427,15 +441,16 @@
             sum += k;
           });
           setBars(counts);
-          setSummary((sum / reviews.length).toFixed(1), reviews.length);
+          setSummary((sum / reviews.length).toFixed(1), reviews.length, counts);
+          setCount(reviews.length);
         } else if (DEMO_ON) {
           list.innerHTML = '';
-          setBars([3, 0, 0, 0, 0]);
-          setSummary('5.0', 3);
+          setSummary('5.0', 3, [3, 0, 0, 0, 0]);
+          setCount(3);
         } else {
           list.innerHTML = '';
-          setBars([0, 0, 0, 0, 0]);
-          setSummary('0', 0);
+          setSummary('0', 0, [0, 0, 0, 0, 0]);
+          setCount(0);
         }
       })
       .catch(function () { /* keep demo cards as-is (hidden unless enabled) */ });
