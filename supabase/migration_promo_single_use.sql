@@ -9,12 +9,14 @@ alter table promo_codes add column if not exists used_count integer not null def
 
 create or replace function claim_single_use_promo(p_code text)
 returns boolean
-language sql
+language plpgsql
 as $$
+begin
   update promo_codes
      set used_count = used_count + 1
    where code = p_code
      and single_use = true
      and used_count = 0;
-  select found;
+  return found;
+end;
 $$;
