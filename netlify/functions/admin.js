@@ -705,7 +705,7 @@ summary.d30.topPaths = Object.keys(byPath)
 
       case 'resetStats': {
         if (body.confirm !== true) return json(400, { error: 'Confirmation requise' });
-        const { error } = await sb.from('analytics_events').delete().neq('id', null);
+        const { error } = await sb.from('analytics_events').delete().gte('created_at', '1970-01-01T00:00:00+00:00');
         if (error) throw error;
         return json(200, { ok: true });
       }
