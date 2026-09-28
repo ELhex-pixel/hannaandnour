@@ -1,15 +1,11 @@
 /**
  * Hanna & Nour - Client configuration
  *
- * EDIT THIS FILE to plug in your own values:
- *   - SUPABASE_URL          : Settings > API > Project URL
- *   - SUPABASE_ANON_KEY     : Settings > API > anon public key (safe for the browser)
- *
- * API_BASE is usually empty: the site talks to the Netlify Functions
- * via `/.netlify/functions/...`. Set it only if you proxy differently.
+ * The front-end talks only to the Netlify Functions, which hold the Supabase
+ * service-role key server-side — no Supabase credentials belong in the browser.
+ * API_BASE is usually empty: the site talks to `/.netlify/functions/...`.
+ * Set it only if you proxy differently.
  */
 window.HN_CONFIG = {
-  API_BASE: '',
-  SUPABASE_URL: 'https://rqgoawbzbgzuvpxnzxsu.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_publishable_p1xBi1XMMqCnhUxLiAkE-Q_QVzjzK4x'
+  API_BASE: ''
 };

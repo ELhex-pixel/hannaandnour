@@ -59,6 +59,7 @@
   }
 
   var CURRENCY_SYMBOL = '$';
+  var CURRENCY_CODE = '';
   var CONFIG_CACHE_KEY = 'hn-config';
   var CONFIG_DATA = {};
   var REVIEW_DEMO = false;
@@ -80,6 +81,9 @@
     if (cachedCfg.currency && cachedCfg.currency.symbol) {
       CURRENCY_SYMBOL = cachedCfg.currency.symbol;
     }
+    if (cachedCfg.currency && cachedCfg.currency.code) {
+      CURRENCY_CODE = cachedCfg.currency.code;
+    }
     configPromise = fetch(apiUrl('config'))
       .then(function (res) {
         if (!res.ok) throw new Error('config request failed');
@@ -90,6 +94,9 @@
           writeLS(CONFIG_CACHE_KEY, data);
           if (data && data.currency && data.currency.symbol) {
             CURRENCY_SYMBOL = data.currency.symbol;
+          }
+          if (data && data.currency && data.currency.code) {
+            CURRENCY_CODE = data.currency.code;
           }
         } catch (e) {}
         applyConfigCopy(data || {});
@@ -633,6 +640,7 @@
     updateWishlistHearts: updateWishlistHearts,
     moneyCents: money,
     symbol: function () { return CURRENCY_SYMBOL; },
+    currency: function () { return CURRENCY_CODE; },
     loadConfig: loadConfig,
     loadPromos: loadPromos,
     promos: promos,

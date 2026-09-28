@@ -1,0 +1,17 @@
+# Scripts shell : toujours LF.
+*.sh text eol=lf
+
+# Binaires — jamais traités comme du texte.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+
+# Tout le reste : UTF-8, LF dans le dépôt.
+* text=auto eol=lf

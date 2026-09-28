@@ -20,22 +20,22 @@ paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Func
    - `supabase/rls_accounts.sql` (comptes clients : table `user_wishlist` + RLS sur la commande et les favoris — défense en profondeur)
    - `supabase/migration_promos_refunds.sql` (remboursements : RPC `increment_stock` pour re-stocker une commande remboursée)
    - `supabase/migration_relance_analytics.sql` (relance panier + analytics maison : colonnes `cart_restore_token`/`relance_sent_at` sur `orders`, table `analytics_events`)
+   - `supabase/migration_model_catalog.sql` (catalogue modèles)
+   - `supabase/migration_blog_story.sql` (articles de blog + contenu « Notre histoire »)
+   - `supabase/migration_demo_reviews_home.sql` (avis démo + curation de l'accueil)
+   - `supabase/migration_order_cancel.sql` (statut `cancelled` + motif/date d'annulation)
+   - `supabase/migration_rls_blog_demo.sql` (RLS sur `blog_posts` et `demo_reviews`)
+   - `supabase/migration_promo_single_use.sql` (codes promo à usage unique réellement appliqués)
 3. Récupérez dans **Settings > API** :
    - `Project URL` → `SUPABASE_URL`
-   - `anon public key` → à mettre dans `js/config.js` (client)
    - `service_role secret` → `SUPABASE_SERVICE_ROLE_KEY` (serveur, **jamais** dans le navigateur)
+   - La clé `anon` n'est utile à **rien** côté client : aucune page ne parle à Supabase directement (tout passe par les Netlify Functions). Ne l'exposez pas.
 
 ## 2. Configurer le client
 
-Éditez `js/config.js` :
-
-```js
-window.HN_CONFIG = {
-  API_BASE: '',               // vide : appels via /.netlify/functions/...
-  SUPABASE_URL: 'https://xxxx.supabase.co',
-  SUPABASE_ANON_KEY: 'xxxx-anon-public-key'
-};
-```
+Rien à configurer dans `public/js/config.js` : `window.HN_CONFIG` ne contient plus que
+`API_BASE` (vide par défaut ; les appels passent par `/.netlify/functions/...`).
+Les identifiants Supabase vivent uniquement dans les variables d'environnement Netlify (§ 4).
 
 ## 3. Créer le compte Stripe
 
@@ -43,7 +43,7 @@ window.HN_CONFIG = {
 2. Déployez le site (ou lancez `netlify dev`) puis créez le webhook :
    - **Stripe > Developers > Webhooks > Add endpoint**
    - URL : `https://VOTRE-DOMAINE/api/stripe-webhook`
-   - Événements à écouter : `checkout.session.completed` et `checkout.session.expired`
+   - Événements à écouter : `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded` et `checkout.session.async_payment_failed`
    - Copiez le **Signing secret** `whsec_...` → `STRIPE_WEBHOOK_SECRET`
 3. Testez le paiement avec la carte  `4242 4242 4242 4242`.
 
@@ -120,11 +120,19 @@ netlify deploy --prod
 
 > Le dossier publié est `public/` (`netlify.toml`) : les fichiers de dev (`supabase/`, `AGENTS.md`, `SETUP.md`, l'éventuel `opencode.json`) ne sont donc **pas** servis. Le SQL ci-dessus se lance depuis la console Supabase (lignes dans `supabase/schema.sql` + `seed.sql`, ou SQL Editor). Toutes les clés (`SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `ADMIN_PASSWORD`) sont des variables d'environnement Netlify — ne jamais les committer.
 
+> La version Node est épinglée par `.nvmrc` (`20`) : elle pilote le build ET le runtime des
+> fonctions. Pour forcer le runtime des fonctions différemment du build, définissez `AWS_LAMBDA_JS_RUNTIME`
+> (ex. `nodejs20.x`) dans **Netlify > Site settings > Environment variables**.
+
 ## Règles métier (à garder cohérentes entre client et serveur)
 
 - Taxe : 7 % (client `js/checkout.js`, `js/cart-page.js` ; serveur `checkout.js`, dépliable via `TAX_RATE`).
 - Livraison standard : gratuite ≥ 7500 ¢ sinon 699 ¢ ; express 1200 ¢ ; J+1 2500 ¢.
-- Codes promo : gérés dans la table `promo_codes` depuis **/admin → Promos** (% non limité en usage). Le client les charge via `/api/promos` (`HN.promoRate`), annonce dans le header réalimentée dynamiquement ; `WELCOME15` reste le seed et le fallback hors-ligne.
+- Codes promo : gérés dans la table `promo_codes` depuis **/admin → Promos**. Les codes marqués
+  **usage unique** (`single_use`) ne sont acceptés qu'une seule fois (l'ordre le premier à le
+  réclamer l'emporte, RPC `claim_single_use_promo`). Le client les charge via `/api/promos`
+  (`HN.promoRate`), annonce dans le header réalimentée dynamiquement ; `WELCOME15` reste le seed
+  et le fallback hors-ligne.
 - Tout changement de prix/taxe/frais doit être répercuté dans le JS client **et** les fonctions Netlify, sinon le total affiché ≠ total facturé.
 - **Relance panier** : `netlify/functions/relance.js` (fonction **planifiée Netlify**, quotidienne à 08:30 UTC — pas de cron externe). Commande `pending` créée il y a > 2 h et jamais relancée → **1 email** avec lien `cart.html?restore=<token>` qui remet les articles dans le panier ; puis `relance_sent_at` est posé. Nécessite `RESEND_API_KEY` + `SITE_URL`.
 - **Analytics maison** (pas de GA4) : le client envoie `pageview`/`product_view`/`add_to_cart`/`checkout_attempt` à `/api/track` (`sendBeacon`), le webhook ajoute `purchase` ; table `analytics_events`, onglet **/admin → Stats** (7 j / 30 j / total, produits et pages les plus vus).

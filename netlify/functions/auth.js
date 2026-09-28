@@ -14,7 +14,7 @@
  *
  * All reads use service_role so no client table access is required.
  */
-const { json, getSupabase, isConfigured, readBody, requireUser, CORS_HEADERS } = require('./shared');
+const { json, getSupabase, isConfigured, readBody, requireUser, getBearer, CORS_HEADERS, siteUrl } = require('./shared');
 
 function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
@@ -106,7 +106,7 @@ exports.handler = async function (event) {
       case 'forgotPassword': {
         const email = String(body.email || '').toLowerCase().trim();
         if (!isValidEmail(email)) return json(400, { error: 'Invalid email' });
-        const base = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/+$/, '');
+        const base = siteUrl;
         const { error } = await sb.auth.resetPasswordForEmail(email, {
           redirectTo: base + '/reset.html'
         });
@@ -190,11 +190,10 @@ exports.handler = async function (event) {
 };
 
 function bearerToken(event) {
-  const h = event.headers ? (event.headers.authorization || event.headers.Authorization || '') : '';
-  const m = String(h).match(/^Bearer\s+(.+)$/i);
-  if (m) return m[1];
-  const q = event.queryStringParameters || {};
-  return q.token || '';
+  // Aligned with shared.getBearer: Authorization header only. A `?token=`
+  // fallback was removed because tokens in URLs leak into server logs,
+  // browser history and referrers.
+  return getBearer(event);
 }
 
 async function linkOrdersByEmail(sb, userId, email) {

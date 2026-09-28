@@ -10,7 +10,8 @@
 
   function statusText(status) {
     var key = {
-      paid: 'orderPaid', pending: 'orderPending', abandoned: 'orderAbandoned', refunded: 'orderRefunded'
+      paid: 'orderPaid', pending: 'orderPending', abandoned: 'orderAbandoned', refunded: 'orderRefunded',
+      cancelled: 'orderCancelled', payment_failed: 'orderPaymentFailed'
     }[status];
     return key ? tr(key) : status;
   }

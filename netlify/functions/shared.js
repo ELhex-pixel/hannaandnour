@@ -108,6 +108,11 @@ function getBearer(event) {
   return '';
 }
 
+// Canonical site URL for emails and redirects. SITE_URL (Netlify env var)
+// wins; the fallback keeps local / `netlify dev` builds working unconfigured.
+const DEFAULT_SITE_URL = 'https://hannanour.netlify.app';
+const siteUrl = (process.env.SITE_URL || DEFAULT_SITE_URL).replace(/\/+$/, '');
+
 // Admin routes check `requireAdmin(event).ok` before doing anything.
 function requireAdmin(event) {
   const secret = process.env.ADMIN_PASSWORD;
@@ -210,5 +215,5 @@ function floatEnv(name, fallback) {
 }
 
 module.exports = { json, getSupabase, isConfigured, readBody, sendEmail, CORS_HEADERS,
-  signToken, verifyToken, getBearer, requireAdmin, requireUser, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv,
+  signToken, verifyToken, getBearer, requireAdmin, requireUser, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv, siteUrl,
   hashAdminPassword, verifyAdminHash, checkAdminCredentials };

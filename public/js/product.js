@@ -202,7 +202,7 @@
       offers: {
         '@type': 'Offer',
         url: 'https://hannanour.netlify.app/product.html?slug=' + encodeURIComponent(p.slug),
-        priceCurrency: 'USD',
+        priceCurrency: (typeof HN.currency === 'function' ? HN.currency() : '') || 'USD',
         price: ((parseInt(p.price_cents, 10) || 0) / 100).toFixed(2),
         availability: 'https://schema.org/InStock'
       }

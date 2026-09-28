@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Hanna & Nour - modest fashion e-commerce (static site + Netlify Functions + Stripe + Supabase)",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "netlify dev",
     "deploy": "netlify deploy --prod"

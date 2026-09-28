@@ -23,7 +23,7 @@
  */
 const { json, getSupabase, isConfigured, readBody, CORS_HEADERS, sendEmail,
   signToken, verifyToken, requireAdmin, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv,
-  hashAdminPassword, checkAdminCredentials } = require('./shared');
+  hashAdminPassword, checkAdminCredentials, siteUrl } = require('./shared');
 
 const crypto = require('crypto');
 const Stripe = require('stripe');
@@ -33,6 +33,9 @@ const STRIPE = () => new Stripe(process.env.STRIPE_SECRET_KEY || '');
 const ADMIN_RESET_TTL_MS = 15 * 60 * 1000;
 const ADMIN_RESET_COOLDOWN_MS = 60 * 1000;
 const MAX_RESET_ATTEMPTS = 5;
+
+const LOGIN_MAX_ATTEMPTS = 10;
+const LOGIN_LOCK_MS = 5 * 60 * 1000;
 
 // Reception address for the admin reset code. Falls back to the owner's
 // Resend-verified inbox until a brand address is configured later.
@@ -118,6 +121,39 @@ async function handleApplyReset(sb, body) {
     reset_otp_attempts: 0
   }));
   return json(200, { ok: true });
+}
+
+// Login with brute-force lockout. Failures are counted in the same `admin_auth`
+// settings row as the OTP flow, so the counter is shared across lambda
+// instances (unlike in-memory throttling). MAX fails -> temporary lock.
+async function handleLogin(sb, body) {
+  const secret = process.env.ADMIN_PASSWORD;
+  if (!secret) return json(503, { error: 'ADMIN_PASSWORD is not set on the server' });
+  const auth = (await getSetting(sb, 'admin_auth', null)) || {};
+  if (auth.login_locked_until && Date.now() < auth.login_locked_until) {
+    return json(429, { error: 'Trop de tentatives. Réessayez dans quelques minutes.' });
+  }
+  const given = String(body.password || '');
+  const match = await checkAdminCredentials(sb, given);
+  if (!match) {
+    const attempts = (auth.login_attempts || 0) + 1;
+    if (attempts >= LOGIN_MAX_ATTEMPTS) {
+      await saveSetting(sb, 'admin_auth', Object.assign({}, auth, {
+        login_attempts: 0,
+        login_locked_until: Date.now() + LOGIN_LOCK_MS
+      }));
+      return json(429, { error: 'Trop de tentatives. Réessayez dans quelques minutes.' });
+    }
+    await saveSetting(sb, 'admin_auth', Object.assign({}, auth, { login_attempts: attempts }));
+    return json(401, { error: 'Mot de passe incorrect' });
+  }
+  if (auth.login_attempts || auth.login_locked_until) {
+    await saveSetting(sb, 'admin_auth', Object.assign({}, auth, {
+      login_attempts: 0,
+      login_locked_until: null
+    }));
+  }
+  return json(200, { token: signToken(secret) });
 }
 
 async function ensureBucket(sb) {
@@ -207,14 +243,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     if (action === 'forgotPassword') return handleForgotPassword(sb, body);
     if (action === 'applyReset') return handleApplyReset(sb, body);
 
-    if (action === 'login') {
-      const secret = process.env.ADMIN_PASSWORD;
-      if (!secret) return json(503, { error: 'ADMIN_PASSWORD is not set on the server' });
-      const given = String(body.password || '');
-      const match = await checkAdminCredentials(sb, given);
-      if (!match) return json(401, { error: 'Mot de passe incorrect' });
-      return json(200, { token: signToken(secret) });
-    }
+    if (action === 'login') return handleLogin(sb, body);
 
     // ---- Everything below requires a valid admin session ----
     const auth = requireAdmin(event);
@@ -404,7 +433,6 @@ if (body.shipping_status !== undefined) {
             if (!oErr && ord && ord.email && ord.status === 'paid') {
               const { sendEmail } = require('./shared');
               const tracking = update.tracking_number || ord.tracking_number;
-              const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
               const html =
                 '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
                 'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande est exp\u00E9di\u00E9e !</h2>' +
@@ -919,7 +947,6 @@ async function restockOrder(sb, order) {
 }
 
 function buildRefundEmail(order) {
-  const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
   return '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
     'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande a été remboursée</h2>' +
     '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ', le remboursement intégral de votre commande ' +

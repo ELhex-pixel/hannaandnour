@@ -6,7 +6,7 @@
  * `shipping_reminders` (no schema change required). Pickup orders are skipped.
  */
 const { schedule } = require('@netlify/functions');
-const { getSupabase, isConfigured, sendEmail, getSetting, saveSetting } = require('./shared');
+const { getSupabase, isConfigured, sendEmail, getSetting, saveSetting, siteUrl } = require('./shared');
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -18,7 +18,6 @@ function moneyStr(cents, currency) {
 }
 
 function buildHtml(order) {
-  const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
   const created = new Date(order.created_at).toLocaleString('fr-FR');
   const addr = order.delivery_type === 'pickup'
     ? 'Retrait en point relais'

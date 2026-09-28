@@ -14,7 +14,7 @@
  */
 const { randomUUID, randomBytes } = require('crypto');
 const Stripe = require('stripe');
-const { json, getSupabase, isConfigured, readBody, getSetting, intEnv, floatEnv, requireUser } = require('./shared');
+const { json, getSupabase, isConfigured, readBody, getSetting, intEnv, floatEnv, requireUser, siteUrl } = require('./shared');
 
 const STRIPE = () => new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
@@ -39,7 +39,6 @@ exports.handler = async function (event) {
     const host = String(event.headers && (event.headers.host || event.headers.Host) || '').split(',')[0].trim();
     // Site URL is a trusted setting, never derived from the caller-controlled
     // Host header (would allow a forged redirect to a phishing domain).
-    const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
     const sb = getSupabase();
     const body = readBody(event);
 
@@ -202,7 +201,7 @@ exports.handler = async function (event) {
     if (promoRaw) {
       const { data: promoRow, error: promoError } = await sb
         .from('promo_codes')
-        .select('code, percent_off, active, expires_at')
+        .select('code, percent_off, active, expires_at, single_use')
         .eq('code', promoRaw)
         .maybeSingle();
       if (promoError) throw promoError;
@@ -213,6 +212,18 @@ exports.handler = async function (event) {
 
       if (!valid) {
         return json(400, { error: 'Invalid promo code', message: 'Ce code promo est invalide ou expiré' });
+      }
+
+      // Atomically claim single-use codes: the RPC only succeeds for the first
+      // order (used_count 0 -> 1). A concurrent checkout sees no eligible row
+      // and is rejected instead of double-spending the code.
+      if (promoRow.single_use) {
+        const { data: claimed, error: claimError } = await sb
+          .rpc('claim_single_use_promo', { p_code: promoRow.code });
+        if (claimError) throw claimError;
+        if (claimed !== true) {
+          return json(400, { error: 'Invalid promo code', message: 'Ce code promo a déjà été utilisé' });
+        }
       }
 
       promoCode = promoRow.code;

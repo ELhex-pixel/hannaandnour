@@ -7,7 +7,7 @@
  * STRIPE_WEBHOOK_SECRET env var to the signing secret.
  */
 const Stripe = require('stripe');
-const { json, getSupabase, isConfigured, sendEmail } = require('./shared');
+const { json, getSupabase, isConfigured, sendEmail, siteUrl } = require('./shared');
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -19,7 +19,6 @@ function moneyStr(cents, currency) {
 }
 
 function buildAdminAlertHtml(order, items) {
-  const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
   const rows = (items || []).map(function (it) {
     return (
       '<tr>' +
@@ -54,7 +53,6 @@ function buildAdminAlertHtml(order, items) {
 }
 
 function buildOrderEmail(order, items) {
-  const siteUrl = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/$/, '');
   const rows = (items || []).map(function (it) {
     const src = it.image && it.image.indexOf('http') === 0 ? it.image : it.image ? siteUrl + '/' + it.image : '';
     return (
@@ -144,11 +142,17 @@ exports.handler = async function (event) {
     if (stripeEvent.type === 'checkout.session.async_payment_failed') {
       const orderId = session.client_reference_id;
       if (orderId) {
-        await sb
+        const { error } = await sb
           .from('orders')
           .update({ status: 'payment_failed' })
           .eq('id', orderId)
           .eq('status', 'pending');
+        if (error) {
+          // Returning 500 lets Stripe retry delivery; a 200 here would swallow
+          // the failure and leave the order stuck as `pending`.
+          console.error('Marking order payment_failed failed:', error.message, 'order', orderId);
+          return json(500, { error: 'Failed to mark order as payment_failed' });
+        }
       }
       return json(200, { received: true });
     }
@@ -162,11 +166,15 @@ exports.handler = async function (event) {
       // Never overwrite an already-paid order (Stripe may deliver `expired`
       // after `completed` in races).
       if (orderId) {
-        await sb
+        const { error } = await sb
           .from('orders')
           .update({ status: 'abandoned' })
           .eq('id', orderId)
           .neq('status', 'paid');
+        if (error) {
+          console.error('Marking order abandoned failed:', error.message, 'order', orderId);
+          return json(500, { error: 'Failed to mark order as abandoned' });
+        }
       }
     }
 
