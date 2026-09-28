@@ -349,6 +349,16 @@ case 'getOrder': {
         return json(200, { order: data || null });
       }
 
+      case 'deleteOrder': {
+        const oid = String(body.id || '').trim();
+        if (!oid) return json(400, { error: 'Missing id' });
+        const delItems = await sb.from('order_items').delete().eq('order_id', oid);
+        if (delItems.error) throw delItems.error;
+        const { error } = await sb.from('orders').delete().eq('id', oid);
+        if (error) throw error;
+        return json(200, { ok: true });
+      }
+
       case 'updateOrder': {
         if (!body.id) return json(400, { error: 'Missing id' });
         const update = {};

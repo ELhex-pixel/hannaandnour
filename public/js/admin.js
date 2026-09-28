@@ -529,7 +529,8 @@
       '<td><span class="' + payClass(o.status) + '">' + statusLabel(o.status) + '</span></td>' +
       '<td><span class="badge ' + shipClass(o.shipping_status) + '">' + shipLabel(o.shipping_status) + '</span>' +
       (o.tracking_number ? '<br><small style="color:#8a7d66;">' + esc(o.tracking_number) + '</small>' : '') + '</td>' +
-      '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-small view-order" data-id="' + o.id + '">Voir</button></td>' +
+      '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-small view-order" data-id="' + o.id + '">Voir</button> ' +
+      '<button class="btn btn-danger btn-small del-order" data-id="' + o.id + '" data-number="' + esc(o.order_number) + '">Supprimer</button></td>' +
       '</tr>';
   }
 
@@ -571,6 +572,7 @@
         '<button class="btn btn-secondary btn-small" data-act="markDelivered">Marquer livr&eacute;e</button>' +
         '<button class="btn btn-secondary btn-small" data-act="revert">R&eacute;initialiser</button>' +
         '<button class="btn btn-danger btn-small" data-act="refund">Rembourser (complet)</button>' +
+        '<button class="btn btn-danger btn-small" data-act="deleteOrder">Supprimer la commande</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printInvoice">Facture</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printPacking">Bon de livraison</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printLabel">&Eacute;tiquette</button>' +
@@ -593,6 +595,10 @@
           call('refundOrder', { id: o.id })
             .then(function () { return afterUpdate(o.id, 'Commande remboursée'); })
             .catch(function (e) { toast(e.message, 'err'); });
+          return;
+        }
+        if (act === 'deleteOrder') {
+          deleteOrder(o.id, o.order_number);
           return;
         }
         if (act === 'printInvoice' || act === 'printPacking' || act === 'printLabel') {
@@ -637,6 +643,17 @@
     return loadOrders();
   }
 
+  function deleteOrder(id, label) {
+    if (!confirm('Supprimer d\u00e9finitivement la commande ' + (label || '') + ' ?\nCette action est irr\u00e9versible.')) return;
+    call('deleteOrder', { id: id })
+      .then(function () {
+        document.getElementById('orderModal').classList.remove('open');
+        toast('Commande supprim\u00e9e', 'ok');
+        return loadOrders();
+      })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+
   function wireOrders() {
     document.getElementById('refreshOrdersBtn').addEventListener('click', loadOrders);
     document.getElementById('filterOrderStatus').addEventListener('change', loadOrders);
@@ -649,6 +666,11 @@
       if (e.target === this) this.classList.remove('open');
     });
     document.addEventListener('click', function (e) {
+      var delBtn = e.target.closest('.del-order');
+      if (delBtn) {
+        deleteOrder(delBtn.getAttribute('data-id'), delBtn.getAttribute('data-number') || '');
+        return;
+      }
       var viewBtn = e.target.closest('.view-order');
       if (viewBtn) {
         var id = viewBtn.getAttribute('data-id');
