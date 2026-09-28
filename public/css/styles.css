@@ -4518,3 +4518,61 @@ select.lang-switcher {
   margin-top: var(--spacing-sm);
 }
 .auth-msg-error { color: var(--color-burgundy); }
+
+
+/* Page reset mot de passe : carte centree, cohérente avec le design du site */
+.page-reset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 62vh;
+  padding: var(--spacing-2xl) 0 var(--spacing-3xl);
+}
+.reset-card {
+  width: 100%;
+  max-width: 440px;
+  background-color: var(--color-white);
+  border: 1px solid var(--color-sage, #e6dcc8);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-xl);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.06);
+}
+.reset-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+.reset-lock {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-blush-light);
+  color: var(--color-emerald);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reset-lock svg { width: 20px; height: 20px; }
+.reset-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-dark);
+}
+.reset-msg {
+  text-align: center;
+  color: var(--color-gray);
+}
+.reset-msg .btn-primary {
+  display: inline-block;
+  margin-top: var(--spacing-lg);
+}
+.reset-help {
+  margin-top: var(--spacing-md);
+  font-size: 0.875rem;
+}
+.reset-help a { color: var(--color-emerald); text-decoration: underline; }

@@ -10,8 +10,8 @@
     return window.I18n && typeof window.I18n.t === 'function' ? window.I18n.t(key) : key;
   }
 
-  function show(el, block) {
-    if (el) el.style.display = block ? 'block' : '';
+  function show(el, value) {
+    if (el) el.style.display = value;
   }
 
   function parseHash() {
@@ -36,9 +36,9 @@
   var submitBtn = document.getElementById('resetSubmit');
 
   function showInvalid() {
-    if (form) show(form, false);
-    show(doneEl, false);
-    show(invalidEl, true);
+    if (form) show(form, 'none');
+    show(doneEl, 'none');
+    show(invalidEl, 'block');
   }
 
   var params = parseHash();
@@ -48,6 +48,7 @@
   if (!form || !token || type !== 'recovery') {
     showInvalid();
   } else {
+    show(form, 'flex');
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (errEl) errEl.style.display = 'none';
@@ -63,8 +64,8 @@
       if (submitBtn) submitBtn.disabled = true;
       window.HN_AUTH.updatePassword(token, password)
         .then(function () {
-          show(form, false);
-          show(doneEl, true);
+          show(form, 'none');
+          show(doneEl, 'block');
         })
         .catch(function () {
           if (submitBtn) submitBtn.disabled = false;

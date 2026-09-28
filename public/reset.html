@@ -22,25 +22,32 @@
   </header>
 
   <main>
-    <section class="container" style="max-width: 460px; padding: var(--spacing-3xl) 0;">
-      <div class="auth-panel" style="display: block;">
-        <form id="resetForm" class="auth-form" novalidate>
-          <h2 style="font-family: var(--font-display); font-size: 1.5rem; color: var(--color-dark); margin-bottom: var(--spacing-md);" data-i18n="resetTitle">Set a new password</h2>
+    <section class="container page-reset">
+      <div class="reset-card">
+        <div class="reset-head">
+          <span class="reset-lock">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          </span>
+          <h1 class="reset-title" data-i18n="resetTitle">Set a new password</h1>
+        </div>
+
+        <form id="resetForm" class="auth-form" novalidate style="display: none;">
           <input type="password" class="form-input" id="resetPassword" autocomplete="new-password" placeholder="New password (6+ characters)" required minlength="6" data-i18n-placeholder="resetPassword">
           <button type="submit" class="btn btn-primary" id="resetSubmit" data-i18n="resetCta">Update password</button>
           <p class="auth-msg auth-msg-error" id="resetError" style="display:none;"></p>
         </form>
 
-        <div id="resetDone" class="auth-intro" style="display:none;">
+        <div id="resetDone" class="reset-msg" style="display:none;">
           <p data-i18n="resetDone">Your password has been updated. You can now sign in.</p>
-          <a href="/account.html" class="btn btn-primary" style="margin-top: var(--spacing-md); display: inline-block;" data-i18n="resetToAccount">Go to account</a>
+          <a href="/account.html" class="btn btn-primary" data-i18n="resetToAccount">Go to account</a>
         </div>
 
-        <div id="resetInvalid" class="auth-intro" style="display:none;">
+        <div id="resetInvalid" class="reset-msg" style="display:none;">
           <p data-i18n="resetInvalid">This reset link is invalid or has expired.</p>
-          <a href="/index.html" class="btn btn-primary" style="margin-top: var(--spacing-md); display: inline-block;" data-i18n="resetToAccount">Go to account</a>
+          <a href="/index.html" class="btn btn-primary" data-i18n="resetToAccount">Go to account</a>
         </div>
       </div>
+      <p class="reset-help"><a href="/account.html" data-i18n="forgotBack">Back to sign in</a></p>
     </section>
   </main>
 
