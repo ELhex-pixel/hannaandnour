@@ -536,7 +536,10 @@
 
       fetch(HN.api('reviews'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': (window.HN_AUTH && HN_AUTH.token()) ? 'Bearer ' + HN_AUTH.token() : ''
+        },
         body: JSON.stringify({
           product: p.slug,
           author_name: name.value.trim(),
