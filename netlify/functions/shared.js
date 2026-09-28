@@ -116,6 +116,45 @@ function requireAdmin(event) {
   return ok ? { ok: true } : { ok: false, error: 'Not authorized' };
 }
 
+/* ---------------- Admin password (forgot/reset) ----------------
+ * The login password is stored as a salted SHA-256 hash in the `settings` row
+ * `admin_auth` (jsonb). Until the first reset, the env ADMIN_PASSWORD is used
+ * as the credential fallback; ADMIN_PASSWORD stays the HMAC signing key.
+ */
+
+// Returns "salt:sha256hex" so the hash is unique per reset.
+function hashAdminPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return salt + ':' + crypto.createHash('sha256').update(salt + password).digest('hex');
+}
+
+// Constant-time check of a stored "salt:sha256hex" hash.
+function verifyAdminHash(stored, password) {
+  const i = String(stored).indexOf(':');
+  if (i <= 0) return false;
+  const salt = stored.slice(0, i);
+  const want = stored.slice(i + 1);
+  const got = crypto.createHash('sha256').update(salt + password).digest('hex');
+  const a = Buffer.from(want);
+  const b = Buffer.from(got);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+// Login check: stored salted hash first, then the env ADMIN_PASSWORD fallback.
+async function checkAdminCredentials(sb, password) {
+  try {
+    const auth = await getSetting(sb, 'admin_auth', null);
+    if (auth && typeof auth.password_hash === 'string' && auth.password_hash) {
+      return verifyAdminHash(auth.password_hash, password);
+    }
+  } catch (e) { /* fall through to env */ }
+  const secret = process.env.ADMIN_PASSWORD;
+  if (!secret) return false;
+  const a = Buffer.from(password);
+  const b = Buffer.from(secret);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 /* ---------------- Client sessions (Supabase Auth) ----------------
  * Uses the Supabase Auth API (access/refresh tokens issued to the end user).
  * The service-role client validates tokens server-side; nothing is trusted
@@ -171,4 +210,5 @@ function floatEnv(name, fallback) {
 }
 
 module.exports = { json, getSupabase, isConfigured, readBody, sendEmail, CORS_HEADERS,
-  signToken, verifyToken, getBearer, requireAdmin, requireUser, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv };
+  signToken, verifyToken, getBearer, requireAdmin, requireUser, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv,
+  hashAdminPassword, verifyAdminHash, checkAdminCredentials };

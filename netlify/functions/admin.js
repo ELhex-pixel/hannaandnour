@@ -5,8 +5,10 @@
  * every other action must send `Authorization: Bearer <token>` (or ?token=).
  * All data access goes through the Supabase service_role key.
  *
- * Actions:
+* Actions:
  *   login              { password }                                -> { token }
+ *   forgotPassword     { email }                                   -> { ok } (emails a 6-digit OTP)
+ *   applyReset         { otp, password }                           -> { ok }
  *   listProducts       {}                                          -> { products }
  *   saveProduct        { product, variants? }                      -> { product }
  *   deleteProduct      { id }                                      -> { ok }
@@ -14,18 +16,101 @@
  *   listOrders         { status?, shipping_status? }                   -> { orders }
  *   getOrder           { id }                                      -> { order }
  *   updateOrder        { id, tracking_number?, shipping_status?, delivery_type?, pickup_point? } -> { ok }
-*   getSettings        {}                                          -> { settings, catalog }
+ *   getSettings        {}                                          -> { settings, catalog }
  *   saveSettings       { shipping, catalog? }                       -> { ok }
  *   listMessages       {}                                          -> { messages }
  *   deleteMessage      { id }                                      -> { ok }
  */
-const { json, getSupabase, isConfigured, readBody, CORS_HEADERS,
-  signToken, verifyToken, requireAdmin, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv } = require('./shared');
+const { json, getSupabase, isConfigured, readBody, CORS_HEADERS, sendEmail,
+  signToken, verifyToken, requireAdmin, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv,
+  hashAdminPassword, checkAdminCredentials } = require('./shared');
 
 const crypto = require('crypto');
 const Stripe = require('stripe');
 
 const STRIPE = () => new Stripe(process.env.STRIPE_SECRET_KEY || '');
+
+const ADMIN_RESET_TTL_MS = 15 * 60 * 1000;
+const MAX_RESET_ATTEMPTS = 5;
+
+function adminResetEmail() {
+  return process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'care@hannaandnour.com';
+}
+
+function otpHash(otp) {
+  return crypto.createHash('sha256').update('admin-otp:' + otp).digest('hex');
+}
+
+// Sends the reset OTP. Never reveals whether the address is the admin's.
+async function handleForgotPassword(sb, body) {
+  const email = String(body.email || '').toLowerCase().trim();
+  if (email !== adminResetEmail().toLowerCase()) {
+    return json(200, { ok: true });
+  }
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const current = (await getSetting(sb, 'admin_auth', null)) || {};
+  await saveSetting(sb, 'admin_auth', Object.assign({}, current, {
+    reset_otp_hash: otpHash(otp),
+    reset_otp_exp: Date.now() + ADMIN_RESET_TTL_MS,
+    reset_otp_attempts: 0
+  }));
+  if (!process.env.RESEND_API_KEY) {
+    console.log('[admin reset] RESEND_API_KEY not set; OTP=' + otp + ' for ' + adminResetEmail());
+    return json(200, { ok: true });
+  }
+  try {
+    await sendEmail({
+      to: adminResetEmail(),
+      subject: 'Hanna & Nour - R\u00e9initialisation du mot de passe admin',
+      html: '<h2 style="font-family:Georgia,serif;color:#B78A4A;">Hanna &amp; Nour</h2>'
+        + '<p>Vous avez demand\u00e9 la r\u00e9initialisation du mot de passe d\u2019administration du site.</p>'
+        + '<p>Votre code de v\u00e9rification :</p>'
+        + '<p style="font-size:26px;font-weight:700;letter-spacing:4px;">' + otp + '</p>'
+        + '<p>Ce code expire dans 15 minutes. Saisissez-le sur la page <code>/admin</code> avec votre nouveau mot de passe.</p>'
+        + '<p>Si vous n\u2019\u00eates pas \u00e0 l\u2019origine de cette demande, ignorez cet email.</p>'
+    });
+  } catch (err) {
+    console.error('[admin reset] email error:', err);
+    return json(502, { error: 'send_failed' });
+  }
+  return json(200, { ok: true });
+}
+
+// Validates the OTP and writes the new password hash.
+async function handleApplyReset(sb, body) {
+  const otp = String(body.otp || '').replace(/\D/g, '');
+  const password = String(body.password || '');
+  if (otp.length !== 6) return json(400, { error: 'Code invalide' });
+  if (password.length < 6) return json(400, { error: 'Le mot de passe doit contenir au moins 6 caract\u00e8res' });
+  const auth = (await getSetting(sb, 'admin_auth', null)) || {};
+  if (!auth.reset_otp_hash || typeof auth.reset_otp_exp !== 'number') {
+    return json(400, { error: 'Aucune demande de r\u00e9initialisation en cours' });
+  }
+  if (Date.now() > auth.reset_otp_exp) {
+    return json(400, { error: 'Code expir\u00e9. Relancez une demande.' });
+  }
+  const attempt = (auth.reset_otp_attempts || 0) + 1;
+  const a = Buffer.from(auth.reset_otp_hash);
+  const b = Buffer.from(otpHash(otp));
+  const match = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!match) {
+    if (attempt >= MAX_RESET_ATTEMPTS) {
+      await saveSetting(sb, 'admin_auth', Object.assign({}, auth, {
+        reset_otp_hash: null, reset_otp_exp: null, reset_otp_attempts: 0
+      }));
+      return json(400, { error: 'Trop de tentatives. Relancez une demande.' });
+    }
+    await saveSetting(sb, 'admin_auth', Object.assign({}, auth, { reset_otp_attempts: attempt }));
+    return json(400, { error: 'Code incorrect' });
+  }
+  await saveSetting(sb, 'admin_auth', Object.assign({}, auth, {
+    password_hash: hashAdminPassword(password),
+    reset_otp_hash: null,
+    reset_otp_exp: null,
+    reset_otp_attempts: 0
+  }));
+  return json(200, { ok: true });
+}
 
 async function ensureBucket(sb) {
   const { error } = await sb.storage.getBucket('product-images');
@@ -104,15 +189,21 @@ exports.handler = async function (event) {
     }
     const sb = getSupabase();
     const body = readBody(event);
-    const action = body.action || (event.queryStringParameters && event.queryStringParameters.action);
+const action = body.action || (event.queryStringParameters && event.queryStringParameters.action);
 
-    if (event.httpMethod === 'POST' && action === 'login') {
+    if (event.httpMethod !== 'POST') {
+      return json(405, { error: 'Method not allowed' });
+    }
+
+    // Unauthenticated reset flow (guarded by the emailed OTP).
+    if (action === 'forgotPassword') return handleForgotPassword(sb, body);
+    if (action === 'applyReset') return handleApplyReset(sb, body);
+
+    if (action === 'login') {
       const secret = process.env.ADMIN_PASSWORD;
       if (!secret) return json(503, { error: 'ADMIN_PASSWORD is not set on the server' });
       const given = String(body.password || '');
-      const a = Buffer.from(given);
-      const b = Buffer.from(secret);
-      const match = a.length === b.length && crypto.timingSafeEqual(a, b);
+      const match = await checkAdminCredentials(sb, given);
       if (!match) return json(401, { error: 'Mot de passe incorrect' });
       return json(200, { token: signToken(secret) });
     }

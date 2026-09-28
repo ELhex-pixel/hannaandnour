@@ -71,6 +71,104 @@
     showApp(false);
   }
 
+  // "Mot de passe oublié" : email -> code à 6 chiffres -> nouveau mot de passe.
+  function wireForgot() {
+    var form = document.getElementById('loginForm');
+    var forgot = document.getElementById('forgotView');
+    var el = function (id) { return document.getElementById(id); };
+    var err = el('forgotErr'), ok = el('forgotOk');
+    var set = function (elm, on) { elm.style.display = on ? '' : 'none'; };
+
+    function msgError(text) {
+      if (ok) ok.style.display = 'none';
+      if (err) { err.textContent = text || ''; err.style.display = text ? 'block' : 'none'; }
+    }
+    function msgOk(text) {
+      if (err) err.style.display = 'none';
+      if (ok) { ok.textContent = text || ''; ok.style.display = text ? 'block' : 'none'; }
+    }
+
+    function showForgot() {
+      set(form, false);
+      set(forgot, true);
+      set(el('forgotEmailWrap'), true);
+      set(el('forgotResetWrap'), false);
+      set(el('forgotStep1'), true);
+      set(el('forgotStep2'), false);
+      msgError('');
+      msgOk('');
+    }
+    function back() {
+      showForgot();
+      set(forgot, false);
+      set(form, true);
+    }
+
+    el('forgotToggle').addEventListener('click', function (e) {
+      e.preventDefault();
+      el('loginErr').style.display = 'none';
+      showForgot();
+    });
+
+    el('forgotBack').addEventListener('click', function (e) {
+      e.preventDefault();
+      back();
+    });
+
+    el('forgotSendBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      msgError('');
+      var email = el('forgotEmail').value.trim();
+      if (!email) { msgError('Entrez votre adresse email.'); return; }
+      var btn = el('forgotSendBtn');
+      btn.disabled = true;
+      call('forgotPassword', { email: email })
+        .then(function () {
+          btn.disabled = false;
+          msgOk('Si cette adresse est valide, un code a \u00e9t\u00e9 envoy\u00e9 par email.');
+          set(el('forgotEmailWrap'), false);
+          set(el('forgotStep1'), false);
+          set(el('forgotResetWrap'), true);
+          set(el('forgotStep2'), true);
+        })
+        .catch(function (e2) {
+          btn.disabled = false;
+          msgError(e2.message || 'Erreur lors de l\'envoi du code.');
+        });
+    });
+
+    [el('forgotCode'), el('forgotNewPw')].forEach(function (input) {
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') el('forgotApplyBtn').click();
+      });
+    });
+
+    el('forgotApplyBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      msgError('');
+      var code = el('forgotCode').value.replace(/\D/g, '');
+      var pw = el('forgotNewPw').value;
+      if (code.length !== 6) { msgError('Le code comporte 6 chiffres.'); return; }
+      if (pw.length < 6) { msgError('Le nouveau mot de passe doit contenir au moins 6 caract\u00e8res.'); return; }
+      var btn = el('forgotApplyBtn');
+      btn.disabled = true;
+      call('applyReset', { otp: code, password: pw })
+        .then(function () {
+          btn.disabled = false;
+          msgOk('Mot de passe r\u00e9initialis\u00e9 ! Connectez-vous avec votre nouveau mot de passe.');
+          el('forgotCode').value = '';
+          el('forgotNewPw').value = '';
+          set(el('forgotResetWrap'), false);
+          set(el('forgotStep2'), false);
+          setTimeout(function () { back(); }, 900);
+        })
+        .catch(function (e2) {
+          btn.disabled = false;
+          msgError(e2.message || 'Code incorrect.');
+        });
+    });
+  }
+
   function wireLogin() {
     function tryLogin() {
       var pw = document.getElementById('loginPassword').value;
@@ -914,6 +1012,7 @@
   }
 
   wireLogin();
+  wireForgot();
   wireTabs();
   wireEditor();
   wireOrders();

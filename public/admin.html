@@ -82,6 +82,10 @@
   .login-box h1 { font-size: 1.3rem; margin: 0 0 4px; color: #B78A4A; font-family: 'Playfair Display', Georgia, serif; }
   .login-box p { color: #9a8c75; margin: 0 0 16px; font-size: 13px; }
   .login-err { color: #b03a2e; font-size: 13px; margin-top: 8px; display: none; }
+  .login-link { display: block; text-align: center; margin-top: 14px; color: #9a8c75; font-size: 13px; text-decoration: none; }
+  .login-link:hover { color: #B78A4A; text-decoration: underline; }
+  .login-ok { color: #3d7a46; font-size: 13px; margin-top: 8px; display: none; }
+  .forgot-sub { font-size: 12px !important; color: #9a8c75; margin: 0 0 12px !important; }
 
   .pass-wrap { position: relative; }
   .pass-wrap input { padding-right: 40px; }
@@ -114,14 +118,39 @@
   <div id="loginView" class="login-box">
     <h1>Espace administrateur</h1>
     <p>Hanna &amp; Nour</p>
-    <div class="pass-wrap">
-      <input type="password" id="loginPassword" placeholder="Mot de passe" style="width:100%; padding:10px 12px; border:1px solid #ddd5c4; border-radius:8px; font:inherit;">
-      <button type="button" id="togglePassword" class="pass-eye" aria-label="Afficher le mot de passe" title="Afficher / masquer">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
-      </button>
+
+    <div id="loginForm">
+      <div class="pass-wrap">
+        <input type="password" id="loginPassword" placeholder="Mot de passe" style="width:100%; padding:10px 12px; border:1px solid #ddd5c4; border-radius:8px; font:inherit;">
+        <button type="button" id="togglePassword" class="pass-eye" aria-label="Afficher le mot de passe" title="Afficher / masquer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <p class="login-err" id="loginErr">Mot de passe incorrect</p>
+      <button class="btn btn-primary" id="loginBtn" style="width:100%; margin-top:12px;">Se connecter</button>
+      <a href="#" class="login-link" id="forgotToggle">Mot de passe oubli&eacute; ?</a>
     </div>
-    <p class="login-err" id="loginErr">Mot de passe incorrect</p>
-    <button class="btn btn-primary" id="loginBtn" style="width:100%; margin-top:12px;">Se connecter</button>
+
+    <div id="forgotView" style="display:none;">
+      <p class="forgot-sub" id="forgotStep1">
+        Entrez l'adresse de l'administration pour recevoir un code de r&eacute;initialisation.
+      </p>
+      <p class="forgot-sub" id="forgotStep2" style="display:none;">
+        Saisissez le code re&ccedil;u par email puis votre nouveau mot de passe.
+      </p>
+      <div id="forgotEmailWrap">
+        <input type="email" id="forgotEmail" placeholder="admin@hannaandnour.com" style="width:100%; padding:10px 12px; border:1px solid #ddd5c4; border-radius:8px; font:inherit;">
+        <button class="btn btn-primary" id="forgotSendBtn" style="width:100%; margin-top:12px;">Envoyer le code</button>
+      </div>
+      <div id="forgotResetWrap" style="display:none;">
+        <input type="text" id="forgotCode" placeholder="Code &agrave; 6 chiffres" inputmode="numeric" autocomplete="one-time-code" style="width:100%; padding:10px 12px; border:1px solid #ddd5c4; border-radius:8px; font:inherit; margin-bottom:10px;">
+        <input type="password" id="forgotNewPw" placeholder="Nouveau mot de passe (6+ caract&egrave;res)" autocomplete="new-password" style="width:100%; padding:10px 12px; border:1px solid #ddd5c4; border-radius:8px; font:inherit;">
+        <button class="btn btn-primary" id="forgotApplyBtn" style="width:100%; margin-top:12px;">R&eacute;initialiser le mot de passe</button>
+      </div>
+      <p class="login-err" id="forgotErr"></p>
+      <p class="login-ok" id="forgotOk"></p>
+      <a href="#" class="login-link" id="forgotBack">Retour &agrave; la connexion</a>
+    </div>
   </div>
 
   <!-- APP -->
