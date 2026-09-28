@@ -426,7 +426,11 @@
       .then(function (res) { return res.json(); })
       .then(function (data) {
         var reviews = data.reviews || [];
-        if (reviews.length) {
+        if (DEMO_ON) {
+          list.innerHTML = '';
+          setSummary('5.0', 3, [3, 0, 0, 0, 0]);
+          setCount(3);
+        } else if (reviews.length) {
           var html = '';
           reviews.forEach(function (r) {
             var date = r.created_at ? new Date(r.created_at).toLocaleDateString() : '';
@@ -449,10 +453,6 @@
           setBars(counts);
           setSummary((sum / reviews.length).toFixed(1), reviews.length, counts);
           setCount(reviews.length);
-        } else if (DEMO_ON) {
-          list.innerHTML = '';
-          setSummary('5.0', 3, [3, 0, 0, 0, 0]);
-          setCount(3);
         } else {
           list.innerHTML = '';
           setSummary('0', 0, [0, 0, 0, 0, 0]);
