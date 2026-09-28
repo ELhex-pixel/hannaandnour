@@ -373,6 +373,7 @@
     }
 
     document.addEventListener('langchange', function () {
+      buildFilterOptions();
       render();
     });
   }
