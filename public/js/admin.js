@@ -1047,6 +1047,16 @@
   function wireStats() {
     var btn = document.getElementById('refreshStatsBtn');
     if (btn) btn.addEventListener('click', loadStats);
+    var reset = document.getElementById('resetStatsBtn');
+    if (reset) reset.addEventListener('click', function () {
+      if (!confirm('Remettre les statistiques \u00e0 z\u00e9ro ?\nToutes les donn\u00e9es d\u2019analyse seront d\u00e9finitivement supprim\u00e9es.')) return;
+      call('resetStats', { confirm: true })
+        .then(function () {
+          toast('Statistiques remises \u00e0 z\u00e9ro', 'ok');
+          return loadStats();
+        })
+        .catch(function (e) { toast(e.message, 'err'); });
+    });
   }
 
   /* ---------------- Filters ---------------- */

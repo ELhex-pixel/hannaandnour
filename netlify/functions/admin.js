@@ -696,11 +696,18 @@ case 'deleteMessage': {
           const k = p.path || '(vide)';
           byPath[k] = (byPath[k] || 0) + 1;
         }
-        summary.d30.topPaths = Object.keys(byPath)
+summary.d30.topPaths = Object.keys(byPath)
           .sort((a, b) => byPath[b] - byPath[a])
           .slice(0, 10)
           .map((path) => ({ path, views: byPath[path] }));
         return json(200, { summary });
+      }
+
+      case 'resetStats': {
+        if (body.confirm !== true) return json(400, { error: 'Confirmation requise' });
+        const { error } = await sb.from('analytics_events').delete().neq('id', null);
+        if (error) throw error;
+        return json(200, { ok: true });
       }
 
       default:
