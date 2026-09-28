@@ -828,11 +828,17 @@
   }
 
   function loadReviews() {
-    return call('listReviews').then(function (res) {
-      renderReviews(res.reviews || []);
-    }).catch(function (e) {
-      document.getElementById('reviewsList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
-    });
+    return Promise.all([call('listReviews'), call('getSettings')])
+      .then(function (res) {
+        renderReviews(res[0].reviews || []);
+        var cb = document.getElementById('f-demo_reviews');
+        if (cb && res[1] && res[1].reviews) {
+          cb.checked = !!res[1].reviews.show_demo;
+        }
+      })
+      .catch(function (e) {
+        document.getElementById('reviewsList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+      });
   }
 
   function renderReviews(list) {
@@ -862,6 +868,12 @@
 
   function wireReviews() {
     document.getElementById('refreshReviewsBtn').addEventListener('click', loadReviews);
+    var demoCb = document.getElementById('f-demo_reviews');
+    if (demoCb) demoCb.addEventListener('change', function () {
+      call('saveSettings', { reviews: { show_demo: demoCb.checked } })
+        .then(function () { toast('Avis de démonstration ' + (demoCb.checked ? 'affichés' : 'masqués'), 'ok'); })
+        .catch(function (err) { toast(err.message, 'err'); demoCb.checked = !demoCb.checked; });
+    });
     document.addEventListener('click', function (e) {
       var approve = e.target.closest('.rev-approve');
       if (approve) {

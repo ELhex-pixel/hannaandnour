@@ -2,9 +2,13 @@
  * Reviews
  * GET  /api/reviews?product=<slug>   -> approved reviews + product aggregate
  * POST /api/reviews                   -> submit a review (stored as pending)
- *   Body: { product: "<slug>", author_name, rating (1-5), body }
+ *   Body: { product: "<slug>", rating (1-5), body }
+ *
+ * POST is restricted to logged-in customers (Bearer token) whose paid order
+ * for that product has been delivered (shipping_status = 'delivered').
+ * Every review lands in `pending` and is published only after admin approval.
  */
-const { json, getSupabase, isConfigured, readBody } = require('./shared');
+const { json, getSupabase, isConfigured, readBody, getBearer, requireUser } = require('./shared');
 
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
@@ -48,12 +52,16 @@ exports.handler = async function (event) {
     if (event.httpMethod === 'POST') {
       const body = readBody(event);
       const slug = String(body.product || '').trim();
-      const author = String(body.author_name || '').trim().slice(0, 60);
       const rating = parseInt(body.rating, 10);
       const text = String(body.body || '').trim();
 
-      if (!slug || !author || !text) return json(400, { error: 'Missing fields' });
+      if (!slug || !text) return json(400, { error: 'Missing fields' });
       if (!(rating >= 1 && rating <= 5)) return json(400, { error: 'Rating must be between 1 and 5' });
+
+      // Only a logged-in customer can review.
+      const auth = await requireUser(sb, getBearer(event));
+      if (!auth.ok) return json(401, { error: 'auth_required' });
+      const user = auth.user;
 
       const { data: product, error: prodError } = await sb
         .from('products')
@@ -63,11 +71,31 @@ exports.handler = async function (event) {
         .single();
       if (prodError) return json(404, { error: 'Product not found' });
 
+      // Eligibility: the customer must own a paid AND delivered order that
+      // contains this product.
+      const { data: orders, error: ordersError } = await sb
+        .from('orders')
+        .select('status, shipping_status, order_items(*)')
+        .eq('user_id', user.id)
+        .eq('status', 'paid')
+        .eq('shipping_status', 'delivered')
+        .limit(100);
+      if (ordersError) throw ordersError;
+      const eligible = (orders || []).some((o) =>
+        Array.isArray(o.order_items) &&
+        o.order_items.some((it) => it.product_slug === slug)
+      );
+      if (!eligible) return json(403, { error: 'not_eligible' });
+
+      // Author comes from the account, never from the form.
+      const meta = user.user_metadata || {};
+      const author = String(meta.first_name || '').trim() || String(user.email || 'Cli-ente').split('@')[0];
+
       const { error: insertError } = await sb
         .from('reviews')
         .insert({
           product_id: product.id,
-          author_name: author,
+          author_name: author.slice(0, 60),
           rating,
           body: text.slice(0, 1000),
           status: 'pending'
@@ -77,7 +105,7 @@ exports.handler = async function (event) {
       // Do NOT touch the aggregate here: only approved reviews count towards
       // rating / review_count (recomputed in admin.js when a review is
       // approved). Counting pending reviews would inflate ratings.
-      return json(201, { ok: true });
+      return json(201, { ok: true, pending: true });
     }
 
     return json(405, { error: 'Method not allowed' });

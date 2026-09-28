@@ -50,7 +50,15 @@ exports.handler = async function (event) {
       }
     } catch (e) { /* keep default */ }
 
-    return json(200, { settings, catalog, currency });
+    let reviews = { show_demo: false };
+    try {
+      const rv = await getSetting(sb, 'reviews', null);
+      if (rv && typeof rv === 'object' && rv !== null) {
+        reviews = Object.assign({ show_demo: false }, rv);
+      }
+    } catch (e) { /* keep default */ }
+
+    return json(200, { settings, catalog, currency, reviews });
   } catch (err) {
     console.error('config.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

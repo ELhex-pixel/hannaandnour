@@ -23,6 +23,7 @@
   };
 
   var RETURNS_DAYS = 30;
+  var DEMO_ON = false;
 
   var SIZE_DIMS = {
     'one size': [180, 70], '180cm x 70cm': [180, 70], '180 x 70': [180, 70],
@@ -377,32 +378,115 @@
     var list = document.getElementById('reviewList');
     var numberEl = document.querySelector('.reviews-number');
     var totalEl = document.querySelector('.reviews-total');
-    if (numberEl) numberEl.textContent = p.rating || '0';
-    if (totalEl) totalEl.textContent = tr('reviewSummaryN', { n: p.review_count || 0 });
+
+    var demoBox = document.getElementById('demoReviews');
+    if (demoBox) demoBox.style.display = DEMO_ON ? '' : 'none';
+
     if (!list) return;
+
+    function setBars(counts) {
+      var rows = document.querySelectorAll('.reviews-bars .review-bar');
+      var total = 0;
+      for (var i = 0; i < counts.length; i++) total += counts[i];
+      for (var j = 0; j < rows.length && j < 5; j++) {
+        var fill = rows[j].querySelector('.review-bar-fill');
+        if (!fill) continue;
+        fill.style.width = total ? Math.round(counts[5 - j] / total * 100) + '%' : '0%';
+      }
+    }
+
+    function setSummary(number, count) {
+      if (numberEl) numberEl.textContent = number;
+      if (totalEl) totalEl.textContent = count ? tr('reviewSummaryN', { n: count }) : tr('noReviews');
+      var topCount = document.querySelector('.product-rating .rating-count');
+      if (topCount) topCount.textContent = count + ' ' + tr('reviewsLabel');
+    }
 
     fetch(HN.api('reviews') + '?product=' + encodeURIComponent(p.slug))
       .then(function (res) { return res.json(); })
       .then(function (data) {
         var reviews = data.reviews || [];
-        if (!reviews.length) {
-          list.innerHTML = '<p style="color: var(--color-gray);">' + tr('noReviews') + '</p>';
-          return;
+        if (reviews.length) {
+          var html = '';
+          reviews.forEach(function (r) {
+            var date = r.created_at ? new Date(r.created_at).toLocaleDateString() : '';
+            html += '<div class="review-card">' +
+              '<div class="review-header"><div class="review-author">' +
+              '<div class="review-avatar">' + esc((r.author_name || '?').charAt(0).toUpperCase()) + '</div>' +
+              '<div><p class="review-name">' + esc(r.author_name) + '</p>' +
+              '<p class="review-date"><span class="review-verified">' + tr('verifiedBadge') + '</span>' + (date ? ' &bull; ' + esc(date) : '') + '</p></div></div>' +
+              '<span class="stars">' + stars(r.rating) + '</span></div>' +
+              '<p class="review-text">' + esc(r.body) + '</p></div>';
+          });
+          list.innerHTML = html;
+          var counts = [0, 0, 0, 0, 0];
+          var sum = 0;
+          reviews.forEach(function (r) {
+            var k = Math.max(1, Math.min(5, parseInt(r.rating, 10) || 0));
+            counts[5 - k]++;
+            sum += k;
+          });
+          setBars(counts);
+          setSummary((sum / reviews.length).toFixed(1), reviews.length);
+        } else if (DEMO_ON) {
+          list.innerHTML = '';
+          setBars([3, 0, 0, 0, 0]);
+          setSummary('5.0', 3);
+        } else {
+          list.innerHTML = '';
+          setBars([0, 0, 0, 0, 0]);
+          setSummary('0', 0);
         }
-        var html = '';
-        reviews.forEach(function (r) {
-          var date = r.created_at ? new Date(r.created_at).toLocaleDateString() : '';
-          html += '<div class="review-card">' +
-            '<div class="review-header"><div class="review-author">' +
-            '<div class="review-avatar">' + esc((r.author_name || '?').charAt(0).toUpperCase()) + '</div>' +
-            '<div><p class="review-name">' + esc(r.author_name) + '</p>' +
-            '<p class="review-date">' + esc(date) + '</p></div></div>' +
-            '<span class="stars">' + stars(r.rating) + '</span></div>' +
-            '<p class="review-text">' + esc(r.body) + '</p></div>';
-        });
-        list.innerHTML = html;
       })
-      .catch(function () { /* static demo reviews remain */ });
+      .catch(function () { /* keep demo cards as-is (hidden unless enabled) */ });
+  }
+
+  function updateReviewGate(p) {
+    var form = document.getElementById('reviewForm');
+    var gate = document.getElementById('reviewGate');
+    if (!form || !gate) return;
+
+    function showGate(msg, isLogin) {
+      form.style.display = 'none';
+      gate.style.display = '';
+      gate.innerHTML = '<p style="color: var(--color-gray); margin: 0;">' + msg +
+        (isLogin ? ' <a href="account.html" style="color: var(--color-emerald);">' + tr('accountTitle') + '</a>' : '') + '</p>';
+    }
+
+    function showForm() {
+      gate.style.display = 'none';
+      form.style.display = '';
+      var user = window.HN_AUTH ? HN_AUTH.currentUser() : null;
+      var nameInput = document.getElementById('reviewName');
+      if (nameInput && user) {
+        nameInput.value = ((user.first_name || '').trim()) || String(user.email || '').split('@')[0];
+        nameInput.readOnly = true;
+      }
+    }
+
+    if (!window.HN_AUTH || !window.HN_AUTH.ready) {
+      showGate(tr('reviewGateLogin'), true);
+      return;
+    }
+    window.HN_AUTH.ready
+      .then(function () {
+        if (!window.HN_AUTH || !HN_AUTH.isAuthed()) { showGate(tr('reviewGateLogin'), true); return null; }
+        return HN_AUTH.call({ action: 'orders' }, true);
+      })
+      .then(function (data) {
+        if (data === null) return;
+        var orders = (data && data.orders) || [];
+        var eligible = orders.some(function (o) {
+          return o.status === 'paid' && o.shipping_status === 'delivered' &&
+            Array.isArray(o.order_items) &&
+            o.order_items.some(function (it) { return it.product_slug === p.slug; });
+        });
+        if (eligible) showForm();
+        else showGate(tr('reviewGateNotEligible'), false);
+      })
+      .catch(function () {
+        showGate(tr('reviewGateLogin'), true);
+      });
   }
 
   function wireReviewForm(p) {
@@ -513,6 +597,7 @@
         var d = parseInt(cfg.settings.returns_days, 10);
         if (!isNaN(d) && d > 0) RETURNS_DAYS = d;
       }
+      if (cfg && cfg.reviews) DEMO_ON = !!cfg.reviews.show_demo;
       return HN.loadProducts();
     })
       .then(function (products) {
@@ -530,6 +615,7 @@
         loadReviews(p);
         wireActions(p);
         wireReviewForm(p);
+        updateReviewGate(p);
         updateStockUI();
         HN.updateWishlistHearts();
       })
@@ -557,6 +643,8 @@
       renderInfo(current);
       renderDetails(current);
       updateStockUI();
+      updateReviewGate(current);
+      document.querySelectorAll('.review-verified').forEach(function (el) { el.textContent = tr('verifiedBadge'); });
     }
   });
 

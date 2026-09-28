@@ -3879,7 +3879,6 @@ h1, h2, h3 { font-style: italic; font-weight: 500; }
 .testimonials { background-color: #221F1C; }
 .testimonials .heading-section { color: #F8F3EC; }
 .testimonials .subtitle { color: #D4B483; }
-.testimonials p[data-i18n="testimonialsNote"] { color: rgba(248,243,236,0.35); }
 .testimonial-card {
   background: rgba(248,243,236,0.05);
   border: 1px solid rgba(248,243,236,0.12);

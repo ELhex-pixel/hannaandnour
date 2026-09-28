@@ -430,7 +430,8 @@ case 'getSettings': {
         const settings = await loadSettings(sb);
         const catalog = await loadCatalog(sb);
         const currency = await getSetting(sb, 'currency', null) || { code: 'usd', symbol: '$' };
-        return json(200, { settings, catalog, currency });
+        const reviews = (await getSetting(sb, 'reviews', null)) || { show_demo: false };
+        return json(200, { settings, catalog, currency, reviews });
       }
 
       case 'saveSettings': {
@@ -463,7 +464,12 @@ case 'getSettings': {
             currency = await saveSetting(sb, 'currency', { code, symbol: code === 'eur' ? '\u20AC' : '$' });
           }
         }
-        return json(200, { ok: true, settings: value, catalog, currency });
+
+        let reviews;
+        if (body.reviews && typeof body.reviews === 'object') {
+          reviews = await saveSetting(sb, 'reviews', { show_demo: !!body.reviews.show_demo });
+        }
+        return json(200, { ok: true, settings: value, catalog, currency, reviews });
       }
 
 case 'deleteMessage': {

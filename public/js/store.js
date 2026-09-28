@@ -120,6 +120,10 @@
         if (typeof refreshPromoAnnounce === 'function') refreshPromoAnnounce();
       }
       refreshFooterTrust();
+      var tSec = document.getElementById('testimonialsSection');
+      if (tSec) {
+        tSec.style.display = cfg && cfg.reviews && cfg.reviews.show_demo ? '' : 'none';
+      }
     } catch (e) {}
   }
 
