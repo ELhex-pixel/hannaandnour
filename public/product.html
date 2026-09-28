@@ -224,6 +224,7 @@
             <div>
               <h2 data-i18n="fabricComp">Fabric Composition</h2>
               <p style="margin-bottom: var(--spacing-lg);" data-i18n="fabricP">70% Mulberry Silk, 30% Egyptian Cotton</p>
+              <p id="fabricListLine" style="display: none; margin-bottom: var(--spacing-lg); color: var(--color-gray);"></p>
               <ul style="list-style: disc; padding-left: var(--spacing-xl); display: flex; flex-direction: column; gap: var(--spacing-sm);">
                 <li data-i18n="fa1">Mulberry silk - known for its luxurious feel and natural temperature regulation</li>
                 <li data-i18n="fa2">Egyptian cotton - long-staple fibers for exceptional softness and durability</li>
@@ -513,12 +514,12 @@
   <div class="modal-overlay" id="sizeGuideModal">
     <div class="modal">
       <div class="modal-header">
-        <h2 class="modal-title" data-i18n="sgHeading">Size Guide - Hijabs</h2>
+        <h2 class="modal-title" data-i18n="sgHeading">Size Guide</h2>
         <button class="modal-close" id="sizeGuideClose" aria-label="Close">&#10005;</button>
       </div>
       <div class="modal-body">
         <div class="filter-option active" style="margin-bottom: var(--spacing-md);">
-          <p class="form-label" data-i18n="sgSelect">Hijab Sizes &amp; Recommended Fit</p>
+          <p class="form-label" data-i18n="sgSelect">Sizes &amp; Recommended Fit</p>
         </div>
         <div style="overflow-x: auto;">
           <table class="size-table">
@@ -530,7 +531,7 @@
                 <th data-i18n="sgBest">Best For</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="sizeGuideBody">
               <tr>
                 <td data-i18n="sizeOne">One Size</td>
                 <td>180cm</td>

@@ -281,7 +281,9 @@
     editing = p || {
       name_en: '', name_fr: '', name_ar: '',
       description_en: '', description_fr: '', description_ar: '',
-      features_en: [], care_en: [], fabrics: [], occasions: [], colors: [], sizes: [],
+      features_en: [], features_fr: [], features_ar: [],
+      care_en: [], care_fr: [], care_ar: [],
+      fabrics: [], occasions: [], colors: [], sizes: [],
       fabric_comp_en: '', fabric_comp_fr: '', fabric_comp_ar: '',
       price_cents: '', compare_at_price_cents: '', category: 'hijab',
       badge: '', rating: 4.5, review_count: 0, image: 'images/hero.jpg', gallery: [],
@@ -303,8 +305,14 @@
     setVal('f-fabrics', (editing.fabrics || []).join(', '));
     setVal('f-occasions', (editing.occasions || []).join(', '));
     setVal('f-features_en', (editing.features_en || []).join(', '));
+    setVal('f-features_fr', (editing.features_fr || []).join(', '));
+    setVal('f-features_ar', (editing.features_ar || []).join(', '));
     setVal('f-fabric_comp_en', editing.fabric_comp_en || '');
+    setVal('f-fabric_comp_fr', editing.fabric_comp_fr || '');
+    setVal('f-fabric_comp_ar', editing.fabric_comp_ar || '');
     setVal('f-care_en', (editing.care_en || []).join(', '));
+    setVal('f-care_fr', (editing.care_fr || []).join(', '));
+    setVal('f-care_ar', (editing.care_ar || []).join(', '));
     setVal('f-rating', editing.rating);
     setVal('f-image', editing.image || 'images/hero.jpg');
     setVal('f-gallery', (editing.gallery || []).join('\n'));
@@ -392,12 +400,18 @@
       description_fr: getVal('f-desc_fr'),
       description_ar: getVal('f-desc_ar'),
       features_en: strToList(getVal('f-features_en')),
+      features_fr: strToList(getVal('f-features_fr')),
+      features_ar: strToList(getVal('f-features_ar')),
       care_en: strToList(getVal('f-care_en')),
+      care_fr: strToList(getVal('f-care_fr')),
+      care_ar: strToList(getVal('f-care_ar')),
       fabrics: strToList(getVal('f-fabrics')),
       occasions: strToList(getVal('f-occasions')),
       colors: strToList(getVal('f-colors')),
       sizes: strToList(getVal('f-sizes')),
       fabric_comp_en: getVal('f-fabric_comp_en'),
+      fabric_comp_fr: getVal('f-fabric_comp_fr'),
+      fabric_comp_ar: getVal('f-fabric_comp_ar'),
       price_cents: toCents(priceRaw),
       compare_at_price_cents: getVal('f-compare') ? toCents(getVal('f-compare')) : null,
       category: getVal('f-category'),

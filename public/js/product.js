@@ -13,7 +13,27 @@
     white: '#FFFFFF', cream: '#F1E7D3', beige: '#D9CCB2', gold: '#A67C00',
     bronze: '#6E5A1C', espresso: '#3B362E', black: '#1A1A1A', champagne: '#C9A227',
     ivory: '#FFFFF0', charcoal: '#404040', emerald: '#3D7A5C', blush: '#E8B4B8',
-    nude: '#D2A58F', sage: '#8A9A7B', brown: '#6E5A1C'
+    nude: '#D2A58F', sage: '#8A9A7B', brown: '#6E5A1C', blue: '#3B5B9E',
+    navy: '#1F2A56', 'navy blue': '#1F2A56', marine: '#1F4E79', green: '#3D7A5C',
+    forest: '#2F5233', violet: '#6B4A8A', purple: '#6B4A8A', rose: '#C97B84',
+    pink: '#E8A2B0', gray: '#808080', grey: '#808080', orange: '#C96A2B',
+    red: '#B23B3B', maroon: '#7A2E2E', burgundy: '#6E2542', silver: '#C0C0C0',
+    teal: '#2E6E6E', mint: '#A8C3A0', terracotta: '#B0603F', sand: '#DECC9C',
+    taupe: '#A79A8C', plum: '#5E3A64', olive: '#7A7A3D', rust: '#9C4E2E'
+  };
+
+  var RETURNS_DAYS = 30;
+
+  var SIZE_DIMS = {
+    'one size': [180, 70], '180cm x 70cm': [180, 70], '180 x 70': [180, 70],
+    'large': [200, 75], '200cm x 75cm': [200, 75],
+    'extra large': [220, 90], 'xl': [220, 90], '220cm x 90cm': [220, 90]
+  };
+  var SIZE_BEST_KEY = {
+    'one size': 'sgR1',
+    'large': 'sgR2',
+    'extra large': 'sgR3',
+    'xl': 'sgR3'
   };
 
   function catKey(cat) {
@@ -21,7 +41,9 @@
   }
 
   function colorHex(name) {
-    return COLOR_PALETTE[String(name || '').toLowerCase()] || '#A67C00';
+    var s = String(name || '').trim();
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(s)) return s;
+    return COLOR_PALETTE[s.toLowerCase()] || '#A67C00';
   }
 
   function stars(rating) {
@@ -43,6 +65,15 @@
     if (lang === 'fr' && p[fieldFr]) return p[fieldFr];
     if (lang === 'ar' && p[fieldAr]) return p[fieldAr];
     return p[fieldEn] || fallback || '';
+  }
+
+  function listLocalized(p, fieldEn) {
+    var lang = HN.lang();
+    var fr = fieldEn.replace('_en', '_fr');
+    var ar = fieldEn.replace('_en', '_ar');
+    if (lang === 'fr' && Array.isArray(p[fr]) && p[fr].length) return p[fr];
+    if (lang === 'ar' && Array.isArray(p[ar]) && p[ar].length) return p[ar];
+    return Array.isArray(p[fieldEn]) ? p[fieldEn] : [];
   }
 
   function getSlug() {
@@ -142,6 +173,14 @@
     document.title = HN.productName(p) + ' | Hanna & Nour';
 
     injectProductSchema(p);
+    updateReturnsMeta();
+  }
+
+  function updateReturnsMeta() {
+    var titleEl = document.querySelector('[data-i18n="metaReturnTitle"]');
+    var textEl = document.querySelector('[data-i18n="metaReturnText"]');
+    if (titleEl) titleEl.textContent = tr('metaReturnTitleN', { n: RETURNS_DAYS });
+    if (textEl) textEl.textContent = tr('metaReturnTextN', { n: RETURNS_DAYS });
   }
 
   function injectProductSchema(p) {
@@ -177,7 +216,7 @@
     // Description tab
     var descTab = document.getElementById('tab-description');
     if (descTab) {
-      var features = Array.isArray(p.features_en) ? p.features_en : [];
+      var features = listLocalized(p, 'features_en');
       if (features.length) {
         var heading = descTab.querySelector('h2');
         var list = descTab.querySelector('ul');
@@ -196,16 +235,46 @@
       var comp = fabricTab.querySelector('p');
       var compList = fabricTab.querySelector('ul');
       if (comp) comp.textContent = localized(p, 'fabric_comp_en', 'fabric_comp_fr', 'fabric_comp_ar', '');
-      if (compList && Array.isArray(p.care_en)) {
+      var care = listLocalized(p, 'care_en');
+      if (compList && care.length) {
         var careHtml = '';
-        p.care_en.forEach(function (c) { careHtml += '<li>' + esc(c) + '</li>'; });
+        care.forEach(function (c) { careHtml += '<li>' + esc(c) + '</li>'; });
         compList.innerHTML = careHtml;
+      }
+      var fabLine = document.getElementById('fabricListLine');
+      if (fabLine) {
+        if (Array.isArray(p.fabrics) && p.fabrics.length) {
+          fabLine.textContent = tr('fabricLabel') + ': ' + p.fabrics.join(', ');
+          fabLine.style.display = '';
+        } else {
+          fabLine.style.display = 'none';
+        }
       }
     }
 
     // Reviews tab heading
     var reviewTabBtn = document.querySelector('.tab-btn[data-tab="reviews"]');
     if (reviewTabBtn) reviewTabBtn.textContent = tr('tabReviewsN', { n: p.review_count || 0 });
+  }
+
+  function renderSizeGuide(p) {
+    var btn = document.getElementById('sizeGuideBtn');
+    var body = document.getElementById('sizeGuideBody');
+    if (!btn || !body) return;
+    if (!Array.isArray(p.sizes) || !p.sizes.length) {
+      btn.style.display = 'none';
+      return;
+    }
+    btn.style.display = '';
+    var rows = p.sizes.map(function (s) {
+      var key = String(s || '').toLowerCase().trim();
+      var dims = SIZE_DIMS[key];
+      var cells = dims
+        ? '<td>' + dims[0] + 'cm</td><td>' + dims[1] + 'cm</td>'
+        : '<td colspan="2">&mdash;</td>';
+      return '<tr><td>' + esc(s) + '</td>' + cells + '<td>' + tr(SIZE_BEST_KEY[key] || 'sgGeneric') + '</td></tr>';
+    }).join('');
+    body.innerHTML = rows;
   }
 
   /* ---- Variants & stock ---- */
@@ -439,7 +508,13 @@
     if (infoEl) infoEl.setAttribute('data-slug', slug);
     HN.updateWishlistHearts();
 
-    HN.loadProducts()
+    HN.loadConfig().then(function (cfg) {
+      if (cfg && cfg.settings) {
+        var d = parseInt(cfg.settings.returns_days, 10);
+        if (!isNaN(d) && d > 0) RETURNS_DAYS = d;
+      }
+      return HN.loadProducts();
+    })
       .then(function (products) {
         var p = null;
         for (var i = 0; i < products.length; i++) {
@@ -451,6 +526,7 @@
         renderGallery(p);
         renderInfo(p);
         renderDetails(p);
+        renderSizeGuide(p);
         loadReviews(p);
         wireActions(p);
         wireReviewForm(p);
