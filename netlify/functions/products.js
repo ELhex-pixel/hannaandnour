@@ -53,7 +53,35 @@ exports.handler = async function (event) {
 
     const products = (data || []).map((p) => ({ ...p, variants: p.product_variants || [] }));
 
-    return json(200, { products });
+    // Attach the REAL approved review stats per product so product cards can
+    // render counts/stars in sync with the admin (seed values kept only until
+    // the first real review is approved).
+    const ids = products.map((p) => p.id).filter(Boolean);
+    let approvedMap = {};
+    if (ids.length) {
+      const rv = await sb
+        .from('reviews')
+        .select('product_id, rating')
+        .eq('status', 'approved')
+        .in('product_id', ids);
+      if (rv.error) throw rv.error;
+      (rv.data || []).forEach((r) => {
+        const m = approvedMap[r.product_id] || (approvedMap[r.product_id] = { count: 0, sum: 0 });
+        m.count += 1;
+        m.sum += r.rating;
+      });
+    }
+
+    const out = products.map((p) => {
+      const m = approvedMap[p.id];
+      return {
+        ...p,
+        approved_count: m ? m.count : 0,
+        approved_rating: m ? Math.round((m.sum / m.count) * 10) / 10 : 0
+      };
+    });
+
+    return json(200, { products: out });
   } catch (err) {
     console.error('products.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

@@ -61,6 +61,7 @@
   var CURRENCY_SYMBOL = '$';
   var CONFIG_CACHE_KEY = 'hn-config';
   var CONFIG_DATA = {};
+  var REVIEW_DEMO = false;
   var configPromise = null;
 
   function money(cents) {
@@ -111,6 +112,7 @@
   function applyConfigCopy(cfg) {
     try {
       CONFIG_DATA = (cfg && cfg.settings) || {};
+      REVIEW_DEMO = !!(cfg && cfg.reviews && cfg.reviews.show_demo);
       if (window.I18n && typeof window.I18n.setShipThreshold === 'function' &&
           cfg.settings && typeof cfg.settings.free_threshold_cents === 'number') {
         window.I18n.setShipThreshold(cfg.settings.free_threshold_cents);
@@ -325,6 +327,32 @@
     return b || null;
   }
 
+  // Card review display, synced with the admin:
+  // - No real approved reviews: keep the catalog seed (rating/review_count).
+  // - Real approved reviews: show the real count (or real+3 when the demo
+  //   illustration is ON, rating combined with the 3 demos at 5) so the card
+  //   matches the product page.
+  // - No reviews at all: returns null so the block is hidden.
+  function cardReviewInfo(p) {
+    var real = parseInt(p && p.approved_count, 10) || 0;
+    var count, rating;
+    if (real > 0) {
+      var realRating = parseFloat(p && p.approved_rating) || 0;
+      rating = realRating || parseFloat(p && p.rating) || 0;
+      if (REVIEW_DEMO) {
+        count = real + 3;
+        rating = (realRating * real + 15) / count;
+      } else {
+        count = real;
+      }
+    } else {
+      count = parseInt(p && p.review_count, 10) || 0;
+      rating = parseFloat(p && p.rating) || 0;
+    }
+    if (!count) return null;
+    return { count: count, rating: rating };
+  }
+
   // Canonical product card used by shop.js, the home page feeds and anywhere
   // else the API catalog is rendered. Keep markup in sync with shop static cards.
   function buildCard(p) {
@@ -333,12 +361,15 @@
     var price = money(p.price_cents);
     var original = p.compare_at_price_cents ? money(p.compare_at_price_cents) : null;
     var badge = badgeFor(p);
-    var stars = Math.round(parseFloat(p.rating) || 0);
+    var info = cardReviewInfo(p);
+    var stars = info ? Math.round(info.rating) : 0;
     if (stars < 1) stars = 0;
     var starStr = '';
     for (var s = 0; s < stars; s++) starStr += '\u2605';
     for (var e = stars; e < 5; e++) starStr += '\u2606';
-    var count = p.review_count || 0;
+    var ratingHtml = info
+      ? '    <div class="product-card-rating"><span class="stars">' + starStr + '</span><span class="rating-count">(' + info.count + ')</span></div>'
+      : '';
 
     return '' +
       '<div class="product-card" data-slug="' + escAttr(p.slug) + '" data-category="' + escAttr(p.category) + '" data-price-cents="' + (p.price_cents || 0) + '" data-rating="' + (p.rating || 0) + '">' +
@@ -355,7 +386,7 @@
       '      <span class="product-price-current">' + price + '</span>' +
       (original ? '<span class="product-price-original">' + original + '</span>' : '') +
       '    </div>' +
-      '    <div class="product-card-rating"><span class="stars">' + starStr + '</span><span class="rating-count">(' + count + ')</span></div>' +
+      ratingHtml +
       '  </div>' +
       '</div>';
   }

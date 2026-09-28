@@ -165,6 +165,12 @@
     var items = [];
     for (var i = 0; i < cards.length; i++) {
       var c = cards[i];
+      var countMatch = null;
+      var countEl = c.querySelector('.rating-count');
+      if (countEl) {
+        var m = /\((\d+)\)/.exec(countEl.textContent || '');
+        if (m) countMatch = parseInt(m[1], 10);
+      }
       items.push({
         slug: c.getAttribute('data-slug') || c.getAttribute('data-category'),
         category: normalizeCategory(c.getAttribute('data-category')),
@@ -173,7 +179,7 @@
         name_en: c.getAttribute('data-name') || tr('productFallback'),
         image: c.getAttribute('data-image') || '',
         rating: parseFloat(c.getAttribute('data-rating')) || 0,
-        review_count: 0,
+        review_count: countMatch || 0,
         colors: DEFAULT_COLORS.slice(),
         sizes: DEFAULT_SIZES.slice(),
         fabrics: DEFAULT_FABRICS.slice(),
