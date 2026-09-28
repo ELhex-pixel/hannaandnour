@@ -31,10 +31,13 @@ const Stripe = require('stripe');
 const STRIPE = () => new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 const ADMIN_RESET_TTL_MS = 15 * 60 * 1000;
+const ADMIN_RESET_COOLDOWN_MS = 60 * 1000;
 const MAX_RESET_ATTEMPTS = 5;
 
+// Reception address for the admin reset code. Falls back to the owner's
+// Resend-verified inbox until a brand address is configured later.
 function adminResetEmail() {
-  return process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'care@hannaandnour.com';
+  return process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'yassinaous92@gmail.com';
 }
 
 function otpHash(otp) {
@@ -47,12 +50,17 @@ async function handleForgotPassword(sb, body) {
   if (email !== adminResetEmail().toLowerCase()) {
     return json(200, { ok: true });
   }
+  const auth = (await getSetting(sb, 'admin_auth', null)) || {};
+  // Throttle: at most one reset code every 60s to avoid flooding the inbox.
+  if (auth.reset_sent_at && Date.now() - auth.reset_sent_at < ADMIN_RESET_COOLDOWN_MS) {
+    return json(200, { ok: true });
+  }
   const otp = String(Math.floor(100000 + Math.random() * 900000));
-  const current = (await getSetting(sb, 'admin_auth', null)) || {};
-  await saveSetting(sb, 'admin_auth', Object.assign({}, current, {
+  await saveSetting(sb, 'admin_auth', Object.assign({}, auth, {
     reset_otp_hash: otpHash(otp),
     reset_otp_exp: Date.now() + ADMIN_RESET_TTL_MS,
-    reset_otp_attempts: 0
+    reset_otp_attempts: 0,
+    reset_sent_at: Date.now()
   }));
   if (!process.env.RESEND_API_KEY) {
     console.log('[admin reset] RESEND_API_KEY not set; OTP=' + otp + ' for ' + adminResetEmail());
