@@ -4636,3 +4636,265 @@ select.lang-switcher {
   font-size: 0.875rem;
 }
 .reset-help a { color: var(--color-emerald); text-decoration: underline; }
+
+/* ================================================================
+   MODE SOMBRE — bascule lune/soleil (html[data-theme="dark"])
+   Partagé admin + site (clé localStorage : hn-theme). Le skin clair
+   repose sur des variables crème/charbon/or : on bascule les variables
+   de surface/texte, puis on surcharge les composants codés en dur.
+   ================================================================ */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-cream: #16130F;
+  --color-blush-light: #201C16;
+  --color-sage-light: #3A3327;
+  --color-cream-dark: #262119;
+  --color-off-white: #1A1610;
+  --color-charcoal: #EDE6DA;
+  --color-dark: #EDE6DA;
+  --color-gray: #A89A82;
+  --color-gray-light: #C9BEAA;
+  --color-gold: #C79B54;
+  --color-sage: #C79B54;
+  --color-emerald: #C79B54;
+  --color-emerald-dark: #D3A75C;
+}
+
+/* ---- Surfaces blanches : cartes, paniers, formulaires, modales ---- */
+html[data-theme="dark"] .nav-mobile,
+html[data-theme="dark"] .cart-item,
+html[data-theme="dark"] .cart-summary,
+html[data-theme="dark"] .account-sidebar,
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .reset-card,
+html[data-theme="dark"] .blog-card,
+html[data-theme="dark"] .value-icon,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .shop-sort select,
+html[data-theme="dark"] .input-group input,
+html[data-theme="dark"] .nav-mobile-action-btn {
+  background-color: #201C16;
+  color: #EDE6DA;
+}
+
+/* ---- Sections crème / cartes du skin ---- */
+html[data-theme="dark"] .section[bg-cream-dark],
+html[data-theme="dark"] .newsletter,
+html[data-theme="dark"] .about-values,
+html[data-theme="dark"] .reviews-summary {
+  background-color: #201C16;
+}
+html[data-theme="dark"] .featured-banner {
+  background: linear-gradient(135deg, #262119 0%, #1C1812 100%);
+}
+html[data-theme="dark"] .featured-banner-text,
+html[data-theme="dark"] .featured-banner-title {
+  color: #EDE6DA;
+}
+html[data-theme="dark"] .featured-banner p {
+  color: rgba(237, 230, 218, 0.7);
+}
+html[data-theme="dark"] .featured-banner-image {
+  background: #1A1610;
+}
+html[data-theme="dark"] .featured-banner .btn-white {
+  background-color: #C79B54;
+  border-color: #C79B54;
+  color: #16130F;
+}
+html[data-theme="dark"] .featured-banner .btn-white:hover {
+  background-color: #DDBA7E;
+  border-color: #DDBA7E;
+  color: #16130F;
+}
+
+/* ---- Page header / breadcrumb ---- */
+html[data-theme="dark"] .page-header {
+  background-color: #201C16;
+}
+html[data-theme="dark"] .page-header-breadcrumb {
+  color: rgba(237, 230, 218, 0.6);
+}
+
+/* ---- Header : fond crème -> sombre, texte noir -> crème ---- */
+html[data-theme="dark"] .header:not(.header-overlay),
+html[data-theme="dark"] .header.header-overlay.scrolled {
+  background-color: rgba(22, 19, 15, 0.95);
+  backdrop-filter: blur(10px);
+}
+html[data-theme="dark"] .header.header-overlay.scrolled {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .header .logo,
+html[data-theme="dark"] .header .nav-link {
+  color: #EDE6DA !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .header.header-overlay.scrolled .logo,
+html[data-theme="dark"] .header.header-overlay.scrolled .nav-link {
+  color: #EDE6DA !important;
+  text-shadow: none !important;
+}
+html[data-theme="dark"] .header:not(.header-overlay) .header-action-btn svg,
+html[data-theme="dark"] .header.header-overlay.scrolled .header-action-btn svg {
+  stroke: #EDE6DA;
+}
+html[data-theme="dark"] .header:not(.header-overlay) .menu-toggle span {
+  background-color: #EDE6DA;
+}
+html[data-theme="dark"] .header:not(.header-overlay) .lang-switcher,
+html[data-theme="dark"] .header.header-overlay .lang-switcher,
+html[data-theme="dark"] .lang-switcher {
+  background-color: #201C16;
+  border-color: #3A3327;
+  color: #EDE6DA;
+}
+
+/* ---- Menu mobile ---- */
+html[data-theme="dark"] .nav-mobile-header .logo,
+html[data-theme="dark"] .nav-mobile-action-lang .lang-switcher {
+  color: #EDE6DA;
+}
+html[data-theme="dark"] .nav-mobile-action-btn {
+  border-color: #3A3327;
+}
+html[data-theme="dark"] .nav-mobile-action-btn:hover {
+  background: #262119;
+  border-color: #C79B54;
+}
+
+/* ---- Boutons : charbon -> or, fonds sombres réaffirmés ---- */
+html[data-theme="dark"] .btn-primary {
+  background-color: #C79B54;
+  border-color: #C79B54;
+  color: #16130F;
+}
+html[data-theme="dark"] .btn-primary:hover {
+  background-color: #DDBA7E;
+  border-color: #DDBA7E;
+  color: #16130F;
+}
+html[data-theme="dark"] .btn-secondary:hover {
+  background-color: #C79B54;
+  border-color: #C79B54;
+  color: #16130F;
+}
+html[data-theme="dark"] .btn-white {
+  background-color: #2A251E;
+  border-color: #2A251E;
+  color: #EDE6DA;
+}
+html[data-theme="dark"] .btn-white:hover {
+  background-color: #C79B54;
+  border-color: #C79B54;
+  color: #16130F;
+}
+html[data-theme="dark"] .auth-tab.is-active {
+  background-color: #C79B54;
+  border-color: #C79B54;
+  color: #16130F;
+}
+html[data-theme="dark"] .view-btn.active,
+html[data-theme="dark"] .size-option.active {
+  background-color: #C79B54;
+  border-color: #C79B54;
+  color: #16130F;
+}
+
+/* ---- Cartes produit ---- */
+html[data-theme="dark"] .product-card {
+  background: #201C16;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+html[data-theme="dark"] .product-card:hover {
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .product-card-image {
+  background: #1A1610;
+}
+html[data-theme="dark"] .product-badge,
+html[data-theme="dark"] .product-price-discount {
+  background-color: #C79B54;
+  color: #16130F;
+}
+html[data-theme="dark"] .product-price-original {
+  color: rgba(237, 230, 218, 0.45);
+}
+html[data-theme="dark"] .product-wishlist {
+  background-color: rgba(22, 19, 15, 0.9);
+}
+html[data-theme="dark"] .product-wishlist svg {
+  stroke: #EDE6DA;
+}
+html[data-theme="dark"] .product-wishlist:hover svg,
+html[data-theme="dark"] .product-wishlist.active svg {
+  fill: #D4B483;
+  stroke: #D4B483;
+}
+
+/* ---- Erreurs / liens danger (burgundy reste sombre) ---- */
+html[data-theme="dark"] .auth-error,
+html[data-theme="dark"] .auth-msg-error {
+  color: #F0A59C;
+}
+html[data-theme="dark"] .filter-tag-remove:hover,
+html[data-theme="dark"] .cart-item-remove:hover {
+  color: #D4B483;
+}
+
+/* ---- Séparateurs : noirs translucides -> blancs translucides ---- */
+html[data-theme="dark"] .modal-header,
+html[data-theme="dark"] .tabs-nav,
+html[data-theme="dark"] .product-tabs,
+html[data-theme="dark"] .product-meta,
+html[data-theme="dark"] .review-card {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+html[data-theme="dark"] .cart-summary-title {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+html[data-theme="dark"] .cart-summary-row.total {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+html[data-theme="dark"] .size-table th,
+html[data-theme="dark"] .size-table td {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ---- Divers ---- */
+html[data-theme="dark"] .review-bar-track {
+  background-color: #3A3327;
+}
+html[data-theme="dark"] .payment-method.selected {
+  background-color: rgba(199, 155, 84, 0.12);
+}
+html[data-theme="dark"] .footer,
+html[data-theme="dark"] .footer.model-footer .footer-wrap {
+  background-color: #1B1814;
+}
+
+/* ---- Recherche, toasts, compte, section eid ---- */
+html[data-theme="dark"] .search-box,
+html[data-theme="dark"] .account-content,
+html[data-theme="dark"] .toast {
+  background-color: #201C16;
+}
+html[data-theme="dark"] .search-box-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+html[data-theme="dark"] .toast-icon.error {
+  background-color: #4A2828;
+  color: #F0A59C;
+}
+html[data-theme="dark"] .eid-section {
+  background-color: #201C16;
+}
+html[data-theme="dark"] .eid-content p {
+  color: rgba(237, 230, 218, 0.7);
+}
+html[data-theme="dark"] .btn-charcoal {
+  background-color: #2A251E;
+  border-color: #2A251E;
+  color: #EDE6DA;
+}
