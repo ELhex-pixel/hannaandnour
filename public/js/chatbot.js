@@ -68,6 +68,8 @@
   var root = null;
   var body, input, sendBtn, toggleBtn, chipsBox;
   var busy = false;
+  var ended = false;
+  var closeTimer = null;
 
   function el(tag, cls, parent) {
     var node = document.createElement(tag);
@@ -76,7 +78,16 @@
     return node;
   }
 
+  function resetConversation() {
+    ended = false;
+    body.innerHTML = '';
+    bubble('bot', tr('intro'));
+    chips(tr('chips'));
+  }
+
   function open() {
+    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+    if (ended) resetConversation();
     root.classList.add('hn-chat--open');
     toggleBtn.setAttribute('aria-expanded', 'true');
     toggleBtn.setAttribute('aria-label', tr('close'));
@@ -127,6 +138,7 @@
   function send(text) {
     var message = String(text || '').trim();
     if (!message || busy) return;
+    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
     input.value = '';
     chipsBox.innerHTML = '';
     bubble('user', message);
@@ -161,6 +173,10 @@
       }
       body.scrollTop = body.scrollHeight;
       chips(data.suggestions || []);
+      if (data.source === 'end') {
+        ended = true;
+        closeTimer = setTimeout(close, 3000);
+      }
     }).catch(function (err) {
       thinking.textContent = tr('err');
       chips([tr('chips')[0]]);

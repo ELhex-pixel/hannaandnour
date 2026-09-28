@@ -47,6 +47,16 @@ function moneyStr(cents, currency, lang) {
   return sym + amount;
 }
 
+// Coût du retrait en point relais, lu depuis les réglages admin (même source
+// que le checkout : total affiché = total facturé).
+function pickupCostStr(ctx) {
+  const cents = parseInt(ctx.shipping.pickup_cents, 10) || 0;
+  if (cents <= 0) {
+    return ctx.lang === 'fr' ? 'gratuit' : ctx.lang === 'en' ? 'free' : 'مجاني';
+  }
+  return moneyStr(cents, ctx.currency, ctx.lang);
+}
+
 function settingsWithDefaults(row) {
   const base = {
     standard_cents: 699,
@@ -124,21 +134,6 @@ const RULES = [
     })
   },
   {
-    id: 'thanks',
-    keywords: {
-      fr: ['merci', 'merci beaucoup'],
-      en: ['thank', 'thanks', 'thank you'],
-      ar: ['شكرا', 'شكرًا', 'جزاك الله', 'تسلم']
-    },
-    reply: (ctx) => ({
-      text: ctx.lang === 'fr'
-        ? 'Avec plaisir ! Si vous avez d\u2019autres questions, je suis l\u00e0. \uD83D\uDE0A Bonne journ\u00e9e chez Hanna & Nour !'
-        : ctx.lang === 'en'
-          ? 'You\u2019re welcome! If you have any other questions, I\u2019m here. \uD83D\uDE0A Have a lovely day at Hanna & Nour!'
-          : 'على الرحب والسعة! إن كان لديك أي سؤال آخر، أنا هنا. \uD83D\uDE0A يومك سعيد في حنا ونور!'
-    })
-  },
-  {
     id: 'free_shipping',
     keywords: {
       fr: ['livraison gratuite', 'livraison offerte', 'gratuite', 'franco'],
@@ -149,10 +144,10 @@ const RULES = [
       const s = ctx.shipping;
       if (s.free_threshold_cents > 0) {
         const text = ctx.lang === 'fr'
-          ? 'Livraison offerte d\u00e8s ' + moneyStr(s.free_threshold_cents, ctx.currency, 'fr') + ' d\u2019achat (hors retrait en boutique, qui est toujours gratuit).'
+          ? 'Livraison offerte d\u00e8s ' + moneyStr(s.free_threshold_cents, ctx.currency, 'fr') + ' d\u2019achat (hors retrait en point relais, factur\u00e9 \u00e0 part).'
           : ctx.lang === 'en'
-            ? 'Free shipping on all orders over ' + moneyStr(s.free_threshold_cents, ctx.currency, 'en') + ' (in-store pickup is always free).'
-            : 'توصيل مجاني للطلبات التي تزيد عن ' + moneyStr(s.free_threshold_cents, ctx.currency, 'ar') + ' (الاستلام من المتجر مجاني دائمًا).';
+            ? 'Free shipping on all orders over ' + moneyStr(s.free_threshold_cents, ctx.currency, 'en') + ' (relay-point pickup is billed separately).'
+            : 'توصيل مجاني للطلبات التي تزيد عن ' + moneyStr(s.free_threshold_cents, ctx.currency, 'ar') + ' (الاستلام من نقطة التوصيل يُدفع بشكل منفصل).';
         return { text };
       }
       const text = ctx.lang === 'fr'
@@ -178,18 +173,18 @@ const RULES = [
           (s.express_cents > 0 ? ', Express : ' + moneyStr(s.express_cents, ctx.currency, 'fr') + ' (2\u20133 jours)' : '') +
           (s.nextday_cents > 0 ? ', Lendemain avant 21h : ' + moneyStr(s.nextday_cents, ctx.currency, 'fr') : '') +
           (free ? '. Et c\u2019est gratuit d\u00e8s ' + moneyStr(s.free_threshold_cents, ctx.currency, 'fr') + ' d\u2019achat !' : '.') +
-          (s.pickup_enabled ? ' Le retrait en boutique est gratuit.' : '')
+          (s.pickup_enabled ? ' Retrait en point relais : ' + pickupCostStr(ctx) + '.' : '')
         : ctx.lang === 'en'
           ? 'Shipping \u2014 Standard: ' + moneyStr(s.standard_cents, ctx.currency, 'en') + ' (5\u20137 business days)' +
             (s.express_cents > 0 ? ', Express: ' + moneyStr(s.express_cents, ctx.currency, 'en') + ' (2\u20133 days)' : '') +
             (s.nextday_cents > 0 ? ', Next-day before 9pm: ' + moneyStr(s.nextday_cents, ctx.currency, 'en') : '') +
             (free ? '. And it\u2019s free on orders over ' + moneyStr(s.free_threshold_cents, ctx.currency, 'en') + '!' : '.') +
-            (s.pickup_enabled ? ' Free in-store pickup is also available.' : '')
+            (s.pickup_enabled ? ' Relay-point pickup: ' + pickupCostStr(ctx) + '.' : '')
           : 'التوصيل — العادي: ' + moneyStr(s.standard_cents, ctx.currency, 'ar') + ' (5–7 أيام عمل)' +
             (s.express_cents > 0 ? '، السريع: ' + moneyStr(s.express_cents, ctx.currency, 'ar') + ' (2–3 أيام)' : '') +
             (s.nextday_cents > 0 ? '، التوصيل في اليوم التالي قبل ٩ مساءً: ' + moneyStr(s.nextday_cents, ctx.currency, 'ar') : '') +
             (free ? '. والتوصيل مجاني للطلبات فوق ' + moneyStr(s.free_threshold_cents, ctx.currency, 'ar') + '!' : '.') +
-            (s.pickup_enabled ? ' كما يتوفر الاستلام من المتجر مجانًا.' : '');
+            (s.pickup_enabled ? ' الاستلام من نقطة التوصيل: ' + pickupCostStr(ctx) + '.' : '');
       return { text, links: [link(ctx.lang === 'fr' ? 'Livraison & retours' : ctx.lang === 'en' ? 'Shipping & returns' : 'التوصيل والإرجاع', 'terms.html')] };
     }
   },
@@ -204,12 +199,12 @@ const RULES = [
       const s = ctx.shipping;
       const text = ctx.lang === 'fr'
         ? 'D\u00e9lais indicatifs : Standard 5\u20137 jours ouvr\u00e9s, Express 2\u20133 jours, Lendemain avant 21h' +
-          (s.pickup_enabled ? ' Retrait en boutique : pr\u00eat sous 24\u201348 h (vous \u00eates pr\u00e9venu par email).' : '.')
+          (s.pickup_enabled ? ' Retrait en point relais : pr\u00eat sous 24\u201348 h (vous \u00eates pr\u00e9venu par email).' : '.')
         : ctx.lang === 'en'
           ? 'Estimated times: Standard 5\u20137 business days, Express 2\u20133 days, Next-day before 9pm' +
-            (s.pickup_enabled ? ' In-store pickup: ready within 24\u201348h (you\u2019ll get an email).' : '.')
+            (s.pickup_enabled ? ' Relay-point pickup: ready within 24\u201348h (you\u2019ll get an email).' : '.')
           : 'المدد التقريبية: العادي 5–7 أيام عمل، السريع 2–3 أيام، اليوم التالي قبل ٩ مساءً' +
-            (s.pickup_enabled ? ' الاستلام من المتجر: جاهز خلال 24–48 ساعة (ستصلك رسالة).' : '.');
+            (s.pickup_enabled ? ' الاستلام من نقطة التوصيل: جاهز خلال 24–48 ساعة (ستصلك رسالة).' : '.');
       return { text };
     }
   },
@@ -305,24 +300,25 @@ const RULES = [
   {
     id: 'pickup',
     keywords: {
-      fr: ['retrait', 'point de retrait', 'retirer en boutique', 'en boutique', 'magasin', 'boutique'],
-      en: ['pickup', 'in-store', 'store pickup', 'collect', 'shop location'],
-      ar: ['استلام', 'استلام من المتجر', 'من المتجر', 'المتجر', 'عنوان المتجر']
+      fr: ['retrait', 'point de retrait', 'point relais', 'relais', 'retirer en boutique', 'en boutique', 'magasin', 'boutique', 'point livraison', 'ou est votre magasin'],
+      en: ['pickup', 'in-store', 'store pickup', 'relay point', 'pickup point', 'parcel', 'collect', 'shop location', 'where is your store'],
+      ar: ['استلام', 'استلام من المتجر', 'نقطة التوصيل', 'نقطة استلام', 'نقطة', 'المتجر', 'عنوان المتجر']
     },
     reply: (ctx) => {
       if (!ctx.shipping.pickup_enabled) {
         const text = ctx.lang === 'fr'
-          ? 'Le retrait en boutique n\u2019est pas propos\u00e9 pour le moment ; la livraison est assur\u00e9e \u00e0 domicile.'
+          ? 'Le retrait n\u2019est pas propos\u00e9 pour le moment ; nous livrons \u00e0 domicile.'
           : ctx.lang === 'en'
-            ? 'In-store pickup is not available right now; we deliver to your door.'
-            : 'الاستلام من المتجر غير متاح حاليًا؛ نوصّل إلى باب منزلك.';
+            ? 'Pickup is not available right now; we deliver to your door.'
+            : 'الاستلام غير متاح حاليًا؛ نوصّل إلى باب منزلك.';
         return { text };
       }
+      const cost = pickupCostStr(ctx);
       const text = ctx.lang === 'fr'
-        ? 'Le retrait en boutique est gratuit : choisissez \u00ab Retrait \u00bb \u00e0 l\u2019\u00e9tape livraison. Votre commande est pr\u00eate sous 24\u201348 h et vous recevez un email d\u00e8s qu\u2019elle vous attend.'
+        ? 'Nous n\u2019avons pas de boutique physique : nous livrons \u00e0 domicile et proposons le retrait en point relais. \u00c0 l\u2019\u00e9tape livraison, choisissez \u00ab Retrait \u2014 point relais \u00bb et indiquez le point de votre choix. Co\u00fbt : ' + cost + '.'
         : ctx.lang === 'en'
-          ? 'In-store pickup is free: choose \u201cPickup\u201d at the shipping step. Your order is ready within 24\u201348h and you\u2019ll get an email as soon as it\u2019s waiting for you.'
-          : 'الاستلام من المتجر مجاني: اختر «استلام» في خطوة التوصيل. طلبك جاهز خلال 24–48 ساعة وستصلك رسالة فور جاهزيته.';
+          ? 'We don\u2019t have a physical store: we ship to your door and offer relay-point pickup. At the delivery step, choose \u201cPickup \u2014 relay point\u201d and select your point. Cost: ' + cost + '.'
+          : 'ليس لدينا متجر فعلي: نوصّل إلى باب منزلك ونوفر الاستلام من نقطة التوصيل. في خطوة التوصيل اختاري «استلام — نقطة التوصيل» وحددي النقطة. التكلفة: ' + cost + '.';
       return { text };
     }
   },
@@ -373,8 +369,61 @@ const RULES = [
           : 'بين مقاسين، اختاري الأكبر: قصّاتنا مضبوطة. وتذكري أن الاستبدال ممكن خلال ' + (parseInt(ctx.shipping.returns_days, 10) || 30) + ' يومًا. أرسلي لنا قياساتك وسنساعدك!';
       return { text };
     }
+  },
+  {
+    id: 'end',
+    keywords: {
+      fr: ['non', 'c est tout', 'ca suffit', 'rien d autre', 'pas d autre question', 'aucune question'],
+      en: ['no', 'nothing else', 'that s all', 'that is all', 'no more questions', 'i m done', 'no thanks'],
+      ar: ['لا', 'لا شيء', 'لا مزيد', 'انتهى', 'مالي سؤال', 'خلاص']
+    },
+    reply: (ctx) => ({
+      text: ctx.lang === 'fr'
+        ? 'Avec plaisir ! Merci de votre visite chez Hanna & Nour, à bientôt ! \uD83D\uDE0A\n\nConversation terminée — notre équipe reste joignable à care@hannaandnour.com.'
+        : ctx.lang === 'en'
+          ? 'You\u2019re welcome! Thank you for visiting Hanna & Nour, see you soon! \uD83D\uDE0A\n\nConversation closed — our team remains reachable at care@hannaandnour.com.'
+          : 'على الرحب والسعة! شكرًا لزيارتك حنا ونور، إلى اللقاء! \uD83D\uDE0A\n\nانتهت المحادثة — فريقنا يبقى متاحًا على care@hannaandnour.com.'
+    })
+  },
+  {
+    id: 'thanks',
+    keywords: {
+      fr: ['merci', 'merci beaucoup'],
+      en: ['thank', 'thanks', 'thank you'],
+      ar: ['شكرا', 'شكرًا', 'جزاك الله', 'تسلم']
+    },
+    reply: (ctx) => ({
+      text: ctx.lang === 'fr'
+        ? 'Avec plaisir ! Si vous avez d\u2019autres questions, je suis l\u00e0. \uD83D\uDE0A'
+        : ctx.lang === 'en'
+          ? 'You\u2019re welcome! If you have any other questions, I\u2019m here. \uD83D\uDE0A'
+          : 'على الرحب والسعة! إن كان لديك أي سؤال آخر، أنا هنا. \uD83D\uDE0A'
+    })
+  },
+  {
+    id: 'affirm',
+    keywords: {
+      fr: ['oui', 'd accord', 'daccord', 'oka', 'tres bien', 'bien sur', 'vas y', 'dac'],
+      en: ['yes', 'yeah', 'yep', 'sure', 'ok', 'of course', 'go ahead'],
+      ar: ['نعم', 'ايوه', 'اكيد', 'حسنا', 'طيب', 'بالتاكيد', 'تمام']
+    },
+    reply: (ctx) => ({
+      text: ctx.lang === 'fr'
+        ? 'Tr\u00e8s bien — allez-y, quelle est votre question ? \uD83D\uDE0A'
+        : ctx.lang === 'en'
+          ? 'Great — go ahead, what\u2019s your question? \uD83D\uDE0A'
+          : 'حسنًا — تفضل، ما هو سؤالك؟ \uD83D\uDE0A'
+    })
   }
 ];
+
+// Question de suivi ajoutée après chaque réponse utile (pas après l'accueil,
+// la clôture ou une confirmation).
+const FOLLOW_UP = {
+  fr: 'Une autre question ? R\u00e9pondez oui ou non.',
+  en: 'Any other question? Answer yes or no.',
+  ar: 'هل لديك سؤال آخر؟ أجب بنعم أو لا.'
+};
 
 // Suggestions de suivi par règle + langue.
 const SUGGESTIONS = {
@@ -384,7 +433,7 @@ const SUGGESTIONS = {
   sizes: { fr: ['Quelle taille prendre ?', 'Puis-je échanger ?'], en: ['Which size should I take?', 'Can I exchange?'], ar: ['أي مقاس أناسب؟', 'هل يمكن الاستبدال؟'] },
   payment: { fr: ['Quels moyens de paiement ?', 'Le paiement est-il sécurisé ?'], en: ['Which payment methods?', 'Is payment secure?'], ar: ['ما وسائل الدفع؟', 'هل الدفع آمن؟'] },
   promo: { fr: ['Y a-t-il un code promo ?', 'Comment appliquer un code ?'], en: ['Is there a promo code?', 'How do I apply a code?'], ar: ['هل يوجد كود خصم؟', 'كيف أطبق الكود؟'] },
-  pickup: { fr: ['Où est la boutique ?', 'Quand ma commande sera-t-elle prête ?'], en: ['Where is the store?', 'When will my order be ready?'], ar: ['أين يقع المتجر؟', 'متى يكون طلبي جاهزًا؟'] },
+  pickup: { fr: ['Combien co\u00fbte le point relais ?', 'O\u00f9 puis-je retirer ma commande ?'], en: ['How much is relay-point pickup?', 'Where can I collect my order?'], ar: ['كم تكلف نقطة التوصيل؟', 'أين أستلم طلبي؟'] },
   contact: { fr: ['Quelle est votre adresse email ?', 'Parler à un conseiller'], en: ['What is your email?', 'Talk to an agent'], ar: ['ما هو بريدكم؟', 'التحدث مع موظف'] },
   catalog: { fr: ['Que vendez-vous ?', 'Voir la collection'], en: ['What do you sell?', 'See the collection'], ar: ['ماذا تبيعون؟', 'مشاهدة المجموعة'] },
   greeting: { fr: ['Quels sont les délais de livraison ?', 'Comment faire un retour ?', 'Suivre ma commande'], en: ['Shipping times?', 'How do returns work?', 'Track my order'], ar: ['مدد التوصيل؟', 'كيف يتم الإرجاع؟', 'تتبع طلبي'] },
@@ -434,6 +483,26 @@ function findRule(rawMessage) {
     }
   }
   return bestScore > 0 ? { rule: best, score: bestScore } : null;
+}
+
+// Construit la réponse complète d'une règle : texte final (avec la question de
+// suivi « Une autre question ? » après chaque réponse utile), source, id,
+// liens et suggestions. Renvoie null si aucune règle ne correspond.
+function answer(rawMessage, ctx) {
+  const found = findRule(rawMessage);
+  if (!found) return null;
+  const id = found.rule.id;
+  const res = found.rule.reply(ctx);
+  let reply = res.text;
+  let source = 'faq';
+  let suggestions = (SUGGESTIONS[id] && SUGGESTIONS[id][ctx.lang]) || GENERIC_SUGGESTIONS[ctx.lang];
+  if (id === 'end') {
+    source = 'end';
+    suggestions = [];
+  } else if (id !== 'greeting' && id !== 'affirm') {
+    reply = reply + '\n\n' + FOLLOW_UP[ctx.lang];
+  }
+  return { reply, source, id, links: res.links || [], suggestions };
 }
 
 function fallbackReply(lang) {
@@ -542,25 +611,18 @@ exports.handler = async function (event) {
     const ctx = await buildContext(sb);
     ctx.lang = lang;
 
-    const found = findRule(message);
-    if (found) {
-      const res = found.rule.reply(ctx);
-      return json(200, {
-        reply: res.text,
-        source: 'faq',
-        id: found.rule.id,
-        links: res.links || [],
-        suggestions: (SUGGESTIONS[found.rule.id] && SUGGESTIONS[found.rule.id][lang]) || GENERIC_SUGGESTIONS[lang]
-      });
+    const ans = answer(message, ctx);
+    if (ans) {
+      return json(200, ans);
     }
 
     const ai = await askAI(message, ctx);
     if (ai) {
-      return json(200, { reply: ai, source: 'ai', suggestions: GENERIC_SUGGESTIONS[lang] });
+      return json(200, { reply: ai + '\n\n' + FOLLOW_UP[lang], source: 'ai', suggestions: GENERIC_SUGGESTIONS[lang] });
     }
 
     return json(200, {
-      reply: fallbackReply(lang),
+      reply: fallbackReply(lang) + '\n\n' + FOLLOW_UP[lang],
       source: 'fallback',
       suggestions: GENERIC_SUGGESTIONS[lang],
       links: [link(lang === 'fr' ? 'Nous contacter' : lang === 'en' ? 'Contact us' : 'اتصل بنا', 'contact.html')]
@@ -572,4 +634,4 @@ exports.handler = async function (event) {
 };
 
 // Exposé pour les tests unitaires (jamais appelé en prod).
-exports._chat = { normalize, findRule, fallbackReply, GENERIC_SUGGESTIONS, askAI };
+exports._chat = { normalize, findRule, answer, fallbackReply, GENERIC_SUGGESTIONS, FOLLOW_UP, askAI };
