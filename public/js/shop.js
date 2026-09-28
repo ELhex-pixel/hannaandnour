@@ -288,10 +288,13 @@
 
   function setFilterControls() {
     document.querySelectorAll('.filter-option').forEach(function (opt) {
-      var val = opt.getAttribute('data-value');
+      var val = opt.getAttribute('data-value') || '';
       var group = opt.getAttribute('data-group');
       var active = false;
-      if (group === 'category') active = state.categories.indexOf(val) >= 0;
+      if (group === 'category') {
+        // "All Products" (empty value) is active when no category is selected.
+        active = val === '' ? state.categories.length === 0 : state.categories.indexOf(val) >= 0;
+      }
       if (group === 'size') active = state.sizes.indexOf(val) >= 0;
       if (group === 'occasion') active = state.occasions.indexOf(val) >= 0;
       opt.classList.toggle('active', active);
