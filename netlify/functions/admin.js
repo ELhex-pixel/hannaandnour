@@ -71,7 +71,7 @@ async function handleForgotPassword(sb, body) {
     });
   } catch (err) {
     console.error('[admin reset] email error:', err);
-    return json(502, { error: 'send_failed' });
+    return json(502, { error: 'send_failed', detail: String(err.message || err) });
   }
   return json(200, { ok: true });
 }
