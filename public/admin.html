@@ -7,6 +7,7 @@
 <title>Admin &middot; Hanna &amp; Nour</title>
 <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
 <link rel="stylesheet" href="css/styles.css">
+<script src="js/theme.js"></script>
 <style>
   html, body { margin: 0; padding: 0; background: #F8F3EC; color: #221F1C; }
   body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; font-size: 14px; }
@@ -130,6 +131,95 @@
   .toast.err { background: #b03a2e; }
   .empty { color: #9a8c75; padding: 20px 0; text-align: center; }
 
+  .theme-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid #E7DECC; background: #fff; cursor: pointer;
+    color: #6b5d4a; vertical-align: middle;
+    transition: transform .2s ease, border-color .2s ease, color .2s ease, background .2s ease;
+  }
+  .theme-toggle:hover { border-color: #B78A4A; color: #B78A4A; transform: rotate(15deg); }
+  .theme-toggle svg { width: 17px; height: 17px; }
+  .login-theme-toggle { position: fixed; top: 16px; right: 16px; z-index: 55; box-shadow: 0 4px 14px rgba(90,70,40,.18); }
+
+  /* ===================== Mode sombre ===================== */
+  html[data-theme="dark"], html[data-theme="dark"] body { background: #16130F; color: #EDE6DA; }
+
+  html[data-theme="dark"] .admin-tab { background: #201C16; border-color: #3A3327; color: #C9BEAA; }
+  html[data-theme="dark"] .admin-tab:hover { border-color: #C79B54; color: #EDE6DA; }
+  html[data-theme="dark"] .admin-tab.active { background: #C79B54; border-color: #C79B54; color: #16130F; }
+
+  html[data-theme="dark"] .theme-toggle { background: #201C16; border-color: #3A3327; color: #C9BEAA; }
+  html[data-theme="dark"] .theme-toggle:hover { border-color: #C79B54; color: #C79B54; }
+
+  html[data-theme="dark"] .stat-card { background: #201C16; border-color: #3A3327; }
+  html[data-theme="dark"] .stat-card strong { color: #C79B54; }
+  html[data-theme="dark"] .stat-card span { color: #A89A82; }
+
+  html[data-theme="dark"] .card { background: #201C16; border-color: #3A3327; }
+  html[data-theme="dark"] .card h3 { color: #EDE6DA; }
+  html[data-theme="dark"] .btn-secondary { background: #2A251E; color: #D8CDB8; }
+  html[data-theme="dark"] .btn-primary { background: #C79B54; color: #16130F; }
+  html[data-theme="dark"] .btn-primary:hover { background: #D3A75C; }
+
+  html[data-theme="dark"] th { color: #A89A82; }
+  html[data-theme="dark"] th, html[data-theme="dark"] td { border-color: #2E2820; }
+  html[data-theme="dark"] tr:hover td { background: #262119; }
+  html[data-theme="dark"] .thumb { background: #2A251E; }
+
+  html[data-theme="dark"] .badge-green { background: #22311F; color: #9FD59A; }
+  html[data-theme="dark"] .badge-red { background: #3A201C; color: #F0A59C; }
+  html[data-theme="dark"] .badge-gray { background: #2E2820; color: #C9BEAA; }
+
+  html[data-theme="dark"] .field label { color: #C9BEAA; }
+  html[data-theme="dark"] .field input, html[data-theme="dark"] .field select, html[data-theme="dark"] .field textarea {
+    background: #1A1610; color: #EDE6DA; border-color: #3E3629;
+  }
+  html[data-theme="dark"] .field input:focus, html[data-theme="dark"] .field select:focus, html[data-theme="dark"] .field textarea:focus { border-color: #C79B54; }
+  html[data-theme="dark"] .check { color: #C9BEAA; }
+  html[data-theme="dark"] input[type="checkbox"] { accent-color: #C79B54; }
+
+  html[data-theme="dark"] .editor-overlay { background: rgba(0,0,0,.66); }
+  html[data-theme="dark"] .editor { background: #201C16; color: #EDE6DA; }
+  html[data-theme="dark"] .editor-head h2 { color: #EDE6DA; }
+  html[data-theme="dark"] .editor input:not([type="checkbox"]):not([type="hidden"]),
+  html[data-theme="dark"] .editor select,
+  html[data-theme="dark"] .editor textarea {
+    background: #1A1610; color: #EDE6DA; border-color: #3E3629;
+  }
+  html[data-theme="dark"] .editor input:focus, html[data-theme="dark"] .editor select:focus, html[data-theme="dark"] .editor textarea:focus { border-color: #C79B54; }
+  html[data-theme="dark"] .variant-row input { background: #1A1610; border-color: #3E3629; color: #EDE6DA; }
+
+  html[data-theme="dark"] .gallery-item { border-color: #3A3327; background: #1A1610; }
+  html[data-theme="dark"] .color-tag { background: #2A251E; border-color: #3E3629; color: #EDE6DA; }
+  html[data-theme="dark"] .color-tag .x { color: #A89A82; }
+  html[data-theme="dark"] .color-tag .x:hover { color: #F0A59C; }
+  html[data-theme="dark"] .colors-panel { background: #201C16; border-color: #3E3629; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  html[data-theme="dark"] .colors-list label { color: #EDE6DA; }
+  html[data-theme="dark"] .colors-list label:hover { background: #2A251E; }
+  html[data-theme="dark"] .colors-add { border-color: #3E3629; }
+  html[data-theme="dark"] .colors-add input { background: #1A1610; border-color: #3E3629; color: #EDE6DA; }
+  html[data-theme="dark"] .v-color-cell input.v-color { color: #EDE6DA; }
+
+  html[data-theme="dark"] .login-box { background: #201C16; border-color: #3A3327; }
+  html[data-theme="dark"] .login-box h1 { color: #D3A75C; }
+  html[data-theme="dark"] .login-box p, html[data-theme="dark"] .login-link { color: #A89A82; }
+  html[data-theme="dark"] .login-link:hover { color: #D3A75C; }
+  html[data-theme="dark"] .login-box input, html[data-theme="dark"] .login-box select { background: #1A1610; color: #EDE6DA; border-color: #3E3629; }
+  html[data-theme="dark"] .login-box input:focus { border-color: #C79B54; }
+  html[data-theme="dark"] .pass-eye { color: #A89A82; }
+  html[data-theme="dark"] .pass-eye:hover { background: #2A251E; color: #D3A75C; }
+
+  html[data-theme="dark"] .toolbar input, html[data-theme="dark"] .toolbar select { background: #1A1610; color: #EDE6DA; }
+  html[data-theme="dark"] .empty { color: #A89A82; }
+
+  /* Lignes générées par admin.js (styles inline) */
+  html[data-theme="dark"] [style*="color:#8a7d66"] { color: #B6A98F !important; }
+  html[data-theme="dark"] [style*="color:#9a8c75"] { color: #A89A82 !important; }
+  html[data-theme="dark"] [style*="color:#5c5346"], html[data-theme="dark"] [style*="color:#5c5548"] { color: #D8CDB8 !important; }
+  html[data-theme="dark"] [style*="border:1px solid #ddd5c4"] { border-color: #3E3629 !important; }
+  html[data-theme="dark"] [style*="border-bottom:1px solid #eee"] { border-color: #3A3327 !important; }
+
   @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } .variant-row { grid-template-columns: 1fr 1fr; } }
 </style>
   <meta property="og:image" content="https://hannanour.netlify.app/images/hero.jpg">
@@ -138,6 +228,8 @@
   <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
+  <button type="button" class="theme-toggle login-theme-toggle" id="loginThemeToggle" title="Mode sombre" aria-label="Basculer le thème clair/sombre"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
+
   <!-- LOGIN -->
   <div id="loginView" class="login-box">
     <h1>Espace administrateur</h1>
@@ -182,6 +274,7 @@
     <div class="admin-header">
       <div class="admin-logo">Hanna &amp; Nour<small>Administration</small></div>
       <div>
+        <button type="button" class="theme-toggle" id="themeToggleBtn" title="Mode sombre" aria-label="Basculer le thème clair/sombre"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
         <a href="index.html" class="btn btn-secondary btn-small">Voir le site</a>
         <button class="btn btn-secondary btn-small" id="logoutBtn">D&eacute;connexion</button>
       </div>
