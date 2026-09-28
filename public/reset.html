@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+  <title>Reset password | Hanna &amp; Nour</title>
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="header" id="header">
+    <div class="header-top"><p data-i18n="announce">Free shipping on orders over $75 | New styles every week</p></div>
+    <div class="header-main">
+      <div class="container">
+        <div class="header-inner">
+          <a href="/index.html" class="logo">Hanna<span class="logo-accent">&amp;</span>Nour</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="container" style="max-width: 460px; padding: var(--spacing-3xl) 0;">
+      <div class="auth-panel" style="display: block;">
+        <form id="resetForm" class="auth-form" novalidate>
+          <h2 style="font-family: var(--font-display); font-size: 1.5rem; color: var(--color-dark); margin-bottom: var(--spacing-md);" data-i18n="resetTitle">Set a new password</h2>
+          <input type="password" class="form-input" id="resetPassword" autocomplete="new-password" placeholder="New password (6+ characters)" required minlength="6" data-i18n-placeholder="resetPassword">
+          <button type="submit" class="btn btn-primary" id="resetSubmit" data-i18n="resetCta">Update password</button>
+          <p class="auth-msg auth-msg-error" id="resetError" style="display:none;"></p>
+        </form>
+
+        <div id="resetDone" class="auth-intro" style="display:none;">
+          <p data-i18n="resetDone">Your password has been updated. You can now sign in.</p>
+          <a href="/account.html" class="btn btn-primary" style="margin-top: var(--spacing-md); display: inline-block;" data-i18n="resetToAccount">Go to account</a>
+        </div>
+
+        <div id="resetInvalid" class="auth-intro" style="display:none;">
+          <p data-i18n="resetInvalid">This reset link is invalid or has expired.</p>
+          <a href="/index.html" class="btn btn-primary" style="margin-top: var(--spacing-md); display: inline-block;" data-i18n="resetToAccount">Go to account</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/config.js"></script>
+  <script src="/js/i18n.js"></script>
+  <script src="/js/store.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/reset.js"></script>
+</body>
+</html>

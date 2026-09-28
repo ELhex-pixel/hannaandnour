@@ -168,6 +168,8 @@
     var tabSignup = document.getElementById('authTabSignup');
     var loginForm = document.getElementById('loginForm');
     var signupForm = document.getElementById('signupForm');
+    var forgotForm = document.getElementById('forgotForm');
+    var forgotToggle = document.getElementById('forgotToggle');
     var intro = document.getElementById('authIntro');
     var logoutBtn = document.getElementById('logoutBtn');
 
@@ -176,6 +178,8 @@
       if (tabSignup) tabSignup.classList.toggle('is-active', isSignup);
       if (loginForm) loginForm.style.display = isSignup ? 'none' : 'flex';
       if (signupForm) signupForm.style.display = isSignup ? 'flex' : 'none';
+      if (forgotToggle) forgotToggle.style.display = isSignup ? 'none' : '';
+      if (forgotForm) forgotForm.style.display = 'none';
       if (intro) {
         intro.removeAttribute('data-i18n');
         intro.setAttribute('data-i18n', isSignup ? 'authCreateIntro' : 'authLoginIntro');
@@ -224,6 +228,47 @@
         );
       });
     });
+
+    if (forgotToggle && forgotForm) {
+      var fEmail = document.getElementById('forgotEmail');
+      var fSubmit = document.getElementById('forgotSubmit');
+      var fMsg = document.getElementById('forgotMsg');
+      var fBack = document.getElementById('forgotBack');
+
+      function resetForgot() {
+        if (fSubmit) fSubmit.disabled = false;
+        if (fMsg) { fMsg.style.display = 'none'; fMsg.classList.remove('auth-msg-error'); }
+      }
+
+      forgotToggle.addEventListener('click', function () {
+        setAuthError('');
+        resetForgot();
+        if (loginForm) loginForm.style.display = 'none';
+        forgotForm.style.display = 'flex';
+      });
+      if (fBack) fBack.addEventListener('click', function () {
+        resetForgot();
+        forgotForm.style.display = 'none';
+        if (loginForm) loginForm.style.display = 'flex';
+      });
+      forgotForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        resetForgot();
+        if (!fEmail || !fSubmit) return;
+        setBusy(forgotForm, true);
+        window.HN_AUTH.forgotPassword(fEmail.value.trim())
+          .then(function () {
+            setBusy(forgotForm, false);
+            fEmail.value = '';
+            fSubmit.disabled = true;
+            if (fMsg) { fMsg.textContent = tr('forgotSent'); fMsg.style.display = 'block'; }
+          })
+          .catch(function () {
+            setBusy(forgotForm, false);
+            if (fMsg) { fMsg.textContent = tr('forgotError'); fMsg.classList.add('auth-msg-error'); fMsg.style.display = 'block'; }
+          });
+      });
+    }
 
     if (logoutBtn) logoutBtn.addEventListener('click', function () {
       HN_AUTH.logout().then(function () {

@@ -5,6 +5,8 @@
  *   signup   { email, password, first_name }  -> creates + auto-login the account
  *   login    { email, password }              -> session + links past orders by email
  *   refresh  { refresh_token }                -> new session pair
+ *   forgotPassword { email }                  -> sends a Supabase reset link
+ *   updatePassword (Bearer token) { password }-> sets a new password
  *   me       (Bearer token)                   -> current user
  *   orders   (Bearer token)                   -> orders linked to the account
  *   wishlist (Bearer token) GET               -> favorite slugs
@@ -99,6 +101,28 @@ exports.handler = async function (event) {
         const { data, error } = await sb.auth.refreshSession({ refresh_token: refreshToken });
         if (error || !data.session) return json(401, { error: 'invalid_refresh_token' });
         return json(200, { session: data.session, user: publicUser(data.session.user) });
+      }
+
+      case 'forgotPassword': {
+        const email = String(body.email || '').toLowerCase().trim();
+        if (!isValidEmail(email)) return json(400, { error: 'Invalid email' });
+        const base = (process.env.SITE_URL || 'https://hannanour.netlify.app').replace(/\/+$/, '');
+        const { error } = await sb.auth.resetPasswordForEmail(email, {
+          redirectTo: base + '/reset.html'
+        });
+        if (error) return json(400, { error: 'reset_send_failed' });
+        // Always succeed — never leak whether the email exists.
+        return json(200, { ok: true });
+      }
+
+      case 'updatePassword': {
+        const auth = await requireUser(sb, bearerToken(event));
+        if (!auth.ok) return json(401, { error: auth.error });
+        const password = String(body.password || '');
+        if (password.length < 6) return json(400, { error: 'Password must be at least 6 characters' });
+        const { error } = await sb.auth.admin.updateUserById(auth.user.id, { password });
+        if (error) return json(400, { error: error.message });
+        return json(200, { ok: true });
       }
 
       case 'me': {

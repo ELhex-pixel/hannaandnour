@@ -107,9 +107,17 @@
             <form id="loginForm" class="auth-form">
               <input type="email" class="form-input" id="loginEmail" autocomplete="email" placeholder="you@example.com" required data-i18n-placeholder="authEmail">
               <input type="password" class="form-input" id="loginPassword" autocomplete="current-password" placeholder="••••••••" required data-i18n-placeholder="authPassword">
-              <button type="submit" class="btn btn-primary" id="loginBtn" data-i18n="authLoginCta">Sign in</button>
-            </form>
-            <form id="signupForm" class="auth-form" style="display: none;">
+<button type="submit" class="btn btn-primary" id="loginBtn" data-i18n="authLoginCta">Sign in</button>
+             </form>
+             <button type="button" class="auth-link" id="forgotToggle" data-i18n="forgotPassword">Forgot your password?</button>
+             <form id="forgotForm" class="auth-form" style="display: none;">
+               <p class="auth-intro" id="forgotIntro" data-i18n="forgotIntro">Enter your account email and we'll send you a reset link.</p>
+               <input type="email" class="form-input" id="forgotEmail" autocomplete="email" placeholder="you@example.com" required data-i18n-placeholder="authEmail">
+               <button type="submit" class="btn btn-primary" id="forgotSubmit" data-i18n="forgotCta">Send reset link</button>
+               <p class="auth-msg" id="forgotMsg" style="display: none;" data-i18n="forgotSent">If that email exists, a reset link has been sent.</p>
+               <button type="button" class="auth-link" id="forgotBack" data-i18n="forgotBack">Back to sign in</button>
+             </form>
+             <form id="signupForm" class="auth-form" style="display: none;">
               <input type="text" class="form-input" id="signupName" autocomplete="given-name" placeholder="Amina" required data-i18n-placeholder="authFirstName">
               <input type="email" class="form-input" id="signupEmail" autocomplete="email" placeholder="you@example.com" required data-i18n-placeholder="authEmail">
               <input type="password" class="form-input" id="signupPassword" autocomplete="new-password" placeholder="••••••••" required data-i18n-placeholder="authPassword">

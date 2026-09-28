@@ -156,6 +156,37 @@
       });
   }
 
+  function forgotPassword(email) {
+    return call({ action: 'forgotPassword', email: email });
+  }
+
+  // The reset link carries a short-lived token in the URL hash; send it as the
+  // Bearer token so the /api/auth updatePassword action can resolve the user.
+  function updatePassword(token, password) {
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    return fetch(apiUrl(), {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ action: 'updatePassword', password: password })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && data.error) {
+          var e = new Error(data.error);
+          e.code = data.error;
+          throw e;
+        }
+        return data;
+      })
+      .catch(function (err) {
+        if (err && err.code) throw err;
+        var n = new Error('Network error');
+        n.code = 'network_error';
+        throw n;
+      });
+  }
+
   function logout() {
     current = null;
     removeLS(SESSION_KEY);
@@ -206,6 +237,8 @@
     call: call,
     login: login,
     signup: signup,
+    forgotPassword: forgotPassword,
+    updatePassword: updatePassword,
     logout: logout,
     boot: boot,
     ready: boot().catch(function () { return null; })

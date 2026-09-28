@@ -4496,3 +4496,25 @@ select.lang-switcher {
   font-size: 1.5rem;
   letter-spacing: 0.025em;
 }
+
+
+/* Auth : lien mot de passe oublie + messages du formulaire de recuperation */
+.auth-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: var(--spacing-sm);
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--color-emerald);
+  cursor: pointer;
+  text-decoration: underline;
+  align-self: flex-start;
+}
+.auth-link:hover { color: var(--color-dark); }
+.auth-msg {
+  font-size: 0.85rem;
+  color: var(--color-emerald);
+  margin-top: var(--spacing-sm);
+}
+.auth-msg-error { color: var(--color-burgundy); }
