@@ -110,7 +110,12 @@ exports.handler = async function (event) {
         const { error } = await sb.auth.resetPasswordForEmail(email, {
           redirectTo: base + '/reset.html'
         });
-        if (error) return json(400, { error: 'reset_send_failed' });
+        if (error) {
+          const msg = String(error.message || '');
+          const tooFast = error.status === 429 || /rate|frequency|only request this/i.test(msg);
+          if (tooFast) return json(429, { error: 'rate_limited' });
+          return json(400, { error: 'reset_send_failed' });
+        }
         // Always succeed — never leak whether the email exists.
         return json(200, { ok: true });
       }

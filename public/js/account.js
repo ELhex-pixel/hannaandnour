@@ -263,9 +263,12 @@
             fSubmit.disabled = true;
             if (fMsg) { fMsg.textContent = tr('forgotSent'); fMsg.style.display = 'block'; }
           })
-          .catch(function () {
+          .catch(function (err) {
             setBusy(forgotForm, false);
-            if (fMsg) { fMsg.textContent = tr('forgotError'); fMsg.classList.add('auth-msg-error'); fMsg.style.display = 'block'; }
+            if (!fMsg) return;
+            fMsg.classList.add('auth-msg-error');
+            fMsg.textContent = (err && err.code === 'rate_limited') ? tr('forgotRateLimit') : tr('forgotError');
+            fMsg.style.display = 'block';
           });
       });
     }
