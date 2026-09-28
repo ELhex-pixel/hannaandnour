@@ -83,6 +83,25 @@
   #galleryGrid { min-height: 36px; }
   #galleryGrid .empty { color: #8a7d66; font-size: 13px; padding: 6px 0; }
 
+  .colors-picker { position: relative; }
+  .colors-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .color-tag { display: inline-flex; align-items: center; gap: 6px; background: #F6F1E7; border: 1px solid #E2D8C5; border-radius: 20px; padding: 3px 10px 3px 6px; font-size: 13px; }
+  .color-tag .dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); flex: none; }
+  .color-tag .x { cursor: pointer; color: #9a8c75; font-weight: 700; line-height: 1; margin-left: 4px; }
+  .color-tag .x:hover { color: #b03a2e; }
+  .colors-panel { display: none; position: absolute; z-index: 30; background: #fff; border: 1px solid #E2D8C5; border-radius: 12px; box-shadow: 0 8px 24px rgba(90,70,40,.18); padding: 10px; min-width: 280px; max-height: 330px; overflow: auto; margin-top: 6px; }
+  .colors-panel.open { display: block; }
+  .colors-list label { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 8px; cursor: pointer; font-size: 13.5px; }
+  .colors-list label:hover { background: #F6F1E7; }
+  .colors-list .dot { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); flex: none; }
+  .colors-add { display: flex; gap: 6px; margin-top: 10px; border-top: 1px solid #EEE3CD; padding-top: 10px; }
+  .colors-add input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid #E2D8C5; border-radius: 8px; }
+  .v-color-cell { display: flex; align-items: center; gap: 6px; }
+  .v-color-cell .swatch { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); flex: none; }
+  .v-color-cell input.v-color { border: none; background: transparent; padding: 6px 0; width: 130px; font-size: 13px; }
+  .v-color-cell input.v-color:focus { outline: none; }
+  .v-color-cell .swatch.unknown { background: repeating-linear-gradient(45deg,#ddd,#ddd 3px,#fff 3px,#fff 6px); }
+
   .login-box { max-width: 380px; margin: 80px auto; background: #fff; border: 1px solid #E7DECC; border-radius: 18px; padding: 28px; }
   .login-box h1 { font-size: 1.3rem; margin: 0 0 4px; color: #B78A4A; font-family: 'Playfair Display', Georgia, serif; }
   .login-box p { color: #9a8c75; margin: 0 0 16px; font-size: 13px; }
@@ -524,7 +543,21 @@
           </select>
         </div>
         <div class="field"><label>Badge</label><input id="f-badge" placeholder="ex: Bestseller, Nouveau"></div>
-        <div class="field"><label>Couleurs (sÃ©parÃ©es par des virgules)</label><input id="f-colors" placeholder="Gold, Bronze, Beige"></div>
+        <div class="field">
+          <label>Couleurs</label>
+          <div class="colors-picker" id="colorsPicker">
+            <button type="button" class="btn btn-secondary btn-small" id="colorsPickerBtn">Choisir les couleurs&hellip;</button>
+            <div class="colors-tags" id="colorsTags"></div>
+            <div class="colors-panel" id="colorsPanel">
+              <div class="colors-list" id="colorsList"></div>
+              <div class="colors-add">
+                <input type="text" id="colorsAddInput" placeholder="Ajouter une couleur (ex. Bleu ciel)">
+                <button type="button" class="btn btn-secondary btn-small" id="colorsAddBtn">Ajouter</button>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="f-colors">
+        </div>
         <div class="field"><label>Tailles (virgules)</label><input id="f-sizes" placeholder="One Size, M, L"></div>
         <div class="field"><label>Fabrics</label><input id="f-fabrics" placeholder="Silk, Cotton"></div>
         <div class="field"><label>Occasions</label><input id="f-occasions" placeholder="Daily, Events"></div>
@@ -589,6 +622,7 @@
 
   <div class="toast" id="toast"></div>
   <script src="js/config.js"></script>
+  <script src="js/colors.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>

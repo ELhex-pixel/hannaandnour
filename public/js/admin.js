@@ -8,6 +8,13 @@
 
   var API = (window.HN_CONFIG && window.HN_CONFIG.API_BASE) || '/.netlify/functions';
   var TOKEN_KEY = 'hn-admin-token';
+  var COLORS = window.HN_COLORS || {
+    list: [],
+    hex: function () { return '#A67C00'; },
+    has: function () { return false; },
+    label: function (n) { return String(n == null ? '' : n); },
+    norm: function (s) { return String(s == null ? '' : s).trim().toLowerCase(); }
+  };
 
   function token() {
     try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
@@ -380,6 +387,7 @@
     document.getElementById('deleteProductBtn').style.display = p ? '' : 'none';
 
     buildVariantGrid();
+    renderColorsPicker();
     document.getElementById('productEditor').classList.add('open');
   }
 
@@ -396,6 +404,15 @@
 
   function strToList(val) {
     return val.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
+  function colorCellHtml(color) {
+    var hex = COLORS.hex(color);
+    var unknown = !COLORS.has(color);
+    return '<div class="v-color-cell">' +
+      '<span class="swatch' + (unknown ? ' unknown" title="Couleur inconnue du site' : '') + '" style="background:' + esc(hex) + ';"></span>' +
+      '<input type="text" class="v-color" value="' + esc(color) + '" readonly>' +
+      '</div>';
   }
 
   function buildVariantGrid() {
@@ -425,7 +442,7 @@
 
     var html = rows.map(function (r, i) {
       return '<div class="variant-row" data-i="' + i + '">' +
-        '<input type="text" class="v-color" value="' + esc(r.color) + '" placeholder="Couleur" ' + (r.color ? 'readonly' : '') + '>' +
+        (r.color ? colorCellHtml(r.color) : '<input type="text" class="v-color" value="" placeholder="Couleur">') +
         '<input type="text" class="v-size" value="' + esc(r.size) + '" placeholder="Taille" ' + (r.size ? 'readonly' : '') + '>' +
         '<input type="number" class="v-stock" min="0" step="1" value="' + (stockFor(r.color, r.size) === '' ? '' : stockFor(r.color, r.size)) + '" placeholder="0">' +
         '<span style="font-size:12px;color:#8a7d66;">stock</span>' +
@@ -447,6 +464,100 @@
       out.push({ color: color, size: size, stock: Math.max(0, parseInt(stockRaw, 10) || 0) });
     });
     return out;
+  }
+
+  /* ---------------- Sélecteur de couleurs ---------------- */
+
+  function normalizeColorName(s) {
+    return COLORS.norm ? COLORS.norm(s) : String(s == null ? '' : s).trim().toLowerCase();
+  }
+
+  function pickerColors() {
+    return strToList(getVal('f-colors'));
+  }
+
+  function setPickerColors(list) {
+    setVal('f-colors', list.join(', '));
+    renderColorsPicker();
+  }
+
+  function renderColorsPicker() {
+    var tagsEl = document.getElementById('colorsTags');
+    var listEl = document.getElementById('colorsList');
+    if (!tagsEl || !listEl) return;
+    var colors = pickerColors();
+    var normals = colors.map(normalizeColorName);
+
+    var tags = '';
+    colors.forEach(function (c) {
+      tags += '<span class="color-tag"><span class="dot" style="background:' + esc(COLORS.hex(c)) + ';"></span>' +
+        esc(c) + '<span class="x" data-remove="' + esc(c) + '" title="Retirer">&times;</span></span>';
+    });
+    tagsEl.innerHTML = tags || '<span style="color:#9a8c75;font-size:13px;">Aucune couleur</span>';
+
+    var checks = '';
+    (COLORS.list || []).forEach(function (e) {
+      var selected = normals.indexOf(normalizeColorName(e.fr)) >= 0;
+      checks += '<label><input type="checkbox" class="c-cb" value="' + esc(e.fr) + '"' + (selected ? ' checked' : '') + '>' +
+        '<span class="dot" style="background:' + esc(e.hex) + ';"></span> ' + esc(e.fr) + '</label>';
+    });
+    listEl.innerHTML = checks || '<p style="color:#9a8c75;font-size:13px;">Liste vide</p>';
+  }
+
+  function wireColorsPicker() {
+    var btn = document.getElementById('colorsPickerBtn');
+    var panel = document.getElementById('colorsPanel');
+    var tagsEl = document.getElementById('colorsTags');
+    var listEl = document.getElementById('colorsList');
+    var input = document.getElementById('colorsAddInput');
+    var addBtn = document.getElementById('colorsAddBtn');
+    if (!btn || !panel || !tagsEl || !listEl) return;
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      panel.classList.toggle('open');
+    });
+
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!(t && t.closest && t.closest('#colorsPicker'))) panel.classList.remove('open');
+    });
+
+    panel.addEventListener('change', function (e) {
+      var cb = e.target.closest('.c-cb');
+      if (!cb) return;
+      var colors = pickerColors();
+      var norm = normalizeColorName(cb.value);
+      var exists = colors.some(function (c) { return normalizeColorName(c) === norm; });
+      if (cb.checked && !exists) colors.push(cb.value);
+      if (!cb.checked && exists) colors = colors.filter(function (c) { return normalizeColorName(c) !== norm; });
+      setPickerColors(colors);
+    });
+
+    tagsEl.addEventListener('click', function (e) {
+      var x = e.target.closest('[data-remove]');
+      if (!x) return;
+      var norm = normalizeColorName(x.getAttribute('data-remove'));
+      setPickerColors(pickerColors().filter(function (c) { return normalizeColorName(c) !== norm; }));
+    });
+
+    function addColor() {
+      var v = (input.value || '').trim();
+      if (!v) return;
+      var norm = normalizeColorName(v);
+      var colors = pickerColors();
+      if (colors.some(function (c) { return normalizeColorName(c) === norm; })) {
+        input.value = '';
+        toast('Couleur d\u00e9j\u00e0 pr\u00e9sente', 'err');
+        return;
+      }
+      colors.push(v);
+      setPickerColors(colors);
+      input.value = '';
+      if (!COLORS.has(v)) toast('Couleur ajout\u00e9e (teinte par d\u00e9faut sur le site)', 'err');
+    }
+    if (addBtn) addBtn.addEventListener('click', addColor);
+    if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') addColor(); });
   }
 
   function collectProduct() {
@@ -567,6 +678,7 @@
     document.getElementById('newProductBtn').addEventListener('click', function () { openEditor(null); });
     document.getElementById('f-colors').addEventListener('input', buildVariantGrid);
     document.getElementById('f-sizes').addEventListener('input', buildVariantGrid);
+    wireColorsPicker();
     var galleryUrlInput = document.getElementById('galleryUrl');
     if (galleryUrlInput) galleryUrlInput.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') addGalleryUrl();

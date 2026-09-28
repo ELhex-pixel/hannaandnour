@@ -452,7 +452,11 @@
     el.classList.add('active');
 
     const label = document.getElementById('selectedColor');
-    if (label) label.textContent = name;
+    if (label) {
+      const lang = (window.HN && window.HN.lang) ? window.HN.lang() : 'fr';
+      const shown = (window.HN_COLORS && window.HN_COLORS.label) ? window.HN_COLORS.label(name, lang) : name;
+      label.textContent = shown;
+    }
   };
 
   window.selectSize = function(el, size) {
