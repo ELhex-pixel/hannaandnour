@@ -412,8 +412,13 @@
       var starsRow = document.querySelector('.reviews-average .stars');
       if (starsRow) starsRow.style.display = count ? '' : 'none';
       if (counts) setBars(counts);
-      var topCount = document.querySelector('.product-rating .rating-count');
-      if (topCount) topCount.textContent = count + ' ' + tr('reviewsLabel');
+      var ratingWrapper = document.querySelector('.product-rating');
+      if (ratingWrapper) {
+        var rwStars = ratingWrapper.querySelector('.stars');
+        if (rwStars) rwStars.textContent = count ? stars(KNOWN_RATING) : '';
+        var topCount = ratingWrapper.querySelector('.rating-count');
+        if (topCount) topCount.textContent = count + ' ' + tr('reviewsLabel');
+      }
     }
 
     fetch(HN.api('reviews') + '?product=' + encodeURIComponent(p.slug))
