@@ -79,7 +79,12 @@ exports.handler = async function (event) {
       home = await getSetting(sb, 'home', null);
     } catch (e) { /* keep default */ }
 
-    return json(200, { settings, catalog, currency, reviews, home });
+    let story = null;
+    try {
+      story = await getSetting(sb, 'story', null);
+    } catch (e) { /* keep default */ }
+
+    return json(200, { settings, catalog, currency, reviews, home, story });
   } catch (err) {
     console.error('config.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

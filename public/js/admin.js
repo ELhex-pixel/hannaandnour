@@ -222,6 +222,7 @@
         if (id === 'panel-orders') loadOrders();
         if (id === 'panel-reviews') loadReviews();
         if (id === 'panel-home') loadHome();
+        if (id === 'panel-blog') loadBlog();
         if (id === 'panel-promos') loadPromos();
         if (id === 'panel-stats') loadStats();
         if (id === 'panel-messages') loadMessages();
@@ -1212,6 +1213,177 @@
       }).join('') + '</tbody></table>';
   }
 
+  /* ---------------- Blog (posts + Notre histoire) ---------------- */
+
+  var postsAll = [];
+  var storyState = null;
+
+  function postDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleDateString('fr-FR');
+  }
+
+  function loadBlog() {
+    return Promise.all([call('listPosts'), call('getSettings')]).then(function (res) {
+      postsAll = res[0].posts || [];
+      storyState = res[1].story || null;
+      renderPosts();
+      renderStoryForm();
+    }).catch(function (e) {
+      var box = document.getElementById('postsList');
+      if (box) box.innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+      toast(e.message, 'err');
+    });
+  }
+
+  function renderPosts() {
+    var box = document.getElementById('postsList');
+    if (!box) return;
+    if (!postsAll.length) { box.innerHTML = '<p class="empty">Aucun article. Créez le premier !</p>'; return; }
+    box.innerHTML = postsAll.map(function (p) {
+      return '<div class="card" style="margin-bottom:10px; ' + (p.active === false ? 'opacity:.6;' : '') + '">' +
+        '<div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">' +
+        '<div style="display:flex; align-items:center; gap:10px;">' +
+        '<img src="' + esc(p.image || 'images/hero.jpg') + '" style="width:64px; height:44px; object-fit:cover; border-radius:6px;" alt="">' +
+        '<div><strong>' + esc(p.title) + '</strong>' +
+        '<br><small style="color:#8a7d66;">' + esc(p.category || '') + ' &mdash; ' + esc(p.author || '') + ' &mdash; ' + postDate(p.published_at) + ' &mdash; ' + (parseInt(p.read_minutes, 10) || 5) + ' min</small>' +
+        '</div></div>' +
+        '<div style="text-align:right; color:#8a7d66; font-size:12px; white-space:nowrap;">' +
+        (p.active === false ? '<span class="badge badge-red">Caché</span> ' : '<span class="badge badge-green">Publié</span> ') +
+        '<small>blog-post.html?slug=' + esc(p.slug) + '</small>' +
+        '</div></div>' +
+        '<div style="display:flex; gap:8px; margin-top:8px;">' +
+        '<button class="btn btn-secondary btn-small edit-post" data-id="' + esc(p.id) + '">Modifier</button>' +
+        '<button class="btn btn-danger btn-small del-post" data-id="' + esc(p.id) + '">Supprimer</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function renderStoryForm() {
+    var s = storyState || {};
+    var hero = s.hero || {};
+    var craft = s.craft || {};
+    setVal('s-hero-subtitle', hero.subtitle || '');
+    setVal('s-hero-title', hero.title || '');
+    setVal('s-hero-p1', hero.p1 || '');
+    setVal('s-hero-p2', hero.p2 || '');
+    setVal('s-hero-image', hero.image || '');
+    setVal('s-craft-subtitle', craft.subtitle || '');
+    setVal('s-craft-title', craft.title || '');
+    setVal('s-craft-p1', craft.p1 || '');
+    setVal('s-craft-p2', craft.p2 || '');
+    setVal('s-craft-image', craft.image || '');
+  }
+
+  var editingPost = null;
+
+  function openPostEditor(p) {
+    editingPost = p || null;
+    document.getElementById('postEditorTitle').textContent = p ? 'Modifier l\'article' : 'Nouvel article';
+    setVal('b-id', p ? p.id : '');
+    setVal('b-title', p ? p.title : '');
+    setVal('b-category', p ? p.category : '');
+    setVal('b-slug', p ? p.slug : '');
+    setVal('b-image', p ? p.image : '');
+    setVal('b-excerpt', p ? p.excerpt : '');
+    setVal('b-body', p ? p.body : '');
+    setVal('b-author', p ? p.author : '');
+    setVal('b-read', p ? (parseInt(p.read_minutes, 10) || 5) : 5);
+    setVal('b-date', p && p.published_at ? String(p.published_at).slice(0, 10) : '');
+    document.getElementById('b-active').checked = p ? p.active !== false : true;
+    document.getElementById('deletePostBtn').style.display = p ? '' : 'none';
+    document.getElementById('postEditor').classList.add('open');
+  }
+
+  function wireBlog() {
+    document.getElementById('refreshBlogBtn').addEventListener('click', loadBlog);
+    document.getElementById('newPostBtn').addEventListener('click', function () { openPostEditor(null); });
+    document.getElementById('closePostBtn').addEventListener('click', function () {
+      document.getElementById('postEditor').classList.remove('open');
+    });
+    document.getElementById('postEditor').addEventListener('click', function (e) {
+      if (e.target === this) this.classList.remove('open');
+    });
+    document.getElementById('savePostBtn').addEventListener('click', function () {
+      var title = getVal('b-title');
+      if (!title) { toast('Titre requis', 'err'); return; }
+      var btn = this;
+      btn.disabled = true;
+      call('savePost', {
+        id: editingPost ? editingPost.id : '',
+        title: title,
+        slug: getVal('b-slug'),
+        category: getVal('b-category'),
+        image: getVal('b-image'),
+        excerpt: getVal('b-excerpt'),
+        body: getVal('b-body'),
+        author: getVal('b-author'),
+        read_minutes: parseInt(getVal('b-read'), 10) || 5,
+        published_at: getVal('b-date'),
+        active: document.getElementById('b-active').checked
+      })
+        .then(function () {
+          toast('Article enregistré', 'ok');
+          document.getElementById('postEditor').classList.remove('open');
+          return loadBlog();
+        })
+        .catch(function (e2) { toast(e2.message, 'err'); })
+        .finally(function () { btn.disabled = false; });
+    });
+    document.getElementById('deletePostBtn').addEventListener('click', function () {
+      if (!editingPost || !editingPost.id) return;
+      if (!confirm('Supprimer cet article ?')) return;
+      call('deletePost', { id: editingPost.id })
+        .then(function () {
+          toast('Article supprimé', 'ok');
+          document.getElementById('postEditor').classList.remove('open');
+          return loadBlog();
+        })
+        .catch(function (e) { toast(e.message, 'err'); });
+    });
+    document.getElementById('saveStoryBtn').addEventListener('click', function () {
+      var story = {
+        hero: {
+          subtitle: getVal('s-hero-subtitle'),
+          title: getVal('s-hero-title'),
+          p1: getVal('s-hero-p1'),
+          p2: getVal('s-hero-p2'),
+          image: getVal('s-hero-image') || 'images/hero.jpg'
+        },
+        craft: {
+          subtitle: getVal('s-craft-subtitle'),
+          title: getVal('s-craft-title'),
+          p1: getVal('s-craft-p1'),
+          p2: getVal('s-craft-p2'),
+          image: getVal('s-craft-image') || 'images/craftsmanship.jpg'
+        }
+      };
+      call('saveSettings', { story: story })
+        .then(function () {
+          toast('Notre histoire enregistrée', 'ok');
+          storyState = story;
+        })
+        .catch(function (e2) { toast(e2.message, 'err'); });
+    });
+    document.addEventListener('click', function (e) {
+      var edit = e.target.closest('.edit-post');
+      if (edit) {
+        var id = edit.getAttribute('data-id');
+        var found = postsAll.filter(function (p) { return p.id === id; })[0];
+        if (found) openPostEditor(found);
+        return;
+      }
+      var del = e.target.closest('.del-post');
+      if (del) {
+        if (!confirm('Supprimer cet article ?')) return;
+        call('deletePost', { id: del.getAttribute('data-id') })
+          .then(function () { toast('Article supprimé', 'ok'); return loadBlog(); })
+          .catch(function (err) { toast(err.message, 'err'); });
+      }
+    });
+  }
+
   var editingPromo = null;
 
   function openPromoEditor(p) {
@@ -1395,6 +1567,7 @@
   wireReviews();
   wireDemoReviews();
   wireHome();
+  wireBlog();
   wirePromos();
   wireStats();
   wireMessages();

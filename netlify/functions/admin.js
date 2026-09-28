@@ -432,7 +432,8 @@ case 'getSettings': {
         const currency = await getSetting(sb, 'currency', null) || { code: 'usd', symbol: '$' };
         const reviews = (await getSetting(sb, 'reviews', null)) || { show_demo: false };
         const home = await getSetting(sb, 'home', null);
-        return json(200, { settings, catalog, currency, reviews, home });
+        const story = await getSetting(sb, 'story', null);
+        return json(200, { settings, catalog, currency, reviews, home, story });
       }
 
       case 'saveSettings': {
@@ -475,7 +476,12 @@ case 'getSettings': {
         if (body.home && typeof body.home === 'object') {
           home = await saveSetting(sb, 'home', body.home);
         }
-        return json(200, { ok: true, settings: value, catalog, currency, reviews, home });
+
+        let story;
+        if (body.story && typeof body.story === 'object') {
+          story = await saveSetting(sb, 'story', body.story);
+        }
+        return json(200, { ok: true, settings: value, catalog, currency, reviews, home, story });
       }
 
 case 'deleteMessage': {
@@ -591,6 +597,63 @@ case 'deleteMessage': {
         const id = String(body.id || '').trim();
         if (!id) return json(400, { error: 'Missing id' });
         const { error } = await sb.from('demo_reviews').delete().eq('id', id);
+        if (error) throw error;
+        return json(200, { ok: true });
+      }
+
+      case 'listPosts': {
+        const { data, error } = await sb
+          .from('blog_posts')
+          .select('*')
+          .order('published_at', { ascending: false });
+        if (error) throw error;
+        return json(200, { posts: data || [] });
+      }
+
+      case 'savePost': {
+        const title = String(body.title || '').trim();
+        if (!title) return json(400, { error: 'Titre manquant' });
+        let slug = String(body.slug || '').trim().toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        if (!slug) {
+          slug = title.toLowerCase().normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '').slice(0, 60);
+        }
+        if (!slug) return json(400, { error: 'Slug invalide' });
+        const fields = {
+          slug,
+          title: title.slice(0, 180),
+          category: String(body.category || '').trim().slice(0, 60),
+          image: String(body.image || '').trim().slice(0, 500),
+          excerpt: String(body.excerpt || '').trim().slice(0, 400),
+          body: String(body.body || '').trim().slice(0, 20000),
+          author: String(body.author || '').trim().slice(0, 80),
+          read_minutes: Math.max(1, Math.min(120, parseInt(body.read_minutes, 10) || 5)),
+          active: body.active !== false,
+          updated_at: new Date().toISOString()
+        };
+        if (body.published_at) {
+          const d = new Date(body.published_at);
+          if (!isNaN(d.getTime())) fields.published_at = d.toISOString();
+        }
+        const id = String(body.id || '').trim();
+        if (id) {
+          const { data, error } = await sb.from('blog_posts').update(fields).eq('id', id).select().maybeSingle();
+          if (error) throw error;
+          return json(200, { ok: true, post: data });
+        }
+        const { data: ins, error: insError } = await sb.from('blog_posts').insert(fields).select().maybeSingle();
+        if (insError) throw insError;
+        return json(200, { ok: true, post: ins });
+      }
+
+      case 'deletePost': {
+        const id = String(body.id || '').trim();
+        if (!id) return json(400, { error: 'Missing id' });
+        const { error } = await sb.from('blog_posts').delete().eq('id', id);
         if (error) throw error;
         return json(200, { ok: true });
       }

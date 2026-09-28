@@ -168,6 +168,7 @@
       <button class="admin-tab" data-tab="orders">Commandes</button>
       <button class="admin-tab" data-tab="reviews">Avis</button>
       <button class="admin-tab" data-tab="home">Accueil</button>
+      <button class="admin-tab" data-tab="blog">Blog</button>
       <button class="admin-tab" data-tab="promos">Promos</button>
       <button class="admin-tab" data-tab="stats">Stats</button>
       <button class="admin-tab" data-tab="messages">Messages</button>
@@ -260,6 +261,45 @@
         <p style="font-size:12px;color:#8a7d66;margin-bottom:8px;">Cartes collections (titre, image, lien, ordre). Cliquez sur une carte pour la modifier.</p>
         <div id="homeColList"></div>
         <button class="btn btn-secondary" id="homeColAddBtn">+ Ajouter une carte collection</button>
+      </div>
+    </div>
+
+    <!-- BLOG (articles + Notre histoire) -->
+    <div class="admin-panel" id="panel-blog">
+      <div class="toolbar">
+        <span style="color:#8a7d66;">Blog &amp; page &laquo; Notre histoire &raquo;</span>
+        <button class="btn btn-secondary" id="refreshBlogBtn">Actualiser</button>
+      </div>
+
+      <div class="card">
+        <h3>Articles de blog</h3>
+        <p style="font-size:12px;color:#8a7d66;margin-bottom:8px;">Les articles apparaissent sur blog.html et chaque carte ouvre la page article compl&egrave;te.</p>
+        <div id="postsList"><p class="empty">Chargement...</p></div>
+        <button class="btn btn-primary" id="newPostBtn" style="margin-top:10px;">+ Nouvel article</button>
+      </div>
+
+      <div class="card" style="margin-top:18px;">
+        <h3>Notre histoire</h3>
+        <p style="font-size:12px;color:#8a7d66;margin-bottom:10px;">Texte et images du hero et de la section &laquo; Confectionn&eacute; avec intention &raquo; de la page about.html.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+          <div>
+            <h4 style="margin-bottom:6px;">Hero</h4>
+            <div class="field"><label>Sous-titre</label><input id="s-hero-subtitle"></div>
+            <div class="field"><label>Titre</label><input id="s-hero-title"></div>
+            <div class="field"><label>Paragraphe 1</label><textarea id="s-hero-p1"></textarea></div>
+            <div class="field"><label>Paragraphe 2</label><textarea id="s-hero-p2"></textarea></div>
+            <div class="field"><label>Image (URL)</label><input id="s-hero-image"></div>
+          </div>
+          <div>
+            <h4 style="margin-bottom:6px;">Confectionn&eacute; avec intention</h4>
+            <div class="field"><label>Sous-titre</label><input id="s-craft-subtitle"></div>
+            <div class="field"><label>Titre</label><input id="s-craft-title"></div>
+            <div class="field"><label>Paragraphe 1</label><textarea id="s-craft-p1"></textarea></div>
+            <div class="field"><label>Paragraphe 2</label><textarea id="s-craft-p2"></textarea></div>
+            <div class="field"><label>Image (URL)</label><input id="s-craft-image"></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="saveStoryBtn" style="margin-top:8px;">Enregistrer notre histoire</button>
       </div>
     </div>
 
@@ -392,6 +432,37 @@
       <div class="editor-actions">
         <button class="btn btn-danger" id="deleteCollectionBtn" style="display:none;">Supprimer</button>
         <button class="btn btn-primary" id="saveCollectionBtn">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOG POST EDITOR -->
+  <div class="editor-overlay" id="postEditor">
+    <div class="editor" style="max-width:640px;">
+      <div class="editor-head">
+        <h2 id="postEditorTitle">Article de blog</h2>
+        <button class="btn btn-secondary btn-small" id="closePostBtn">Fermer</button>
+      </div>
+      <input type="hidden" id="b-id">
+      <div class="form-grid">
+        <div class="field full"><label>Titre *</label><input id="b-title"></div>
+        <div class="field"><label>Cat&eacute;gorie</label><input id="b-category" placeholder="Conseils de style"></div>
+        <div class="field"><label>Slug (lien)</label><input id="b-slug" placeholder="auto si vide"></div>
+        <div class="field full"><label>Image (URL)</label><input id="b-image" placeholder="images/hero.jpg"></div>
+        <div class="field full"><label>Extrait (affich&eacute; sur la carte)</label><textarea id="b-excerpt"></textarea></div>
+        <div class="field full"><label>Texte de l&rsquo;article (paragraphes s&eacute;par&eacute;s par une ligne vide)</label><textarea id="b-body" style="min-height:160px;"></textarea></div>
+        <div class="field"><label>Auteur</label><input id="b-author"></div>
+        <div class="field"><label>Lecture (min)</label><input type="number" min="1" id="b-read"></div>
+        <div class="field full">
+          <div style="display:flex; gap:14px; align-items:center; margin-top:4px; flex-wrap:wrap;">
+            <div class="field" style="margin-right:8px;"><label>Date de publication</label><input type="date" id="b-date"></div>
+            <label class="check" style="margin-top:20px;"><input type="checkbox" id="b-active" checked> Publi&eacute;</label>
+          </div>
+        </div>
+      </div>
+      <div class="editor-actions">
+        <button class="btn btn-danger" id="deletePostBtn" style="display:none;">Supprimer</button>
+        <button class="btn btn-primary" id="savePostBtn">Enregistrer</button>
       </div>
     </div>
   </div>

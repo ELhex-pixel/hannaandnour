@@ -305,6 +305,7 @@
       read3: 'Jan 25, 2026 \u2022 3 min read',
       read8: 'Jan 08, 2026 \u2022 8 min read',
       loadMoreArticles: 'Load More Articles',
+      minRead: 'min read',
 
       /* Cart */
       cartTitle: 'Shopping Cart',
@@ -797,6 +798,7 @@
       read3: '25 janv. 2026 \u2022 3 min de lecture',
       read8: '08 janv. 2026 \u2022 8 min de lecture',
       loadMoreArticles: 'Charger plus d\'articles',
+      minRead: 'min de lecture',
       cartTitle: 'Panier',
       crumbCart: 'Panier',
       cartVariantSilk: 'Couleur : Or | Taille : unique',
@@ -1282,6 +1284,7 @@
       read3: '25 يناير 2026، 3 دقائق',
       read8: '8 يناير 2026، 8 دقائق',
       loadMoreArticles: 'عرض المزيد من المقالات',
+      minRead: 'دقائق قراءة',
       cartTitle: 'سلة التسوق',
       crumbCart: 'السلة',
       cartVariantSilk: 'اللون: ذهبي | المقاس: مقاس واحد',

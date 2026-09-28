@@ -2282,6 +2282,67 @@ body[data-menu-open="true"] .nav-mobile {
 }
 
 /* ============================================
+   Blog Post (article) Page
+   ============================================ */
+.blog-post-header {
+  max-width: 780px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.blog-post-header .blog-card-category {
+  display: inline-block;
+}
+
+.blog-post-title {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  line-height: 1.2;
+  margin: var(--spacing-sm) 0 0;
+}
+
+.blog-post-meta {
+  color: var(--color-gray);
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: var(--spacing-md);
+  font-size: 0.875rem;
+}
+
+.blog-post-figure {
+  max-width: 980px;
+  margin: var(--spacing-2xl) auto 0;
+}
+
+.blog-post-figure img {
+  width: 100%;
+  border-radius: 16px;
+  max-height: 520px;
+  object-fit: cover;
+}
+
+.blog-post-body {
+  max-width: 780px;
+  margin: 0 auto;
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--color-dark);
+}
+
+.blog-post-body p {
+  margin: 0 0 1.2em;
+}
+
+.blog-post-fallback {
+  max-width: 780px;
+  margin: 0 auto;
+  text-align: center;
+  color: var(--color-gray);
+  padding: var(--spacing-3xl) 0;
+}
+
+/* ============================================
    Cart Page
    ============================================ */
 .cart-layout {
