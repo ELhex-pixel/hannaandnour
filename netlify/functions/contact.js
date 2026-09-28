@@ -55,7 +55,7 @@ exports.handler = async function (event) {
     // real recipient.
     try {
       await sendEmail({
-        to: process.env.CONTACT_EMAIL || 'care@hannanour.com',
+        to: process.env.CONTACT_EMAIL || 'care@hannaandnour.com',
         subject: 'Nouveau message du site : ' + (subject || '(sans objet)'),
         html:
           '<p><strong>De :</strong> ' +

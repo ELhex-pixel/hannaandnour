@@ -64,7 +64,7 @@ async function handler() {
     if (error) throw error;
 
     const reminded = (await getSetting(sb, 'shipping_reminders', {})) || {};
-    const adminTo = process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'care@hannanour.com';
+    const adminTo = process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'yassinaous92@gmail.com';
     let sent = 0;
     for (const order of data || []) {
       if (order.delivery_type === 'pickup') continue;

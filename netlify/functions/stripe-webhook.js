@@ -260,7 +260,7 @@ async function markPaid(session, sb) {
           console.log('Order email skipped (RESEND_API_KEY not set) for ' + toEmail);
         }
       }
-      const adminTo = process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'care@hannanour.com';
+      const adminTo = process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'yassinaous92@gmail.com';
       if (adminTo && adminTo !== toEmail) {
         const alertResult = await sendEmail({
           to: adminTo,

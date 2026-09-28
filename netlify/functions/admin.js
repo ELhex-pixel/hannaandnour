@@ -37,7 +37,7 @@ const MAX_RESET_ATTEMPTS = 5;
 // Reception address for the admin reset code. Falls back to the owner's
 // Resend-verified inbox until a brand address is configured later.
 function adminResetEmail() {
-  return process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'care@hannanour.com';
+  return process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'yassinaous92@gmail.com';
 }
 
 function otpHash(otp) {
