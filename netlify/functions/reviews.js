@@ -1,6 +1,7 @@
 /**
  * Reviews
  * GET  /api/reviews?product=<slug>   -> approved reviews + product aggregate
+ * GET  /api/reviews?demo=true        -> active admin-managed demo reviews
  * POST /api/reviews                   -> submit a review (stored as pending)
  *   Body: { product: "<slug>", rating (1-5), body }
  *
@@ -23,7 +24,27 @@ exports.handler = async function (event) {
     const sb = getSupabase();
 
     if (event.httpMethod === 'GET') {
-      const slug = (event.queryStringParameters || {}).product;
+      const q = event.queryStringParameters || {};
+
+      if (q.demo === 'true') {
+        // Admin-managed demo reviews (global, used by the product page and the
+        // home testimonials section when the illustration is enabled).
+        try {
+          const { data: demo, error: demoError } = await sb
+            .from('demo_reviews')
+            .select('id, author_name, rating, body, location, verified')
+            .eq('active', true)
+            .order('sort_order', { ascending: true })
+            .order('created_at', { ascending: true });
+          if (demoError) throw demoError;
+          return json(200, { reviews: demo || [] });
+        } catch (demoErr) {
+          // Migration not applied yet: treat as "no demo reviews" instead of 500.
+          return json(200, { reviews: [] });
+        }
+      }
+
+      const slug = q.product;
       if (!slug) return json(400, { error: 'Missing product slug' });
 
       const { data: product, error: prodError } = await sb

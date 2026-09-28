@@ -431,7 +431,8 @@ case 'getSettings': {
         const catalog = await loadCatalog(sb);
         const currency = await getSetting(sb, 'currency', null) || { code: 'usd', symbol: '$' };
         const reviews = (await getSetting(sb, 'reviews', null)) || { show_demo: false };
-        return json(200, { settings, catalog, currency, reviews });
+        const home = await getSetting(sb, 'home', null);
+        return json(200, { settings, catalog, currency, reviews, home });
       }
 
       case 'saveSettings': {
@@ -469,7 +470,12 @@ case 'getSettings': {
         if (body.reviews && typeof body.reviews === 'object') {
           reviews = await saveSetting(sb, 'reviews', { show_demo: !!body.reviews.show_demo });
         }
-        return json(200, { ok: true, settings: value, catalog, currency, reviews });
+
+        let home;
+        if (body.home && typeof body.home === 'object') {
+          home = await saveSetting(sb, 'home', body.home);
+        }
+        return json(200, { ok: true, settings: value, catalog, currency, reviews, home });
       }
 
 case 'deleteMessage': {
@@ -535,6 +541,57 @@ case 'deleteMessage': {
         if (!r) return json(404, { error: 'Review not found' });
         await sb.from('reviews').delete().eq('id', id);
         await recomputeRating(sb, r.product_id);
+        return json(200, { ok: true });
+      }
+
+      case 'listDemoReviews': {
+        try {
+          const { data, error } = await sb
+            .from('demo_reviews')
+            .select('*')
+            .order('sort_order', { ascending: true })
+            .order('created_at', { ascending: true });
+          if (error) throw error;
+          return json(200, { reviews: data || [] });
+        } catch (err) {
+          return json(200, { reviews: [], note: 'Table demo_reviews indisponible' });
+        }
+      }
+
+      case 'saveDemoReview': {
+        const author = String(body.author_name || '').trim();
+        const rating = parseInt(body.rating, 10);
+        if (!author) return json(400, { error: 'Nom manquant' });
+        if (!(rating >= 1 && rating <= 5)) return json(400, { error: 'Note invalide (1-5)' });
+        const fields = {
+          author_name: author.slice(0, 60),
+          rating,
+          body: String(body.body || '').trim().slice(0, 1000),
+          location: String(body.location || '').trim().slice(0, 120),
+          verified: !!body.verified,
+          active: body.active !== false,
+          sort_order: Math.max(0, parseInt(body.sort_order, 10) || 0),
+          updated_at: new Date().toISOString()
+        };
+        const id = String(body.id || '').trim();
+        let saved;
+        if (id) {
+          const { data, error } = await sb.from('demo_reviews').update(fields).eq('id', id).select().maybeSingle();
+          if (error) throw error;
+          saved = data;
+        } else {
+          const { data, error } = await sb.from('demo_reviews').insert(fields).select().maybeSingle();
+          if (error) throw error;
+          saved = data;
+        }
+        return json(200, { ok: true, review: saved });
+      }
+
+      case 'deleteDemoReview': {
+        const id = String(body.id || '').trim();
+        if (!id) return json(400, { error: 'Missing id' });
+        const { error } = await sb.from('demo_reviews').delete().eq('id', id);
+        if (error) throw error;
         return json(200, { ok: true });
       }
 

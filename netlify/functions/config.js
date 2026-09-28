@@ -50,15 +50,36 @@ exports.handler = async function (event) {
       }
     } catch (e) { /* keep default */ }
 
-    let reviews = { show_demo: false };
+    let reviews = { show_demo: false, demo: { count: 0, sum: 0 } };
     try {
       const rv = await getSetting(sb, 'reviews', null);
       if (rv && typeof rv === 'object' && rv !== null) {
-        reviews = Object.assign({ show_demo: false }, rv);
+        reviews = Object.assign({ show_demo: false, demo: { count: 0, sum: 0 } }, rv);
+        if (!reviews.demo || typeof reviews.demo !== 'object') reviews.demo = { count: 0, sum: 0 };
       }
     } catch (e) { /* keep default */ }
 
-    return json(200, { settings, catalog, currency, reviews });
+    // Active demo reviews summary (used by the product cards when the
+    // illustration is ON so their count/stars match the product page).
+    try {
+      const { data: demo, error: demoError } = await sb
+        .from('demo_reviews')
+        .select('rating')
+        .eq('active', true);
+      if (!demoError) {
+        const list = demo || [];
+        let sum = 0;
+        list.forEach((r) => { sum += parseInt(r.rating, 10) || 0; });
+        reviews.demo = { count: list.length, sum };
+      }
+    } catch (e) { /* migration not applied yet: demo stays 0 */ }
+
+    let home = null;
+    try {
+      home = await getSetting(sb, 'home', null);
+    } catch (e) { /* keep default */ }
+
+    return json(200, { settings, catalog, currency, reviews, home });
   } catch (err) {
     console.error('config.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

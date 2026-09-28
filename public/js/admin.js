@@ -221,6 +221,7 @@
         if (id === 'panel-products') loadProducts();
         if (id === 'panel-orders') loadOrders();
         if (id === 'panel-reviews') loadReviews();
+        if (id === 'panel-home') loadHome();
         if (id === 'panel-promos') loadPromos();
         if (id === 'panel-stats') loadStats();
         if (id === 'panel-messages') loadMessages();
@@ -835,6 +836,7 @@
         if (cb && res[1] && res[1].reviews) {
           cb.checked = !!res[1].reviews.show_demo;
         }
+        return loadDemoReviews();
       })
       .catch(function (e) {
         document.getElementById('reviewsList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
@@ -888,6 +890,285 @@
         call('deleteReview', { id: del.getAttribute('data-id') })
           .then(function () { toast('Avis supprimé', 'ok'); return loadReviews(); })
           .catch(function (err) { toast(err.message, 'err'); });
+      }
+    });
+  }
+
+  /* ---------------- Demo reviews (admin-managed) ---------------- */
+
+  var demoAll = [];
+
+  function loadDemoReviews() {
+    return call('listDemoReviews').then(function (res) {
+      demoAll = res.reviews || [];
+      var box = document.getElementById('demoReviewsList');
+      if (!box) return;
+      if (!demoAll.length) { box.innerHTML = '<p class="empty">Aucun avis de d\u00e9monstration.</p>'; return; }
+      box.innerHTML = demoAll.map(function (r) {
+        var isActive = r.active !== false;
+        return '<div class="card" style="margin-bottom:10px; ' + (isActive ? '' : 'opacity:.6;') + '">' +
+          '<div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">' +
+          '<div><strong>' + esc(r.author_name) + '</strong> <span style="color:#b8860b;">' + stars(r.rating) + '</span> ' +
+          '<span style="color:#8a7d66;">' + r.rating + '/5</span>' +
+          (r.location ? ' <small style="color:#8a7d66;">&mdash; ' + esc(r.location) + '</small>' : '') + '</div>' +
+          '<div style="text-align:right; color:#8a7d66; font-size:12px;">Pos. ' + (parseInt(r.sort_order, 10) || 0) + '<br>' +
+          (isActive ? '<span class="badge badge-green">Affich&eacute;</span>' : '<span class="badge badge-red">Masqu&eacute;</span>') + ' ' +
+          (r.verified ? '<span class="badge badge-green">V&eacute;rifi&eacute;</span>' : '') +
+          '</div></div>' +
+          '<p style="margin:8px 0 0; white-space:pre-wrap; color:#5c5346; font-size:13px;">' + esc(r.body) + '</p>' +
+          '<div style="margin-top:8px;">' +
+          '<button class="btn btn-secondary btn-small demo-edit" data-id="' + esc(r.id) + '">Modifier</button> ' +
+          '<button class="btn btn-danger btn-small demo-del" data-id="' + esc(r.id) + '">Supprimer</button>' +
+          '</div></div>';
+      }).join('');
+    }).catch(function (e) {
+      var box = document.getElementById('demoReviewsList');
+      if (box) box.innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+    });
+  }
+
+  var editingDemo = null;
+
+  function openDemoReviewEditor(r) {
+    editingDemo = r || {};
+    document.getElementById('demoReviewEditorTitle').textContent = r ? 'Modifier l\'avis d\u00e9mo' : 'Nouvel avis d\u00e9mo';
+    setVal('d-id', r ? r.id : '');
+    setVal('d-author', r ? r.author_name : '');
+    document.getElementById('d-rating').value = r ? String(r.rating) : '5';
+    setVal('d-body', r ? r.body : '');
+    setVal('d-location', r ? r.location : '');
+    setVal('d-sort', r ? (parseInt(r.sort_order, 10) || 0) : 0);
+    document.getElementById('d-verified').checked = r ? r.verified !== false : true;
+    document.getElementById('d-active').checked = r ? r.active !== false : true;
+    document.getElementById('deleteDemoReviewBtn').style.display = r ? '' : 'none';
+    document.getElementById('demoReviewEditor').classList.add('open');
+  }
+
+  function wireDemoReviews() {
+    document.getElementById('newDemoReviewBtn').addEventListener('click', function () { openDemoReviewEditor(null); });
+    document.getElementById('closeDemoReviewBtn').addEventListener('click', function () {
+      document.getElementById('demoReviewEditor').classList.remove('open');
+    });
+    document.getElementById('demoReviewEditor').addEventListener('click', function (e) {
+      if (e.target === this) this.classList.remove('open');
+    });
+    document.getElementById('saveDemoReviewBtn').addEventListener('click', function () {
+      var author = getVal('d-author');
+      var rating = parseInt(getVal('d-rating'), 10);
+      var body = getVal('d-body');
+      if (!author) { toast('Auteur requis', 'err'); return; }
+      if (!(rating >= 1 && rating <= 5)) { toast('Note invalide', 'err'); return; }
+      if (!body) { toast('Texte requis', 'err'); return; }
+      var btn = this;
+      btn.disabled = true;
+      call('saveDemoReview', {
+        id: editingDemo && editingDemo.id ? editingDemo.id : '',
+        author_name: author,
+        rating: rating,
+        body: body,
+        location: getVal('d-location'),
+        verified: document.getElementById('d-verified').checked,
+        active: document.getElementById('d-active').checked,
+        sort_order: parseInt(getVal('d-sort'), 10) || 0
+      })
+        .then(function () {
+          toast('Avis d\u00e9mo enregistr\u00e9', 'ok');
+          document.getElementById('demoReviewEditor').classList.remove('open');
+          return loadDemoReviews();
+        })
+        .catch(function (e2) { toast(e2.message, 'err'); })
+        .finally(function () { btn.disabled = false; });
+    });
+    document.getElementById('deleteDemoReviewBtn').addEventListener('click', function () {
+      if (!editingDemo || !editingDemo.id) return;
+      if (!confirm('Supprimer cet avis d\u00e9mo ?')) return;
+      call('deleteDemoReview', { id: editingDemo.id })
+        .then(function () {
+          toast('Avis d\u00e9mo supprim\u00e9', 'ok');
+          document.getElementById('demoReviewEditor').classList.remove('open');
+          return loadDemoReviews();
+        })
+        .catch(function (e) { toast(e.message, 'err'); });
+    });
+    document.addEventListener('click', function (e) {
+      var edit = e.target.closest('.demo-edit');
+      if (edit) {
+        var id = edit.getAttribute('data-id');
+        var found = demoAll.filter(function (r) { return r.id === id; })[0];
+        if (found) openDemoReviewEditor(found);
+        return;
+      }
+      var del = e.target.closest('.demo-del');
+      if (del) {
+        if (!confirm('Supprimer cet avis d\u00e9mo ?')) return;
+        call('deleteDemoReview', { id: del.getAttribute('data-id') })
+          .then(function () { toast('Avis d\u00e9mo supprim\u00e9', 'ok'); return loadDemoReviews(); })
+          .catch(function (err) { toast(err.message, 'err'); });
+      }
+    });
+  }
+
+  /* ---------------- Home (accueil curation) ---------------- */
+
+  var homeState = { bestsellers: [], bestsellers_count: 4, collections: [] };
+
+  function prodLabel(slug) {
+    for (var i = 0; i < productsAll.length; i++) {
+      if (productsAll[i].slug === slug) return productsAll[i].name_en || slug;
+    }
+    return slug;
+  }
+
+  function moveItem(arr, i, d) {
+    var j = i + d;
+    if (i < 0 || j < 0 || j >= arr.length) return;
+    var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+
+  function loadHome() {
+    return Promise.all([call('getSettings'), call('listProducts')]).then(function (res) {
+      productsAll = res[1].products || [];
+      var h = res[0].home || null;
+      homeState.bestsellers = (h && Array.isArray(h.bestsellers) ? h.bestsellers : []).slice();
+      homeState.bestsellers_count = Math.max(1, parseInt(h && h.bestsellers_count, 10) || 4);
+      homeState.collections = (h && Array.isArray(h.collections) ? h.collections : []).slice();
+      renderHome();
+    }).catch(function (e) {
+      toast(e.message, 'err');
+    });
+  }
+
+  function renderHome() {
+    setVal('homeBestCount', homeState.bestsellers_count);
+    var bb = document.getElementById('homeBestList');
+    if (bb) {
+      if (!homeState.bestsellers.length) {
+        bb.innerHTML = '<p class="empty">Aucun produit s\u00e9lectionn\u00e9. Ajoutez-en ci-dessous.</p>';
+      } else {
+        bb.innerHTML = homeState.bestsellers.map(function (slug, i) {
+          return '<div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #eee;">' +
+            '<span style="min-width:22px; color:#8a7d66;">' + (i + 1) + '.</span>' +
+            '<span style="flex:1;"><strong>' + esc(prodLabel(slug)) + '</strong> <small style="color:#8a7d66;">' + esc(slug) + '</small></span>' +
+            '<button class="btn btn-secondary btn-small b-up" data-idx="' + i + '" ' + (i === 0 ? 'disabled' : '') + '>Monter</button>' +
+            '<button class="btn btn-secondary btn-small b-down" data-idx="' + i + '" ' + (i === homeState.bestsellers.length - 1 ? 'disabled' : '') + '>Descendre</button>' +
+            '<button class="btn btn-danger btn-small b-del" data-idx="' + i + '">Retirer</button>' +
+            '</div>';
+        }).join('');
+      }
+    }
+    var sel = document.getElementById('homeBestAdd');
+    if (sel) {
+      var opts = productsAll.filter(function (p) { return homeState.bestsellers.indexOf(p.slug) < 0; });
+      if (!opts.length) {
+        sel.innerHTML = '<option value="">(tous les produits sont s\u00e9lectionn\u00e9s)</option>';
+      } else {
+        sel.innerHTML = '<option value="">&mdash; Choisir un produit &mdash;</option>' + opts.map(function (p) {
+          return '<option value="' + esc(p.slug) + '">' + esc(p.name_en || p.slug) + '</option>';
+        }).join('');
+      }
+    }
+    var cl = document.getElementById('homeColList');
+    if (cl) {
+      if (!homeState.collections.length) {
+        cl.innerHTML = '<p class="empty">Aucune carte collection.</p>';
+      } else {
+        cl.innerHTML = homeState.collections.map(function (c, i) {
+          return '<div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #eee;">' +
+            '<img src="' + esc(c.image || 'images/hero.jpg') + '" style="width:46px; height:34px; object-fit:cover; border-radius:6px;" alt="">' +
+            '<span style="flex:1;"><strong>' + esc(c.title || '') + '</strong>' +
+            (c.subtitle ? ' <small style="color:#8a7d66;">&mdash; ' + esc(c.subtitle) + '</small>' : '') +
+            '<br><small style="color:#8a7d66;">' + esc(c.url || '') + '</small></span>' +
+            '<button class="btn btn-secondary btn-small col-up" data-idx="' + i + '" ' + (i === 0 ? 'disabled' : '') + '>Monter</button>' +
+            '<button class="btn btn-secondary btn-small col-down" data-idx="' + i + '" ' + (i === homeState.collections.length - 1 ? 'disabled' : '') + '>Descendre</button>' +
+            '<button class="btn btn-secondary btn-small col-edit" data-idx="' + i + '">Modifier</button>' +
+            '<button class="btn btn-danger btn-small col-del" data-idx="' + i + '">Supprimer</button>' +
+            '</div>';
+        }).join('');
+      }
+    }
+  }
+
+  var editingColIdx = -1;
+
+  function openCollectionEditor(idx) {
+    editingColIdx = idx;
+    var c = idx >= 0 && homeState.collections[idx] ? homeState.collections[idx] : { title: '', subtitle: '', image: 'images/hero.jpg', url: 'collections.html' };
+    setVal('c-index', idx);
+    setVal('c-title', c.title || '');
+    setVal('c-subtitle', c.subtitle || '');
+    setVal('c-image', c.image || '');
+    setVal('c-url', c.url || '');
+    document.getElementById('deleteCollectionBtn').style.display = idx >= 0 ? '' : 'none';
+    document.getElementById('collectionEditor').classList.add('open');
+  }
+
+  function saveCollection() {
+    var c = {
+      title: getVal('c-title'),
+      subtitle: getVal('c-subtitle'),
+      image: getVal('c-image') || 'images/hero.jpg',
+      url: getVal('c-url') || 'collections.html'
+    };
+    if (!c.title) { toast('Titre requis', 'err'); return; }
+    if (editingColIdx >= 0) homeState.collections[editingColIdx] = c;
+    else homeState.collections.push(c);
+    document.getElementById('collectionEditor').classList.remove('open');
+    renderHome();
+  }
+
+  function wireHome() {
+    document.getElementById('refreshHomeBtn').addEventListener('click', loadHome);
+    document.getElementById('saveHomeBtn').addEventListener('click', function () {
+      var n = Math.max(1, Math.min(12, parseInt(getVal('homeBestCount'), 10) || 4));
+      homeState.bestsellers_count = n;
+      call('saveSettings', { home: { bestsellers: homeState.bestsellers, bestsellers_count: n, collections: homeState.collections } })
+        .then(function () { toast('Accueil enregistr\u00e9', 'ok'); })
+        .catch(function (e2) { toast(e2.message, 'err'); });
+    });
+    document.getElementById('homeBestAddBtn').addEventListener('click', function () {
+      var slug = document.getElementById('homeBestAdd').value;
+      if (!slug) { toast('Choisissez un produit', 'err'); return; }
+      if (homeState.bestsellers.indexOf(slug) >= 0) return;
+      homeState.bestsellers.push(slug);
+      renderHome();
+    });
+    document.getElementById('homeColAddBtn').addEventListener('click', function () { openCollectionEditor(-1); });
+    document.getElementById('closeCollectionBtn').addEventListener('click', function () {
+      document.getElementById('collectionEditor').classList.remove('open');
+    });
+    document.getElementById('collectionEditor').addEventListener('click', function (e) {
+      if (e.target === this) this.classList.remove('open');
+    });
+    document.getElementById('saveCollectionBtn').addEventListener('click', saveCollection);
+    document.getElementById('deleteCollectionBtn').addEventListener('click', function () {
+      if (editingColIdx < 0) return;
+      if (!confirm('Supprimer cette carte collection ?')) return;
+      homeState.collections.splice(editingColIdx, 1);
+      document.getElementById('collectionEditor').classList.remove('open');
+      renderHome();
+    });
+    document.addEventListener('click', function (e) {
+      var bup = e.target.closest('.b-up');
+      if (bup) { moveItem(homeState.bestsellers, parseInt(bup.getAttribute('data-idx'), 10), -1); renderHome(); return; }
+      var bdown = e.target.closest('.b-down');
+      if (bdown) { moveItem(homeState.bestsellers, parseInt(bdown.getAttribute('data-idx'), 10), 1); renderHome(); return; }
+      var bdel = e.target.closest('.b-del');
+      if (bdel) {
+        homeState.bestsellers.splice(parseInt(bdel.getAttribute('data-idx'), 10), 1);
+        renderHome();
+        return;
+      }
+      var cup = e.target.closest('.col-up');
+      if (cup) { moveItem(homeState.collections, parseInt(cup.getAttribute('data-idx'), 10), -1); renderHome(); return; }
+      var cdown = e.target.closest('.col-down');
+      if (cdown) { moveItem(homeState.collections, parseInt(cdown.getAttribute('data-idx'), 10), 1); renderHome(); return; }
+      var cedit = e.target.closest('.col-edit');
+      if (cedit) { openCollectionEditor(parseInt(cedit.getAttribute('data-idx'), 10)); return; }
+      var cdel = e.target.closest('.col-del');
+      if (cdel) {
+        if (!confirm('Supprimer cette carte collection ?')) return;
+        homeState.collections.splice(parseInt(cdel.getAttribute('data-idx'), 10), 1);
+        renderHome();
       }
     });
   }
@@ -1104,6 +1385,8 @@
   wireEditor();
   wireOrders();
   wireReviews();
+  wireDemoReviews();
+  wireHome();
   wirePromos();
   wireStats();
   wireMessages();

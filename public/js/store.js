@@ -62,6 +62,8 @@
   var CONFIG_CACHE_KEY = 'hn-config';
   var CONFIG_DATA = {};
   var REVIEW_DEMO = false;
+  var DEMO_COUNT = 3;
+  var DEMO_SUM = 15;
   var configPromise = null;
 
   function money(cents) {
@@ -113,6 +115,10 @@
     try {
       CONFIG_DATA = (cfg && cfg.settings) || {};
       REVIEW_DEMO = !!(cfg && cfg.reviews && cfg.reviews.show_demo);
+      if (cfg && cfg.reviews && cfg.reviews.demo && typeof cfg.reviews.demo === 'object') {
+        DEMO_COUNT = parseInt(cfg.reviews.demo.count, 10) || 0;
+        DEMO_SUM = parseInt(cfg.reviews.demo.sum, 10) || 0;
+      }
       if (window.I18n && typeof window.I18n.setShipThreshold === 'function' &&
           cfg.settings && typeof cfg.settings.free_threshold_cents === 'number') {
         window.I18n.setShipThreshold(cfg.settings.free_threshold_cents);
@@ -339,9 +345,9 @@
     if (real > 0) {
       var realRating = parseFloat(p && p.approved_rating) || 0;
       rating = realRating || parseFloat(p && p.rating) || 0;
-      if (REVIEW_DEMO) {
-        count = real + 3;
-        rating = (realRating * real + 15) / count;
+      if (REVIEW_DEMO && DEMO_COUNT > 0) {
+        count = real + DEMO_COUNT;
+        rating = (realRating * real + DEMO_SUM) / count;
       } else {
         count = real;
       }

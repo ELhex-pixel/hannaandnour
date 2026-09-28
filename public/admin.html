@@ -167,6 +167,7 @@
       <button class="admin-tab active" data-tab="products">Produits</button>
       <button class="admin-tab" data-tab="orders">Commandes</button>
       <button class="admin-tab" data-tab="reviews">Avis</button>
+      <button class="admin-tab" data-tab="home">Accueil</button>
       <button class="admin-tab" data-tab="promos">Promos</button>
       <button class="admin-tab" data-tab="stats">Stats</button>
       <button class="admin-tab" data-tab="messages">Messages</button>
@@ -223,6 +224,43 @@
         <div style="font-size:12px; color:#8a7d66; margin-top:4px;">Quand cette case est d&eacute;coch&eacute;e, seuls les vrais avis approuv&eacute;s sont affich&eacute;s sur le site (et la section t&eacute;moignages de l&apos;accueil est masqu&eacute;e). La sauvegarde est automatique.</div>
       </div>
       <div class="card" id="reviewsList"><p class="empty">Chargement...</p></div>
+
+      <div class="card" style="margin-top:18px;">
+        <h3 style="margin-bottom:8px;">Avis de d&eacute;monstration</h3>
+        <p style="font-size:12px;color:#8a7d66;">Avis g&eacute;r&eacute;s ici : affich&eacute;s sur toutes les pages produit quand l&rsquo;illustration est active et dans les t&eacute;moignages de l&rsquo;accueil. La colonne Pos. d&eacute;finit l&rsquo;ordre d&rsquo;affichage.</p>
+        <div id="demoReviewsList"><p class="empty">Chargement...</p></div>
+        <button class="btn btn-primary" id="newDemoReviewBtn" style="margin-top:10px;">+ Nouvel avis d&eacute;mo</button>
+      </div>
+    </div>
+
+    <!-- HOME (page d'accueil curation) -->
+    <div class="admin-panel" id="panel-home">
+      <div class="toolbar">
+        <span style="color:#8a7d66;">Contenu de la page d&rsquo;accueil (sauvegard&eacute; automatiquement ? Non : bouton Enregistrer)</span>
+        <button class="btn btn-secondary" id="refreshHomeBtn">Actualiser</button>
+        <button class="btn btn-primary" id="saveHomeBtn">Enregistrer l&rsquo;accueil</button>
+      </div>
+
+      <div class="card">
+        <h3>Meilleures ventes / Les plus aim&eacute;s</h3>
+        <p style="font-size:12px;color:#8a7d66;margin-bottom:8px;">Produits de la grille &laquo; Meilleures ventes &raquo;, dans l&rsquo;ordre choisi (tirant vers le haut = premier).</p>
+        <div class="field" style="max-width:220px;">
+          <label>Nombre de produits affich&eacute;s</label>
+          <input type="number" id="homeBestCount" min="1" max="12" value="4" style="padding:8px;border:1px solid #ddd5c4;border-radius:8px;width:100%;">
+        </div>
+        <div id="homeBestList" style="margin:12px 0 0;"></div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <select id="homeBestAdd" style="padding:8px;border:1px solid #ddd5c4;border-radius:8px; flex:1;"></select>
+          <button class="btn btn-secondary" id="homeBestAddBtn">+ Ajouter</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>S&eacute;lectionn&eacute; pour vous / Achetez par collection</h3>
+        <p style="font-size:12px;color:#8a7d66;margin-bottom:8px;">Cartes collections (titre, image, lien, ordre). Cliquez sur une carte pour la modifier.</p>
+        <div id="homeColList"></div>
+        <button class="btn btn-secondary" id="homeColAddBtn">+ Ajouter une carte collection</button>
+      </div>
     </div>
 
     <!-- PROMOS -->
@@ -299,6 +337,61 @@
       <div class="editor-actions">
         <button class="btn btn-danger" id="deletePromoBtn" style="display:none;">Supprimer</button>
         <button class="btn btn-primary" id="savePromoBtn">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMO REVIEW EDITOR -->
+  <div class="editor-overlay" id="demoReviewEditor">
+    <div class="editor" style="max-width:560px;">
+      <div class="editor-head">
+        <h2 id="demoReviewEditorTitle">Avis de d&eacute;monstration</h2>
+        <button class="btn btn-secondary btn-small" id="closeDemoReviewBtn">Fermer</button>
+      </div>
+      <input type="hidden" id="d-id">
+      <div class="form-grid">
+        <div class="field"><label>Auteur *</label><input id="d-author"></div>
+        <div class="field">
+          <label>Note (1-5) *</label>
+          <select id="d-rating" style="width:100%;">
+            <option value="5">5 - Excellent</option><option value="4">4 - Tr&egrave;s bien</option>
+            <option value="3">3 - Bien</option><option value="2">2 - Moyen</option><option value="1">1 - M&eacute;diocre</option>
+          </select>
+        </div>
+        <div class="field full"><label>Texte de l&rsquo;avis *</label><textarea id="d-body"></textarea></div>
+        <div class="field"><label>Lieu / ville</label><input id="d-location" placeholder="Paris, France"></div>
+        <div class="field"><label>Position (ordre d&rsquo;affichage)</label><input type="number" min="0" id="d-sort"></div>
+        <div class="field full">
+          <div style="display:flex; gap:14px; align-items:center; margin-top:4px;">
+            <label class="check"><input type="checkbox" id="d-verified" checked> Achat v&eacute;rifi&eacute;</label>
+            <label class="check"><input type="checkbox" id="d-active" checked> Affich&eacute;</label>
+          </div>
+        </div>
+      </div>
+      <div class="editor-actions">
+        <button class="btn btn-danger" id="deleteDemoReviewBtn" style="display:none;">Supprimer</button>
+        <button class="btn btn-primary" id="saveDemoReviewBtn">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLLECTION CARD EDITOR -->
+  <div class="editor-overlay" id="collectionEditor">
+    <div class="editor" style="max-width:520px;">
+      <div class="editor-head">
+        <h2>Carte collection</h2>
+        <button class="btn btn-secondary btn-small" id="closeCollectionBtn">Fermer</button>
+      </div>
+      <input type="hidden" id="c-index">
+      <div class="form-grid">
+        <div class="field full"><label>Titre *</label><input id="c-title" placeholder="Tenues de pri&egrave;re"></div>
+        <div class="field full"><label>Sous-titre</label><input id="c-subtitle" placeholder="Confort et s&eacute;r&eacute;nit&eacute; au quotidien"></div>
+        <div class="field full"><label>Image (URL)</label><input id="c-image" placeholder="images/collection-prayer.jpg"></div>
+        <div class="field full"><label>Lien</label><input id="c-url" placeholder="collections.html"></div>
+      </div>
+      <div class="editor-actions">
+        <button class="btn btn-danger" id="deleteCollectionBtn" style="display:none;">Supprimer</button>
+        <button class="btn btn-primary" id="saveCollectionBtn">Enregistrer</button>
       </div>
     </div>
   </div>

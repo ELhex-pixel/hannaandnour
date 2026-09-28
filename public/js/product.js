@@ -382,7 +382,7 @@
     var totalEl = document.querySelector('.reviews-total');
 
     var demoBox = document.getElementById('demoReviews');
-    if (demoBox) demoBox.style.display = DEMO_ON ? '' : 'none';
+    if (demoBox) demoBox.style.display = 'none';
 
     if (!list) return;
 
@@ -443,34 +443,81 @@
       return sum;
     }
 
-    fetch(HN.api('reviews') + '?product=' + encodeURIComponent(p.slug))
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        var reviews = data.reviews || [];
-        if (DEMO_ON) {
-          var html = '';
-          reviews.forEach(function (r) { html += reviewCardHtml(r); });
-          list.innerHTML = html;
-          var counts = [3, 0, 0, 0, 0];
-          var sum = 15 + sumReviews(reviews, counts);
-          var total = 3 + reviews.length;
-          setBars(counts);
-          setSummary((sum / total).toFixed(1), total, counts);
-          setCount(total);
-        } else if (reviews.length) {
-          var html = '';
-          reviews.forEach(function (r) { html += reviewCardHtml(r); });
-          list.innerHTML = html;
-          var counts = [0, 0, 0, 0, 0];
-          var sum = sumReviews(reviews, counts);
-          setBars(counts);
-          setSummary((sum / reviews.length).toFixed(1), reviews.length, counts);
-          setCount(reviews.length);
-        } else {
-          list.innerHTML = '';
-          setSummary('0', 0, [0, 0, 0, 0, 0]);
-          setCount(0);
-        }
+    function demoCardHtml(r) {
+      var badge = r.verified ? '<span class="review-verified">' + tr('verifiedBadge') + '</span>' : '';
+      return '<div class="review-card">' +
+        '<div class="review-header"><div class="review-author">' +
+        '<div class="review-avatar">' + esc((r.author_name || '?').charAt(0).toUpperCase()) + '</div>' +
+        '<div><p class="review-name">' + esc(r.author_name) + '</p>' +
+        '<p class="review-date">' + (badge ? badge + ' &bull; ' : '') + esc(r.location || '') + '</p></div></div>' +
+        '<span class="stars">' + stars(r.rating) + '</span></div>' +
+        '<p class="review-text">' + esc(r.body) + '</p></div>';
+    }
+
+    function fetchDemo() {
+      return fetch(HN.api('reviews') + '?demo=true')
+        .then(function (res) { return res.json(); })
+        .then(function (data) { return data.reviews || []; })
+        .catch(function () { return null; });
+    }
+
+    var demoPromise = DEMO_ON ? fetchDemo() : Promise.resolve([]);
+
+    demoPromise
+      .then(function (demo) {
+        return fetch(HN.api('reviews') + '?product=' + encodeURIComponent(p.slug))
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            var reviews = data.reviews || [];
+            var html = '';
+            reviews.forEach(function (r) { html += reviewCardHtml(r); });
+            list.innerHTML = html;
+
+            var counts = [0, 0, 0, 0, 0];
+            var sum = 0;
+
+            if (!DEMO_ON) {
+              if (reviews.length) {
+                sum = sumReviews(reviews, counts);
+                setBars(counts);
+                setSummary((sum / reviews.length).toFixed(1), reviews.length, counts);
+                setCount(reviews.length);
+              } else {
+                list.innerHTML = '';
+                setSummary('0', 0, counts);
+                setCount(0);
+              }
+              return;
+            }
+
+            // Illustration ON: combine admin demo reviews with real ones.
+            var demoTotal = 0;
+            if (demo === null) {
+              // Demo fetch failed: keep the static #demoReviews markup (3 x 5*).
+              if (demoBox) demoBox.style.display = '';
+              demoTotal = 3;
+              sum = 15;
+            } else if (demo.length) {
+              var dh = '';
+              demo.forEach(function (r) { dh += demoCardHtml(r); });
+              if (demoBox) { demoBox.innerHTML = dh; demoBox.style.display = ''; }
+              demoTotal = demo.length;
+              demo.forEach(function (r) { sumReviews([r], counts); });
+            } else {
+              // Admin has no active demo review: hide the box, real reviews only.
+              if (demoBox) demoBox.style.display = 'none';
+            }
+            sum += sumReviews(reviews, counts);
+            var total = demoTotal + reviews.length;
+            if (!total) {
+              setSummary('0', 0, counts);
+              setCount(0);
+            } else {
+              setBars(counts);
+              setSummary((sum / total).toFixed(1), total, counts);
+              setCount(total);
+            }
+          });
       })
       .catch(function () {
         if (DEMO_ON) {
