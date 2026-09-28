@@ -40,7 +40,7 @@
       '<span>' + esc(p.author || '') + '</span>' +
       '</div>' +
       '<span>' + fmtDate(p.published_at) + ' &bull; ' + (parseInt(p.read_minutes, 10) || 5) + ' ' +
-      window.I18n && window.I18n.t ? window.I18n.t('minRead') : 'min' +
+      (window.I18n && window.I18n.t ? window.I18n.t('minRead') : 'min') +
       '</span>' +
       '</div></div></article>';
   }
