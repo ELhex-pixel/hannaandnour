@@ -288,7 +288,13 @@
             <div class="field"><label>Titre</label><input id="s-hero-title"></div>
             <div class="field"><label>Paragraphe 1</label><textarea id="s-hero-p1"></textarea></div>
             <div class="field"><label>Paragraphe 2</label><textarea id="s-hero-p2"></textarea></div>
-            <div class="field"><label>Image (URL)</label><input id="s-hero-image"></div>
+            <div class="field"><label>Image (URL)</label><input id="s-hero-image">
+              <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                <button class="btn btn-secondary btn-small" id="uploadHeroBtn">Uploader une image</button>
+                <input type="file" id="fileHero" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                <img id="previewHero" alt="aper&ccedil;u" style="width:44px;height:44px;object-fit:cover;border-radius:8px;display:none;">
+              </div>
+            </div>
           </div>
           <div>
             <h4 style="margin-bottom:6px;">Confectionn&eacute; avec intention</h4>
@@ -296,7 +302,13 @@
             <div class="field"><label>Titre</label><input id="s-craft-title"></div>
             <div class="field"><label>Paragraphe 1</label><textarea id="s-craft-p1"></textarea></div>
             <div class="field"><label>Paragraphe 2</label><textarea id="s-craft-p2"></textarea></div>
-            <div class="field"><label>Image (URL)</label><input id="s-craft-image"></div>
+            <div class="field"><label>Image (URL)</label><input id="s-craft-image">
+              <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                <button class="btn btn-secondary btn-small" id="uploadCraftBtn">Uploader une image</button>
+                <input type="file" id="fileCraft" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                <img id="previewCraft" alt="aper&ccedil;u" style="width:44px;height:44px;object-fit:cover;border-radius:8px;display:none;">
+              </div>
+            </div>
           </div>
         </div>
         <button class="btn btn-primary" id="saveStoryBtn" style="margin-top:8px;">Enregistrer notre histoire</button>
@@ -426,7 +438,13 @@
       <div class="form-grid">
         <div class="field full"><label>Titre *</label><input id="c-title" placeholder="Tenues de pri&egrave;re"></div>
         <div class="field full"><label>Sous-titre</label><input id="c-subtitle" placeholder="Confort et s&eacute;r&eacute;nit&eacute; au quotidien"></div>
-        <div class="field full"><label>Image (URL)</label><input id="c-image" placeholder="images/collection-prayer.jpg"></div>
+        <div class="field full"><label>Image (URL)</label><input id="c-image" placeholder="images/collection-prayer.jpg">
+          <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+            <button class="btn btn-secondary btn-small" id="uploadCollBtn">Uploader une image</button>
+            <input type="file" id="fileColl" accept="image/jpeg,image/png,image/webp" style="display:none;">
+            <img id="previewColl" alt="aper&ccedil;u" style="width:44px;height:44px;object-fit:cover;border-radius:8px;display:none;">
+          </div>
+        </div>
         <div class="field full"><label>Lien</label><input id="c-url" placeholder="collections.html"></div>
       </div>
       <div class="editor-actions">
@@ -448,7 +466,13 @@
         <div class="field full"><label>Titre *</label><input id="b-title"></div>
         <div class="field"><label>Cat&eacute;gorie</label><input id="b-category" placeholder="Conseils de style"></div>
         <div class="field"><label>Slug (lien)</label><input id="b-slug" placeholder="auto si vide"></div>
-        <div class="field full"><label>Image (URL)</label><input id="b-image" placeholder="images/hero.jpg"></div>
+        <div class="field full"><label>Image (URL)</label><input id="b-image" placeholder="images/hero.jpg">
+          <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+            <button class="btn btn-secondary btn-small" id="uploadPostBtn">Uploader une image</button>
+            <input type="file" id="filePost" accept="image/jpeg,image/png,image/webp" style="display:none;">
+            <img id="previewPost" alt="aper&ccedil;u" style="width:44px;height:44px;object-fit:cover;border-radius:8px;display:none;">
+          </div>
+        </div>
         <div class="field full"><label>Extrait (affich&eacute; sur la carte)</label><textarea id="b-excerpt"></textarea></div>
         <div class="field full"><label>Texte de l&rsquo;article (paragraphes s&eacute;par&eacute;s par une ligne vide)</label><textarea id="b-body" style="min-height:160px;"></textarea></div>
         <div class="field"><label>Auteur</label><input id="b-author"></div>

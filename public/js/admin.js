@@ -328,7 +328,11 @@
   }
 
   function setVal(id, v) {
-    document.getElementById(id).value = (v == null ? '' : v);
+    var el = document.getElementById(id);
+    el.value = (v == null ? '' : v);
+    var ev = document.createEvent('Event');
+    ev.initEvent('input', true, true);
+    el.dispatchEvent(ev);
   }
   function getVal(id) {
     return document.getElementById(id).value.trim();
@@ -474,9 +478,10 @@
   }
 
   function wireUploads() {
-    function bind(btnId, inputId, onUrl) {
+    function bind(btnId, inputId, onUrl, label) {
       var btn = document.getElementById(btnId);
       var input = document.getElementById(inputId);
+      label = label || (btnId.indexOf('Gallery') >= 0 ? 'Ajouter au galerie' : 'Uploader une photo');
       btn.addEventListener('click', function () { input.click(); });
       input.addEventListener('change', function () {
         var file = input.files && input.files[0];
@@ -491,17 +496,36 @@
           })
             .then(function (res) { onUrl(res.url); toast('Image upload\u00e9e', 'ok'); })
             .catch(function (e) { toast(e.message, 'err'); })
-            .finally(function () { btn.disabled = false; btn.textContent = btnId.indexOf('Gallery') >= 0 ? 'Ajouter au galerie' : 'Uploader une photo'; });
+            .finally(function () { btn.disabled = false; btn.textContent = label; });
         };
         reader.readAsDataURL(file);
         input.value = '';
       });
+    }
+    function wirePreview(inputId, imgId) {
+      var input = document.getElementById(inputId);
+      var img = document.getElementById(imgId);
+      if (!input || !img) return;
+      (function show() {
+        var v = (input.value || '').trim();
+        if (v) { img.src = v; img.style.display = ''; } else { img.style.display = 'none'; }
+      })();
+      input.addEventListener('input', show);
+      input.addEventListener('change', show);
     }
     bind('uploadMainBtn', 'fileMain', function (url) { setVal('f-image', url); });
     bind('uploadGalleryBtn', 'fileGallery', function (url) {
       var cur = getVal('f-gallery');
       setVal('f-gallery', cur ? cur + '\n' + url : url);
     });
+    bind('uploadPostBtn', 'filePost', function (url) { setVal('b-image', url); }, 'Uploader une image');
+    bind('uploadHeroBtn', 'fileHero', function (url) { setVal('s-hero-image', url); }, 'Uploader une image');
+    bind('uploadCraftBtn', 'fileCraft', function (url) { setVal('s-craft-image', url); }, 'Uploader une image');
+    bind('uploadCollBtn', 'fileColl', function (url) { setVal('c-image', url); }, 'Uploader une image');
+    wirePreview('b-image', 'previewPost');
+    wirePreview('s-hero-image', 'previewHero');
+    wirePreview('s-craft-image', 'previewCraft');
+    wirePreview('c-image', 'previewColl');
   }
 
   /* ---------------- Orders ---------------- */
