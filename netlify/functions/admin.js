@@ -510,6 +510,50 @@ if (body.shipping_status !== undefined) {
           }
         }
 
+        // Envoie un email d'invitation à noter les produits quand la commande
+        // est marquée livrée (best-effort). Gardes : commande payée, email réel
+        // et compte lié (le formulaire d'avis de la page produit exige un client
+        // connecté). review_email_sent_at rend l'envoi idempotent (claim-first).
+        if (update.shipping_status === 'delivered') {
+          try {
+            const { data: ord, error: oErr2 } = await sb
+              .from('orders')
+              .select('*, order_items(product_name, product_slug, quantity, variant)')
+              .eq('id', body.id)
+              .single();
+            if (!oErr2 && ord && ord.email && ord.user_id && ord.status === 'paid') {
+              const claimed = await sb
+                .from('orders')
+                .update({ review_email_sent_at: new Date().toISOString() })
+                .eq('id', ord.id)
+                .is('review_email_sent_at', null)
+                .select('id');
+              if (claimed.error) throw claimed.error;
+              if (claimed.data && claimed.data.length) {
+                const items = (ord.order_items || []).filter((it) => it.product_slug);
+                const links = items.map((it) => {
+                  const url = siteUrl + '/product.html?slug=' + encodeURIComponent(it.product_slug);
+                  return '<li style="margin:0 0 8px 0;"><a href="' + url + '" style="display:inline-block;background:#8a2c2c;color:#fff;text-decoration:none;border-radius:6px;padding:8px 14px;font-size:13px;">Donner mon avis sur ' + esc(it.product_name || 'ce produit') + '</a></li>';
+                }).join('');
+                const html =
+                  '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
+                  'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande est livr\u00e9e, merci !</h2>' +
+                  '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(ord.customer_name) + ', votre commande <strong>' + esc(ord.order_number) + '</strong> est arriv\u00e9e. Votre avis aide d\u2019autres clientes \u00e0 choisir : notez vos articles en quelques \u00e9toiles et quelques mots.</p>' +
+                  '<ul style="list-style:none;padding:0;margin:12px 0;">' + links + '</ul>' +
+                  '<p style="font-size:14px;color:#221f1a;">Vous pouvez aussi retrouver vos commandes sur la page <a href="' + siteUrl + '/account.html" style="color:#7d9b76;">Mon compte</a>.</p>' +
+                  '<p style="font-size:12px;color:#8a7d66;">Merci de votre confiance.</p></div></div>';
+                await sendEmail({
+                  to: ord.email,
+                  subject: 'Votre avis compte \u2014 commande ' + ord.order_number + ' (Hanna & Nour)',
+                  html
+                });
+              }
+            }
+          } catch (mailErr) {
+            console.error('Review invitation email failed:', mailErr.message);
+          }
+        }
+
         return json(200, { ok: true, update });
       }
 
