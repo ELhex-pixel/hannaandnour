@@ -20,9 +20,11 @@ function esc(s) {
 
 function buildHtml(order, link) {
   return '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
-    'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre panier sera retir&eacute; sous 48 h</h2>' +
-    '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ', votre commande ' + esc(order.order_number) +
-    ' chez Hanna &amp; Nour est toujours en attente de paiement. C\u2019est votre dernier rappel : sans r\u00e8glement, le panier sera retir\u00e9 automatiquement dans 48 heures.</p>' +
+    'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Rappel : votre commande est en attente de r\u00e8glement</h2>' +
+    '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ',</p>' +
+    '<p style="font-size:14px;color:#221f1a;">Votre commande ' + esc(order.order_number) + ' chez Hanna &amp; Nour est toujours en attente de paiement. ' +
+    'Si vous l\u2019avez d\u00e9j\u00e0 r\u00e9gl\u00e9e, ignorez ce message.</p>' +
+    '<p style="font-size:14px;color:#221f1a;">Sinon, vous pouvez la finaliser quand vous le souhaitez :</p>' +
     '<table style="margin:18px 0;" role="presentation" width="100%"><tr><td align="center">' +
     '<a href="' + link + '" style="background:#221f1a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;display:inline-block;">Finaliser ma commande</a>' +
     '</td></tr></table>' +
@@ -64,7 +66,7 @@ async function send24hEmails(sb) {
 
       await sendEmail({
         to: order.email,
-        subject: 'Votre commande ' + order.order_number + ' attend \u2014 Hanna & Nour',
+        subject: 'Rappel : votre commande ' + order.order_number + ' est en attente \u2014 Hanna & Nour',
         html: buildHtml(order, link)
       });
       sent++;
