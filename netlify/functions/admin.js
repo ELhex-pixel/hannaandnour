@@ -1038,8 +1038,9 @@ case 'deleteMessage': {
       }
 
       case 'exportOrdersCsv': {
-        // Sauvegarde AVANT effacement : CSV complet des commandes (une ligne
-        // par article, montants en décimales dans la devise de la commande).
+        // Sauvegarde AVANT effacement : CSV bien organisé pour Excel (FR/EN).
+        // 1 ligne = 1 commande ; séparateur « ; » ; décimales « , » ; BOM UTF-8
+        // ajouté côté client. Colonne « Articles » : détail complet des lignes.
         const { data: orders, error } = await sb
           .from('orders')
           .select('id, order_number, created_at, paid_at, status, email, customer_name, phone, address1, city, state, postal_code, country, currency, subtotal_cents, shipping_cents, tax_cents, discount_cents, total_cents, shipping_status, delivery_type, pickup_point, order_items(product_name, variant, quantity, unit_price_cents)')
@@ -1048,24 +1049,38 @@ case 'deleteMessage': {
         if (error) throw error;
         const cell = (v) => {
           const s = v == null ? '' : String(v);
-          return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+          return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
         };
-        const money = (c) => ((parseInt(c, 10) || 0) / 100).toFixed(2);
-        const header = ['order_number', 'date_creation', 'payee_le', 'statut', 'client', 'email', 'telephone', 'adresse', 'ville', 'pays', 'devise', 'sous_total', 'livraison', 'taxe', 'remise', 'total', 'expedition', 'type_livraison', 'point_retrait', 'article', 'variante', 'quantite', 'prix_unitaire', 'total_ligne'].join(',');
+        const money = (c) => ((parseInt(c, 10) || 0) / 100).toFixed(2).replace('.', ',');
+        const sym = (o) => (o.currency === 'eur' ? '\u20AC' : o.currency === 'usd' ? '$' : (o.currency || '').toUpperCase());
+        const STATUS = { pending: 'En attente', paid: 'Pay\u00e9e', abandoned: 'Abandonn\u00e9e', refunded: 'Rembours\u00e9e', cancelled: 'Annul\u00e9e', payment_failed: 'Paiement \u00e9chou\u00e9' };
+        const SHIP = { new: '\u00c0 exp\u00e9dier', shipped: 'Exp\u00e9di\u00e9e', delivered: 'Livr\u00e9e' };
+        const TYPE = { home: 'Domicile', pickup: 'Retrait' };
+        const header = ['N\u00b0 commande', 'Date cr\u00e9ation', 'Pay\u00e9e le', 'Statut', 'Client', 'Email', 'T\u00e9l\u00e9phone', 'Adresse', 'Ville', 'Code postal', 'Pays', 'Devise', 'Sous-total', 'Livraison', 'Taxe', 'Remise', 'Total', 'Exp\u00e9dition', 'Type livraison', 'Point retrait', 'Articles'].join(';');
         const rows = [];
         for (const o of orders || []) {
-          const base = [o.order_number, o.created_at, o.paid_at, o.status, o.customer_name, o.email, o.phone, o.address1, o.city, o.country, o.currency, money(o.subtotal_cents), money(o.shipping_cents), money(o.tax_cents), money(o.discount_cents), money(o.total_cents), o.shipping_status, o.delivery_type, o.pickup_point];
           const items = o.order_items || [];
-          if (!items.length) {
-            rows.push([...base, '', '', '', '', ''].map(cell).join(','));
-          } else {
-            for (const it of items) {
-              rows.push([...base, it.product_name, it.variant, it.quantity, money(it.unit_price_cents), money((it.unit_price_cents || 0) * (it.quantity || 0))].map(cell).join(','));
-            }
-          }
+          const detail = items.map((it) => {
+            const label = !it.variant ? (it.product_name || '') : (it.product_name || '') + ' (' + it.variant + ')';
+            return (label || 'Article') + ' x' + it.quantity + ' = ' + money((it.unit_price_cents || 0) * (it.quantity || 0)) + ' ' + sym(o);
+          }).join(' ; ');
+          rows.push([
+            o.order_number, o.created_at, o.paid_at, STATUS[o.status] || o.status, o.customer_name, o.email, o.phone,
+            o.address1, o.city, o.postal_code, o.country, o.currency,
+            money(o.subtotal_cents), money(o.shipping_cents), money(o.tax_cents), money(o.discount_cents),
+            money(o.total_cents), SHIP[o.shipping_status] || o.shipping_status, TYPE[o.delivery_type] || o.delivery_type, o.pickup_point, detail
+          ].map(cell).join(';'));
         }
+        const orderCount = (orders || []).length;
+        const grandTotal = (orders || []).reduce((s, o) => s + (parseInt(o.total_cents, 10) || 0), 0);
+        const footer = [];
+        for (let i = 0; i < 21; i++) footer.push('');
+        footer[0] = 'TOTAL';
+        footer[1] = orderCount + ' commande(s)';
+        footer[16] = money(grandTotal);
+        rows.push(footer.map(cell).join(';'));
         const stamp = new Date().toISOString().slice(0, 10);
-        return json(200, { ok: true, filename: 'commandes-hanna-nour-' + stamp + '.csv', csv: header + '\n' + rows.join('\n') });
+        return json(200, { ok: true, filename: 'commandes-hanna-nour-' + stamp + '.csv', csv: header + '\n' + rows.join('\n') + '\n' });
       }
 
       case 'resetAll': {
