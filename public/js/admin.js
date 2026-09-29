@@ -1278,23 +1278,39 @@
         '.label { width: 60mm; border: 1px dashed #ccc; border-radius: 2mm; padding: 3mm; text-align: center; page-break-inside: avoid; }' +
         '.label .nm { font-weight: bold; font-size: 11px; margin-bottom: 1mm; }' +
         '.label .vt { color: #666; font-size: 10px; margin-bottom: 2mm; }' +
-        '.label svg { max-width: 100%; height: auto; }' +
+        '.label svg { max-width: 100%; height: auto; min-height: 10mm; }' +
+        '.label .cd { font-family: "Courier New", monospace; font-size: 12px; letter-spacing: 1px; margin-top: 1mm; }' +
         '@media print { .label { border-color: #aaa; } }';
       var items = labels.map(function (l) {
         return '<div class="label"><div class="nm">' + esc(l.name) + '</div>' +
           '<div class="vt">' + esc(l.variant) + '</div>' +
-          '<svg class="bc" data-code="' + esc(l.code) + '"></svg></div>';
+          '<svg class="bc" data-code="' + esc(l.code) + '"></svg>' +
+          '<div class="cd">' + esc(l.code) + '</div></div>';
       }).join('');
+      var jsBarcodeUrl = (function () {
+        try { return new URL('vendor/jsbarcode.min.js', window.location.href).href; }
+        catch (e) { return 'vendor/jsbarcode.min.js'; }
+      })();
       var html = '<!doctype html><html><head><meta charset="utf-8"><title>\u00c9tiquettes Hanna &amp; Nour</title>' +
-        '<script src="vendor/jsbarcode.min.js"><\/script>' +
+        '<script src="' + jsBarcodeUrl + '"><\/script>' +
         '<style>' + printCss + '</style></head><body><div class="labels">' + items + '</div>' +
         '<script>' +
+        'var tries=0;' +
+        'function fail(){' +
+        '  var m=document.createElement("div");' +
+        '  m.style.cssText="color:#a00;font:13px Arial;text-align:center;margin:12px auto;padding:8px;border:1px solid #a00;max-width:80%;";' +
+        '  m.textContent="La biblioth\u00e8que de codes-barres n\u2019a pas pu \u00eatre charg\u00e9e (' + jsBarcodeUrl + '). V\u00e9rifiez le fichier public/vendor/jsbarcode.min.js puis r\u00e9essayez.";' +
+        '  document.body.insertBefore(m, document.body.firstChild);' +
+        '}' +
         'function draw(){' +
         '  var els=document.querySelectorAll(".bc");' +
-        '  if(!window.JsBarcode){ window.setTimeout(draw,150); return; }' +
+        '  if(!window.JsBarcode){' +
+        '    if(tries++>=20){ fail(); window.setTimeout(function(){ window.print(); }, 200); return; }' +
+        '    window.setTimeout(draw,150); return;' +
+        '  }' +
         '  for(var i=0;i<els.length;i++){' +
         '    window.JsBarcode(els[i], els[i].getAttribute("data-code"),' +
-        '      { format:"CODE128", width:1.6, height:40, displayValue:true, font:"monospace", fontSize:13, margin:0 });' +
+        '      { format:"CODE128", width:1.6, height:40, margin:0 });' +
         '  }' +
         '  window.setTimeout(function(){ window.print(); }, 200);' +
         '}' +
