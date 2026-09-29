@@ -1170,6 +1170,18 @@
     if (period) period.addEventListener('change', loadSales);
     var th = document.getElementById('salesThreshold');
     if (th) th.addEventListener('change', loadSales);
+    var resetBtn = document.getElementById('resetStockBtn');
+    if (resetBtn) resetBtn.addEventListener('click', function () {
+      if (!confirm('Remettre le stock de TOUS les produits à 0 ?\n\nLes commandes existantes ne sont pas modifiées, mais toute nouvelle vente sera bloquée tant que tu n\u2019auras pas remis du stock. Action irréversible.')) return;
+      resetBtn.disabled = true;
+      call('resetStock').then(function () {
+        toast('Stock remis à zéro', 'ok');
+        loadSales();
+      }).catch(function (err) {
+        toast(err.message, 'err');
+        resetBtn.disabled = false;
+      });
+    });
   }
 
   /* ---------------- Settings ---------------- */
