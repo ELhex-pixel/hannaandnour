@@ -248,16 +248,16 @@
     var totalStock = (p.variants || []).reduce(function (n, v) { return n + (parseInt(v.stock, 10) || 0); }, 0);
     var managed = (p.variants || []).length > 0;
     return '<tr>' +
-      '<td><img class="thumb" src="' + esc(p.image || 'images/hero.jpg') + '" alt=""></td>' +
-      '<td><strong>' + esc(p.name_en) + '</strong><br><small style="color:#8a7d66;">' + esc(p.slug) + '</small></td>' +
-      '<td>' + money(p.price_cents) + '</td>' +
-      '<td>' + esc(cat) + '</td>' +
-      '<td>' + (managed ? '<span class="badge badge-green">' + totalStock + ' en stock</span>' : '<span class="badge badge-gray">sans stock</span>') + '</td>' +
-      (p.active ? '' : '<td><span class="badge badge-red">Inactif</span></td>') +
-      '<td style="white-space:nowrap;">' +
+      '<td data-label=""><img class="thumb" src="' + esc(p.image || 'images/hero.jpg') + '" alt=""></td>' +
+      '<td data-label="Produit"><strong>' + esc(p.name_en) + '</strong><br><small style="color:#8a7d66;">' + esc(p.slug) + '</small></td>' +
+      '<td data-label="Prix">' + money(p.price_cents) + '</td>' +
+      '<td data-label="Cat\u00e9gorie">' + esc(cat) + '</td>' +
+      '<td data-label="Stock">' + (managed ? '<span class="badge badge-green">' + totalStock + ' en stock</span>' : '<span class="badge badge-gray">sans stock</span>') + '</td>' +
+      (p.active ? '' : '<td data-label="Statut"><span class="badge badge-red">Inactif</span></td>') +
+      '<td data-label=""><span style="white-space:nowrap;">' +
       '<button class="btn btn-secondary btn-small edit-product" data-id="' + p.id + '">Modifier</button> ' +
       '<button class="btn btn-secondary btn-small dup-product" title="Dupliquer" data-id="' + p.id + '">Dupliquer</button>' +
-      '</td></tr>';
+      '</span></td></tr>';
   }
 
   function loadProducts() {
@@ -279,7 +279,7 @@
       return (p.name_en + ' ' + p.slug + ' ' + (p.name_fr || '') + ' ' + (p.name_ar || '')).toLowerCase().indexOf(q) >= 0;
     });
     if (!list.length) { box.innerHTML = '<p class="empty">Aucun produit.</p>'; return; }
-    box.innerHTML = '<table><thead><tr><th></th><th>Produit</th><th>Prix</th><th>Cat&eacute;gorie</th><th>Stock</th><th></th><th></th></tr></thead><tbody>' +
+    box.innerHTML = '<table class="admin-table"><thead><tr><th></th><th>Produit</th><th>Prix</th><th>Cat&eacute;gorie</th><th>Stock</th><th></th><th></th></tr></thead><tbody>' +
       list.map(productRow).join('') + '</tbody></table>';
   }
 
@@ -803,22 +803,22 @@
   function orderRow(o) {
     var count = (o.order_items || []).reduce(function (n, it) { return n + (parseInt(it.quantity, 10) || 0); }, 0);
     return '<tr>' +
-      '<td><strong>' + esc(o.order_number) + '</strong><br><small style="color:#8a7d66;">' + fmtDate(o.created_at) + '</small></td>' +
-      '<td>' + esc(o.customer_name) + '<br><small style="color:#8a7d66;">' + esc(o.email) + '</small></td>' +
-      '<td>' + count + '</td>' +
-      '<td>' + money(o.total_cents, o.currency) + '</td>' +
-      '<td><span class="' + payClass(o.status) + '">' + statusLabel(o.status) + '</span></td>' +
-      '<td><span class="badge ' + shipClass(o.shipping_status) + '">' + shipLabel(o.shipping_status) + '</span>' +
+      '<td data-label="Commande"><strong>' + esc(o.order_number) + '</strong><br><small style="color:#8a7d66;">' + fmtDate(o.created_at) + '</small></td>' +
+      '<td data-label="Client">' + esc(o.customer_name) + '<br><small style="color:#8a7d66;">' + esc(o.email) + '</small></td>' +
+      '<td data-label="Articles">' + count + '</td>' +
+      '<td data-label="Total">' + money(o.total_cents, o.currency) + '</td>' +
+      '<td data-label="Paiement"><span class="' + payClass(o.status) + '">' + statusLabel(o.status) + '</span></td>' +
+      '<td data-label="Exp\u00e9dition"><span class="badge ' + shipClass(o.shipping_status) + '">' + shipLabel(o.shipping_status) + '</span>' +
       (o.tracking_number ? '<br><small style="color:#8a7d66;">' + esc(o.tracking_number) + '</small>' : '') + '</td>' +
-      '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-small view-order" data-id="' + o.id + '">Voir</button> ' +
-      '<button class="btn btn-danger btn-small del-order" data-id="' + o.id + '" data-number="' + esc(o.order_number) + '">Supprimer</button></td>' +
+      '<td data-label=""><span style="white-space:nowrap;"><button class="btn btn-secondary btn-small view-order" data-id="' + o.id + '">Voir</button> ' +
+      '<button class="btn btn-danger btn-small del-order" data-id="' + o.id + '" data-number="' + esc(o.order_number) + '">Supprimer</button></span></td>' +
       '</tr>';
   }
 
   function renderOrders() {
     var box = document.getElementById('ordersList');
     if (!ordersAll.length) { box.innerHTML = '<p class="empty">Aucune commande.</p>'; return; }
-    box.innerHTML = '<table><thead><tr>' +
+    box.innerHTML = '<table class="admin-table"><thead><tr>' +
       '<th>Commande</th><th>Client</th><th>Articles</th><th>Total</th><th>Paiement</th><th>Exp&eacute;dition</th><th></th>' +
       '</tr></thead><tbody>' + ordersAll.map(orderRow).join('') + '</tbody></table>';
   }
@@ -842,10 +842,10 @@
         ? '<button class="btn btn-secondary btn-small return-line" data-item="' + esc(it.id) + '" data-remaining="' + remaining + '" data-name="' + esc(it.product_name) + '">Retour</button>'
         : (canReturn ? '<span style="color:#8a7d66;font-size:12px;">\u2014</span>' : '');
       return '<tr>' +
-        '<td>' + esc(it.product_name) + (it.variant ? '<br><small style="color:#8a7d66;">' + esc(it.variant) + '</small>' : '') + retInfo + '</td>' +
-        '<td>' + returned + ' / ' + qty + '</td>' +
-        '<td>' + money(it.unit_price_cents * qty, o.currency) + '</td>' +
-        (canReturn ? '<td>' + btn + '</td>' : '') +
+        '<td data-label="Article">' + esc(it.product_name) + (it.variant ? '<br><small style="color:#8a7d66;">' + esc(it.variant) + '</small>' : '') + retInfo + '</td>' +
+        '<td data-label="Qt\u00e9">' + returned + ' / ' + qty + '</td>' +
+        '<td data-label="Total">' + money(it.unit_price_cents * qty, o.currency) + '</td>' +
+        (canReturn ? '<td data-label="Retour">' + btn + '</td>' : '') +
         '</tr>';
     }).join('');
   }
@@ -881,12 +881,12 @@
       '<div><strong>Livraison</strong><br>' + esc(o.shipping_method || 'standard') + '<br>' + addressBlock +
       (o.tracking_number ? '<br><strong>Suivi :</strong> ' + esc(o.tracking_number) : '') + '</div>' +
       '</div>' +
-      '<table><thead><tr><th>Article</th><th>Qt&eacute;</th><th>Total</th>' + (canReturn ? '<th>Retour</th>' : '') + '</tr></thead><tbody>' + itemRows(o, ret) + '</tbody></table>' +
-      '<table style="margin-top:10px;"><tr><td>Sous-total</td><td style="text-align:right;">' + money(o.subtotal_cents, o.currency) + '</td></tr>' +
-      (o.discount_cents > 0 ? '<tr><td>Remise</td><td style="text-align:right;">-' + money(o.discount_cents, o.currency) + '</td></tr>' : '') +
-      '<tr><td>Livraison</td><td style="text-align:right;">' + money(o.shipping_cents, o.currency) + '</td></tr>' +
-      (o.tax_cents > 0 ? '<tr><td>Taxe</td><td style="text-align:right;">' + money(o.tax_cents, o.currency) + '</td></tr>' : '') +
-      '<tr><td><strong>Total</strong></td><td style="text-align:right;"><strong>' + money(o.total_cents, o.currency) + '</strong></td></tr></table>' +
+      '<table class="admin-table"><thead><tr><th>Article</th><th>Qt&eacute;</th><th>Total</th>' + (canReturn ? '<th>Retour</th>' : '') + '</tr></thead><tbody>' + itemRows(o, ret) + '</tbody></table>' +
+      '<table class="admin-totals" style="margin-top:10px;"><tr><td>Sous-total</td><td>' + money(o.subtotal_cents, o.currency) + '</td></tr>' +
+      (o.discount_cents > 0 ? '<tr><td>Remise</td><td>-' + money(o.discount_cents, o.currency) + '</td></tr>' : '') +
+      '<tr><td>Livraison</td><td>' + money(o.shipping_cents, o.currency) + '</td></tr>' +
+      (o.tax_cents > 0 ? '<tr><td>Taxe</td><td>' + money(o.tax_cents, o.currency) + '</td></tr>' : '') +
+      '<tr><td><strong>Total</strong></td><td><strong>' + money(o.total_cents, o.currency) + '</strong></td></tr></table>' +
       (canReturn ? returnFormHtml() : '') +
       (o.status === 'paid' ? '<div class="order-actions">' +
         '<button class="btn btn-secondary btn-small" data-act="markShipped">Marquer expédiée</button>' +
@@ -1132,19 +1132,19 @@
 
   function salesProductsTable(rows, cur) {
     if (!rows || !rows.length) return '<p class="empty">Aucun produit.</p>';
-    return '<table><thead><tr>' +
+    return '<table class="admin-table"><thead><tr>' +
       '<th>Produit</th><th>Stock dispo</th><th>Vendu</th><th>Retourn\u00e9</th><th>Net vendu</th><th>CA net</th>' +
       '</tr></thead><tbody>' + rows.map(function (r) {
         var stock = r.stock == null ? '\u2014' :
           (r.low ? '<span class="badge badge-warn" title="Stock faible">' + r.stock + '</span>' : r.stock);
         return '<tr>' +
-          '<td>' + (r.image ? '<img src="' + esc(r.image) + '" style="width:34px;height:38px;object-fit:cover;border-radius:6px;vertical-align:middle;margin-right:8px;" alt="">' : '') +
+          '<td data-label="Produit">' + (r.image ? '<img src="' + esc(r.image) + '" style="width:34px;height:38px;object-fit:cover;border-radius:6px;vertical-align:middle;margin-right:8px;" alt="">' : '') +
           '<strong>' + esc(r.name) + '</strong><br><small style="color:#8a7d66;">' + esc(r.slug) + '</small></td>' +
-          '<td>' + stock + '</td>' +
-          '<td>' + r.sold + '</td>' +
-          '<td>' + (r.returned > 0 ? r.returned : '\u2014') + '</td>' +
-          '<td>' + (r.sold - r.returned) + '</td>' +
-          '<td>' + money(r.revenueCents - r.returnedCents, cur) + '</td>' +
+          '<td data-label="Stock dispo">' + stock + '</td>' +
+          '<td data-label="Vendu">' + r.sold + '</td>' +
+          '<td data-label="Retourn\u00e9">' + (r.returned > 0 ? r.returned : '\u2014') + '</td>' +
+          '<td data-label="Net vendu">' + (r.sold - r.returned) + '</td>' +
+          '<td data-label="CA net">' + money(r.revenueCents - r.returnedCents, cur) + '</td>' +
           '</tr>';
       }).join('') + '</tbody></table>';
   }
@@ -1643,17 +1643,17 @@
     var box = document.getElementById('promosList');
     if (!box) return;
     if (!promosAll.length) { box.innerHTML = '<p class="empty">Aucun code promo. Créez le premier !</p>'; return; }
-    box.innerHTML = '<table><thead><tr><th>Code</th><th>Réduction</th><th>Expiration</th><th>Statut</th><th></th></tr></thead><tbody>' +
+    box.innerHTML = '<table class="admin-table"><thead><tr><th>Code</th><th>Réduction</th><th>Expiration</th><th>Statut</th><th></th></tr></thead><tbody>' +
       promosAll.map(function (p) {
         return '<tr>' +
-          '<td><strong>' + esc(p.code) + '</strong></td>' +
-          '<td>' + (parseInt(p.percent_off, 10) || 0) + ' %</td>' +
-          '<td>' + (p.expires_at ? fmtDate(p.expires_at) : '—') + '</td>' +
-          '<td><span class="badge ' + (p.active ? 'badge-green' : 'badge-red') + '">' + (p.active ? 'Actif' : 'Inactif') + '</span></td>' +
-          '<td style="white-space:nowrap;">' +
+          '<td data-label="Code"><strong>' + esc(p.code) + '</strong></td>' +
+          '<td data-label="R\u00e9duction">' + (parseInt(p.percent_off, 10) || 0) + ' %</td>' +
+          '<td data-label="Expiration">' + (p.expires_at ? fmtDate(p.expires_at) : '\u2014') + '</td>' +
+          '<td data-label="Statut"><span class="badge ' + (p.active ? 'badge-green' : 'badge-red') + '">' + (p.active ? 'Actif' : 'Inactif') + '</span></td>' +
+          '<td data-label=""><span style="white-space:nowrap;">' +
           '<button class="btn btn-secondary btn-small edit-promo" data-code="' + esc(p.code) + '">Modifier</button> ' +
           '<button class="btn btn-danger btn-small del-promo" data-code="' + esc(p.code) + '">Supprimer</button>' +
-          '</td></tr>';
+          '</span></td></tr>';
       }).join('') + '</tbody></table>';
   }
 
@@ -1955,11 +1955,11 @@
 
     function topTable(rows, emptyText) {
       if (!rows || !rows.length) return '<p class="empty">' + emptyText + '</p>';
-      return '<table><thead><tr><th>Vue</th><th>Nombre</th></tr></thead><tbody>' +
+      return '<table class="admin-table"><thead><tr><th>Vue</th><th>Nombre</th></tr></thead><tbody>' +
         rows.map(function (r) {
           var label = r.slug ? esc(prodName(r.slug)) : r.path ? esc(r.path).replace(/\?.*$/, '') : esc(String(r.path || r.slug));
           var n = r.views != null ? r.views : r.count;
-          return '<tr><td>' + label + '</td><td>' + n + '</td></tr>';
+          return '<tr><td data-label="Vue">' + label + '</td><td data-label="Nombre">' + n + '</td></tr>';
         }).join('') + '</tbody></table>';
     }
 

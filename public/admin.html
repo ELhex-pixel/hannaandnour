@@ -169,6 +169,9 @@
   html[data-theme="dark"] th, html[data-theme="dark"] td { border-color: #2E2820; }
   html[data-theme="dark"] tr:hover td { background: #262119; }
   html[data-theme="dark"] .thumb { background: #2A251E; }
+  html[data-theme="dark"] .admin-table tr { background: #201C16; border-color: #3A3327; }
+  html[data-theme="dark"] .admin-table td { border-bottom-color: #2E2820; }
+  html[data-theme="dark"] .admin-table td::before { color: #A89A82; }
 
   html[data-theme="dark"] .badge-green { background: #22311F; color: #9FD59A; }
   html[data-theme="dark"] .badge-red { background: #3A201C; color: #F0A59C; }
@@ -226,21 +229,51 @@
   html[data-theme="dark"] [style*="border:1px solid #ddd5c4"] { border-color: #3E3629 !important; }
   html[data-theme="dark"] [style*="border-bottom:1px solid #eee"] { border-color: #3A3327 !important; }
 
+  /* Mobile : les tableaux .admin-table deviennent des cartes empilées (<= 640px ci-dessous) */
+  .admin-table { border-collapse: collapse; }
+  .admin-totals { border-collapse: collapse; }
+  .admin-totals tr { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 4px 0; }
+  .admin-totals td { padding: 2px 0; }
+  .story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
   @media (max-width: 640px) {
     .form-grid { grid-template-columns: 1fr; }
     .variant-row { grid-template-columns: 1fr 1fr; }
+    .story-grid { grid-template-columns: 1fr; }
     .admin-container { padding: 16px 12px 48px; }
     .admin-header { flex-direction: column; align-items: stretch; gap: 10px; }
     .admin-logo { text-align: center; }
     .admin-header > div { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
     .admin-tab { flex: 1 1 calc(50% - 6px); text-align: center; }
     .toolbar input[type="text"], .toolbar select, .toolbar input[type="number"] { flex: 1 1 100%; }
-    .card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    th, td { white-space: nowrap; }
     .editor { padding: 16px 12px; }
     .editor-actions { flex-direction: column; align-items: stretch; }
     .editor-actions .btn { width: 100%; }
     .login-box { margin: 40px 14px; }
+
+    /* Tableaux -> cartes par ligne, zéro défilement horizontal */
+    .admin-table, .admin-table tbody, .admin-table tr, .admin-table td { display: block; width: 100%; box-sizing: border-box; }
+    .admin-table thead { display: none; }
+    .admin-table tr {
+      background: #fff; border: 1px solid #E7DECC; border-radius: 14px;
+      padding: 8px 14px 12px; margin-bottom: 12px; border-collapse: separate;
+    }
+    .admin-table td {
+      padding: 8px 0; border-bottom: 1px dashed #EFE6D8; text-align: left;
+    }
+    .admin-table td:last-child { border-bottom: 0; padding-bottom: 2px; }
+    .admin-table td::before {
+      content: attr(data-label);
+      display: block; margin-bottom: 2px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .4px; color: #9a8c75;
+    }
+    .admin-table td:not([data-label])::before, .admin-table td[data-label=""]::before { content: none; }
+    .admin-table td[data-label=""] { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .admin-table td[data-label=""] > span { display: flex; flex: 1; gap: 8px; flex-wrap: wrap; }
+    .admin-table td[data-label=""] > span .btn { flex: 1 1 40%; }
+    .admin-table tr:hover td { background: transparent; }
+    .admin-table .thumb { margin-top: 6px; }
   }
 </style>
   <meta property="og:image" content="https://hannanour.netlify.app/images/hero.jpg">
@@ -434,7 +467,7 @@
       <div class="card" style="margin-top:18px;">
         <h3>Notre histoire</h3>
         <p style="font-size:12px;color:#8a7d66;margin-bottom:10px;">Texte et images du hero et de la section &laquo; Confectionn&eacute; avec intention &raquo; de la page about.html.</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+        <div class="story-grid">
           <div>
             <h4 style="margin-bottom:6px;">Hero</h4>
             <div class="field"><label>Sous-titre</label><input id="s-hero-subtitle"></div>
