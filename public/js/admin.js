@@ -1194,6 +1194,29 @@
         resetBtn.disabled = false;
       });
     });
+    var resetAllBtn = document.getElementById('resetAllBtn');
+    if (resetAllBtn) resetAllBtn.addEventListener('click', function () {
+      if (!confirm('TOUT remettre à zéro ?\n\nCette action est IRRÉVERSIBLE :\n- TOUTES les commandes sont supprimées (payées, en attente, abandonnées, remboursées, annulées)\n- les lignes et retours de commande avec elles\n- le stock de toutes les variantes repasse à 0\n\nUne sauvegarde CSV des commandes sera téléchargée automatiquement avant l\u2019effacement.')) return;
+      resetAllBtn.disabled = true;
+      call('exportOrdersCsv').then(function (res) {
+        downloadCsv(res.filename, res.csv);
+        return call('resetAll');
+      }).then(function (res) {
+        scanCart = [];
+        scanLast = null;
+        prepCurrent = null;
+        prepOrders = [];
+        renderScanCart();
+        renderScanResult();
+        renderPrep();
+        toast('Base remise à zéro \u2014 ' + res.deleted_orders + ' commande(s) supprimée(s)', 'ok');
+        loadSales();
+      }).catch(function (err) {
+        toast(err.message, 'err');
+      }).then(function () {
+        resetAllBtn.disabled = false;
+      });
+    });
     var genBtn = document.getElementById('genBarcodesBtn');
     if (genBtn) genBtn.addEventListener('click', function () {
       genBtn.disabled = true;
@@ -1212,6 +1235,20 @@
   }
 
   /* ---- Étiquettes code-barres (feuille A4 à imprimer) ---- */
+
+  function downloadCsv(filename, csv) {
+    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
 
   function printLabels() {
     call('listProducts').then(function (res) {
