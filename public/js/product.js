@@ -523,6 +523,42 @@
       });
   }
 
+  var reviewFocusDone = false;
+
+  // Le lien d'invitation à noter (email) arrive avec ?review=1 : on amène le
+  // client directement sur l'onglet Avis et le panneau « Écrire un avis ».
+  function focusReviewIfRequested() {
+    if (reviewFocusDone) return;
+    if (!/review=1/.test(window.location.search)) return;
+    reviewFocusDone = true;
+
+    var btn = document.querySelector('.tab-btn[data-tab="reviews"]');
+    if (window.switchTab) window.switchTab('reviews', btn);
+
+    var form = document.getElementById('reviewForm');
+    var gate = document.getElementById('reviewGate');
+    var target = null;
+    if (form && form.style.display !== 'none') target = form;
+    else if (gate && gate.style.display !== 'none') target = gate;
+    if (target) {
+      setTimeout(function () {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.style.boxShadow = '0 0 0 3px var(--color-emerald)';
+        setTimeout(function () { target.style.boxShadow = ''; }, 2500);
+        if (form && form.style.display !== 'none') {
+          var f = form.querySelector('#reviewRating, textarea, input');
+          if (f) f.focus({ preventScroll: true });
+        }
+      }, 150);
+    }
+
+    // Retire le paramètre : un rechargement ne re-saute pas dessus.
+    try {
+      var s = window.location.search.replace(/[?&]review=1(&|$)/, function (m, sep) { return sep ? '?' : ''; });
+      window.history.replaceState(null, '', window.location.pathname + s);
+    } catch (e) { /* ignore */ }
+  }
+
   function updateReviewGate(p) {
     var form = document.getElementById('reviewForm');
     var gate = document.getElementById('reviewGate');
@@ -533,6 +569,7 @@
       gate.style.display = '';
       gate.innerHTML = '<p style="color: var(--color-gray); margin: 0;">' + msg +
         (isLogin ? ' <a href="account.html" style="color: var(--color-emerald);">' + tr('accountTitle') + '</a>' : '') + '</p>';
+      focusReviewIfRequested();
     }
 
     function showForm() {
@@ -544,6 +581,7 @@
         nameInput.value = ((user.first_name || '').trim()) || String(user.email || '').split('@')[0];
         nameInput.readOnly = true;
       }
+      focusReviewIfRequested();
     }
 
     if (!window.HN_AUTH || !window.HN_AUTH.ready) {

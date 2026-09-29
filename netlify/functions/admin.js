@@ -532,7 +532,7 @@ if (body.shipping_status !== undefined) {
               if (claimed.data && claimed.data.length) {
                 const items = (ord.order_items || []).filter((it) => it.product_slug);
                 const links = items.map((it) => {
-                  const url = siteUrl + '/product.html?slug=' + encodeURIComponent(it.product_slug);
+                  const url = siteUrl + '/product.html?slug=' + encodeURIComponent(it.product_slug) + '&review=1';
                   return '<li style="margin:0 0 8px 0;"><a href="' + url + '" style="display:inline-block;background:#8a2c2c;color:#fff;text-decoration:none;border-radius:6px;padding:8px 14px;font-size:13px;">Donner mon avis sur ' + esc(it.product_name || 'ce produit') + '</a></li>';
                 }).join('');
                 const html =
