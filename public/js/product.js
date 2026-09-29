@@ -495,7 +495,7 @@
               demo.forEach(function (r) { dh += demoCardHtml(r); });
               if (demoBox) { demoBox.innerHTML = dh; demoBox.style.display = ''; }
               demoTotal = demo.length;
-              demo.forEach(function (r) { sumReviews([r], counts); });
+              demo.forEach(function (r) { sum += sumReviews([r], counts); });
             } else {
               // Admin has no active demo review: hide the box, real reviews only.
               if (demoBox) demoBox.style.display = 'none';
