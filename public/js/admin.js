@@ -227,7 +227,7 @@
         panel.classList.add('active');
         if (id === 'panel-products') loadProducts();
         if (id === 'panel-orders') loadOrders();
-        if (id === 'panel-sales') loadSales();
+        if (id === 'panel-sales') { loadSales(); focusScan(); prepLoadOrders(); }
         if (id === 'panel-reviews') loadReviews();
         if (id === 'panel-home') loadHome();
         if (id === 'panel-blog') loadBlog();
@@ -1269,6 +1269,399 @@
     }).catch(function (e) { toast(e.message, 'err'); });
   }
 
+  /* ---------------- Scanner (Ventes & Stock) ---------------- */
+
+  var scanCurrency = { code: 'usd', symbol: '$' };
+  var scanTaxRate = 0;
+  var scanCart = [];
+  var scanLast = null;
+  var prepCurrent = null;
+  var prepOrders = [];
+
+  function sMoney(cents) {
+    return (scanCurrency.symbol || '$') + ((parseInt(cents, 10) || 0) / 100).toFixed(2);
+  }
+
+  function setScanStatus(msg, type) {
+    var el = document.getElementById('scanStatus');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.className = 'scan-status' + (type === 'err' ? ' err' : type === 'ok' ? ' ok' : '');
+  }
+
+  function focusScan() {
+    var panel = document.getElementById('panel-sales');
+    var el = document.getElementById('scanInput');
+    if (el && panel && panel.classList.contains('active')) {
+      try { el.focus(); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function handleScan(value) {
+    var code = String(value || '').trim();
+    if (!code) return;
+    var rcp = document.getElementById('scanReceipt');
+    if (rcp) rcp.innerHTML = '';
+    if (prepCurrent) { prepScan(code); return; }
+    call('scanLookup', { barcode: code }).then(function (res) {
+      scanLast = res;
+      scanCurrency = res.currency || scanCurrency;
+      renderScanResult();
+      setScanStatus('');
+    }).catch(function (err) {
+      scanLast = null;
+      renderScanResult();
+      setScanStatus(err.message === 'Article introuvable' ? 'Article introuvable : v\u00e9rifiez le code scann\u00e9.' : err.message, 'err');
+    });
+  }
+
+  function renderScanResult() {
+    var box = document.getElementById('scanResult');
+    if (!box) return;
+    if (!scanLast) { box.innerHTML = ''; return; }
+    var v = scanLast.variant, p = scanLast.product || {}, s = scanLast.stats || {};
+    var subTxt = [p.name_fr || p.name_en || 'Article', [v.color, v.size].filter(Boolean).join(' x ')].filter(Boolean).join(' \u2014 ');
+    var pills = '';
+    pills += '<span class="badge badge-gray">Stock ' + (v.stock || 0) + '</span>';
+    pills += '<span class="badge badge-gray">Vendus ' + (s.sold || 0) + '</span>';
+    pills += '<span class="badge badge-warn">CA ' + sMoney(s.revenueCents || 0) + '</span>';
+    if (s.returned > 0) pills += '<span class="badge badge-red">Retours ' + s.returned + '</span>';
+    if (!v.stock) pills += '<span class="badge badge-red">Rupture</span>';
+    if (v.active === false) pills += '<span class="badge badge-red">Variante inactive</span>';
+    var pendingHtml = '';
+    if (scanLast.pending && scanLast.pending.length) {
+      pendingHtml = '<div style="flex-basis:100%;font-size:12px;color:#8a7d66;">Commandes en attente : ' +
+        scanLast.pending.map(function (x) {
+          return '<b>' + esc(x.order_number) + '</b> (x' + x.quantity + ')';
+        }).join('&nbsp;|&nbsp;') + '</div>';
+    }
+    var img = p.image ? '<img class="scan-img" src="' + esc(p.image) + '" alt="">' : '<div class="scan-img"></div>';
+    box.innerHTML =
+      '<div class="scan-item">' + img +
+        '<div class="scan-info">' +
+          '<div class="scan-name">' + esc(p.name_fr || p.name_en || v.barcode) + '</div>' +
+          '<div class="scan-sub">' + esc(subTxt) + ' &middot; ' + esc(v.barcode) + ' &middot; ' + sMoney(p.price_cents || 0) + '</div>' +
+        '</div>' +
+        '<div class="scan-pills">' + pills + '</div>' +
+        '<div class="scan-actions">' +
+          '<button class="btn btn-secondary btn-small" data-scan="inv">Inventaire</button>' +
+          '<button class="btn btn-primary btn-small" data-scan="cartAdd" data-vid="' + esc(v.id) + '">Ajouter \u00e0 la caisse</button>' +
+        '</div>' +
+        '<div class="scan-inv" id="scanInv">' +
+          '<input type="number" id="scanInvQty" min="0" step="1" value="' + (v.stock || 0) + '">' +
+          '<button class="btn btn-primary btn-small" data-scan="invSave">Enregistrer le comptage</button>' +
+          '<span class="scan-hint">Remplace le stock par la quantit\u00e9 r\u00e9elle trouv\u00e9e.</span>' +
+        '</div>' +
+        pendingHtml +
+      '</div>';
+  }
+
+  function toggleScanInv(open) {
+    var inv = document.getElementById('scanInv');
+    if (!inv) return;
+    var show = typeof open === 'boolean' ? open : !inv.classList.contains('open');
+    inv.classList.toggle('open', show);
+    var qty = document.getElementById('scanInvQty');
+    if (qty && scanLast) qty.value = scanLast.variant.stock || 0;
+  }
+
+  function invSave() {
+    if (!scanLast) return;
+    var qty = parseInt(document.getElementById('scanInvQty').value, 10);
+    if (isNaN(qty) || qty < 0) { setScanStatus('Quantit\u00e9 invalide', 'err'); return; }
+    call('scanSetStock', { variant_id: scanLast.variant.id, qty: qty }).then(function () {
+      setScanStatus('Stock mis \u00e0 jour', 'ok');
+      return call('scanLookup', { barcode: scanLast.variant.barcode });
+    }).then(function (res) {
+      scanLast = res;
+      scanCurrency = res.currency || scanCurrency;
+      renderScanResult();
+      toggleScanInv(true);
+      focusScan();
+    }).catch(function (err) {
+      setScanStatus(err.message, 'err');
+    });
+  }
+
+  /* ---- Caisse ---- */
+
+  function cartIndex(vid) {
+    for (var i = 0; i < scanCart.length; i++) if (scanCart[i].variant_id === vid) return i;
+    return -1;
+  }
+
+  function cartAdd() {
+    if (!scanLast) return;
+    var v = scanLast.variant, p = scanLast.product || {};
+    var i = cartIndex(v.id);
+    if (i >= 0) { scanCart[i].qty++; }
+    else {
+      scanCart.push({
+        variant_id: v.id,
+        name: p.name_fr || p.name_en || 'Article',
+        sub: [v.color, v.size].filter(Boolean).join(' x '),
+        price_cents: p.price_cents || 0,
+        qty: 1
+      });
+    }
+    renderScanCart();
+    setScanStatus('Ajout\u00e9 \u00e0 la caisse', 'ok');
+    focusScan();
+  }
+
+  function cartQty(vid, delta) {
+    var i = cartIndex(vid);
+    if (i < 0) return;
+    scanCart[i].qty = Math.max(1, scanCart[i].qty + delta);
+    renderScanCart();
+    focusScan();
+  }
+
+  function cartDel(vid) {
+    var i = cartIndex(vid);
+    if (i >= 0) scanCart.splice(i, 1);
+    renderScanCart();
+    focusScan();
+  }
+
+  function scanCartSubtotal() {
+    var t = 0;
+    scanCart.forEach(function (l) { t += l.price_cents * l.qty; });
+    return t;
+  }
+
+  function scanCartTotal() {
+    var sub = scanCartSubtotal();
+    return sub + Math.round(sub * scanTaxRate);
+  }
+
+  function renderScanCart() {
+    var box = document.getElementById('scanCart');
+    if (!box) return;
+    var has = scanCart.length > 0;
+    box.style.display = has ? 'block' : 'none';
+    if (!has) { box.innerHTML = ''; return; }
+    var rows = scanCart.map(function (l) {
+      return '<div class="cart-row">' +
+        '<span class="cart-name">' + esc(l.name) + (l.sub ? '<small>' + esc(l.sub) + '</small>' : '') + '</span>' +
+        '<span class="c-ctrl">' +
+          '<button data-scan="cartMinus" data-vid="' + esc(l.variant_id) + '" title="Retirer un">&#8722;</button>' +
+          '<span class="cqty">' + l.qty + '</span>' +
+          '<button data-scan="cartPlus" data-vid="' + esc(l.variant_id) + '" title="Ajouter un">+</button>' +
+        '</span>' +
+        '<span class="c-line">' + sMoney(l.price_cents * l.qty) + '</span>' +
+        '<button class="c-del" data-scan="cartDel" data-vid="' + esc(l.variant_id) + '" title="Retirer la ligne">&times;</button>' +
+        '</div>';
+    }).join('');
+    var sub = scanCartSubtotal();
+    var tax = Math.round(sub * scanTaxRate);
+    var total = sub + tax;
+    box.innerHTML =
+      '<div class="cart-head"><b>Vente en cours</b>' +
+        '<span style="color:#8a7d66;font-size:12px;">' + scanCart.length + ' ligne(s)</span>' +
+        '<button class="btn btn-secondary btn-small" data-scan="cartClear">Vider</button></div>' +
+      rows +
+      '<div class="cart-totals">' +
+        '<div><span>Sous-total</span><b>' + sMoney(sub) + '</b></div>' +
+        '<div><span>Taxe</span><b>' + sMoney(tax) + '</b></div>' +
+        '<div class="tot"><span>Total \u00e0 encaisser</span><b>' + sMoney(total) + '</b></div>' +
+      '</div>' +
+      '<input class="cart-cust" id="cartCustomer" placeholder="Nom du client (optionnel)" autocomplete="off">' +
+      '<button class="btn btn-primary" id="cartCashBtn">Encaisser &mdash; ' + sMoney(total) + '</button>';
+    document.getElementById('cartCashBtn').addEventListener('click', cartCash);
+  }
+
+  function cartCash() {
+    if (!scanCart.length) return;
+    if (!confirm('Encaisser ' + sMoney(scanCartTotal()) + ' (' + scanCart.length + ' ligne(s)) ?\nLe stock sera d\u00e9cr\u00e9ment\u00e9 et la vente enregistr\u00e9e (remise en main propre).')) return;
+    var customer = document.getElementById('cartCustomer') ? document.getElementById('cartCustomer').value.trim() : '';
+    var items = scanCart.map(function (l) { return { variant_id: l.variant_id, qty: l.qty }; });
+    call('scanSale', { items: items, customer_name: customer }).then(function (res) {
+      scanCart = [];
+      renderScanCart();
+      setScanStatus('Vente encaiss\u00e9e \u2014 commande ' + res.order_number, 'ok');
+      var rcp = document.getElementById('scanReceipt');
+      if (rcp) rcp.innerHTML = '<div class="scan-receipt">' +
+        '<div class="ttl">Encaiss\u00e9 \u2014 ' + esc(res.order_number) + '</div>' +
+        '<div>Total ' + (res.symbol || scanCurrency.symbol) + ((res.total_cents || 0) / 100).toFixed(2) + '</div>' +
+        '</div>';
+      if (scanLast) {
+        call('scanLookup', { barcode: scanLast.variant.barcode }).then(function (r) {
+          scanLast = r;
+          scanCurrency = r.currency || scanCurrency;
+          renderScanResult();
+        }).catch(function () { /* ignore */ });
+      }
+      focusScan();
+    }).catch(function (err) {
+      setScanStatus(err.message, 'err');
+    });
+  }
+
+  /* ---- Pr\u00e9paration de commande ---- */
+
+  function prepLoadOrders(keepSel) {
+    var prev = '';
+    var sel = document.getElementById('prepOrderSel');
+    if (sel) prev = sel.value;
+    call('listOrders', { status: 'paid' }).then(function (res) {
+      prepOrders = (res.orders || []).filter(function (o) {
+        return o.shipping_status !== 'shipped' && o.shipping_status !== 'delivered';
+      });
+      renderPrep(prev);
+    }).catch(function (err) { setScanStatus(err.message, 'err'); });
+  }
+
+  function renderPrep(selVal) {
+    var box = document.getElementById('scanPrepare');
+    if (!box) return;
+    var opts = prepOrders.map(function (o) {
+      return '<option value="' + esc(o.id) + '">' + esc(o.order_number) + ' \u2014 ' + esc(o.customer_name) + '</option>';
+    }).join('');
+    var head = '<div class="prep-head"><b>Pr\u00e9parer une commande</b>' +
+      '<select id="prepOrderSel">' + (opts || '<option value="">Aucune commande en attente</option>') + '</select>' +
+      '<button class="btn btn-secondary btn-small" data-scan="prepLoad">Charger</button></div>';
+    var body = '';
+    if (prepCurrent) {
+      var checked = 0;
+      prepCurrent.items.forEach(function (it) { if (it.checked) checked++; });
+      var rows = prepCurrent.items.map(function (it) {
+        return '<div class="prep-row' + (it.checked ? ' checked' : '') + '">' +
+          '<span class="p-check">' + (it.checked ? '\u2713' : '\u25A1') + '</span>' +
+          '<span class="p-name">' + esc(it.label) + '<small>x' + it.qty + '</small></span>' +
+          '</div>';
+      }).join('');
+      var all = checked === prepCurrent.items.length && prepCurrent.items.length > 0;
+      body = rows +
+        '<div class="prep-foot">' +
+          '<span id="prepProgress">' + checked + '/' + prepCurrent.items.length + ' v\u00e9rifi\u00e9(s)' + (all ? ' \u2014 complet \u2713' : '') + '</span>' +
+          '<button class="btn btn-primary" id="prepShipBtn"' + (all ? '' : ' disabled') + '>Marquer exp\u00e9di\u00e9e</button>' +
+          '<button class="btn btn-secondary btn-small" data-scan="prepClose">Fermer la pr\u00e9paration</button>' +
+        '</div>';
+    } else {
+      body = '<div class="scan-hint" style="padding:4px 0;">Scannez chaque article pour le cocher, puis \u00ab Marquer exp\u00e9di\u00e9e \u00bb. Le stock doit \u00eatre suffisant pour l\u2019emballage.</div>';
+    }
+    box.style.display = 'block';
+    box.innerHTML = head + body;
+    var sel2 = document.getElementById('prepOrderSel');
+    if (sel2 && selVal) sel2.value = selVal;
+    var shipBtn = document.getElementById('prepShipBtn');
+    if (shipBtn) shipBtn.addEventListener('click', prepShip);
+  }
+
+  function prepLoad() {
+    var sel = document.getElementById('prepOrderSel');
+    if (!sel || !sel.value) { setScanStatus('Choisissez une commande', 'err'); return; }
+    call('getOrder', { id: sel.value }).then(function (res) {
+      var o = res.order;
+      if (!o) { setScanStatus('Commande introuvable', 'err'); return; }
+      prepCurrent = {
+        id: o.id,
+        order_number: o.order_number,
+        items: (o.order_items || []).map(function (it) {
+          return {
+            variant_id: it.variant_id,
+            label: it.product_name + (it.variant ? ' (' + it.variant + ')' : ''),
+            qty: it.quantity,
+            checked: false
+          };
+        })
+      };
+      renderPrep(sel.value);
+      setScanStatus('Mode pr\u00e9paration : scannez les articles de ' + o.order_number + '.', 'ok');
+    }).catch(function (err) { setScanStatus(err.message, 'err'); });
+  }
+
+  function prepScan(code) {
+    if (!prepCurrent) return;
+    call('scanLookup', { barcode: code }).then(function (res) {
+      var vid = res.variant && res.variant.id;
+      var stock = res.variant ? res.variant.stock : 0;
+      var name = res.product ? (res.product.name_fr || res.product.name_en) : '';
+      var found = false;
+      prepCurrent.items.forEach(function (it) {
+        if (it.variant_id === vid) {
+          found = true;
+          if (stock >= it.qty) {
+            it.checked = true;
+            setScanStatus('\u2713 ' + (name || 'Article') + ' \u2014 v\u00e9rifi\u00e9', 'ok');
+          } else {
+            setScanStatus('Stock insuffisant pour ' + (name || 'Article') + ' (' + stock + ' en stock, ' + it.qty + ' command\u00e9).', 'err');
+          }
+        }
+      });
+      if (!found) setScanStatus('Cet article ne fait pas partie de la commande.', 'err');
+      renderPrep();
+      focusScan();
+    }).catch(function (err) {
+      setScanStatus(err.message === 'Article introuvable' ? 'Code inconnu.' : err.message, 'err');
+    });
+  }
+
+  function prepShip() {
+    if (!prepCurrent) return;
+    var done = prepCurrent.items.length > 0 && prepCurrent.items.every(function (it) { return it.checked; });
+    if (!done) { setScanStatus('Tous les articles ne sont pas v\u00e9rifi\u00e9s.', 'err'); return; }
+    call('updateOrder', { id: prepCurrent.id, shipping_status: 'shipped' }).then(function () {
+      setScanStatus('Commande ' + prepCurrent.order_number + ' marqu\u00e9e exp\u00e9di\u00e9e', 'ok');
+      prepCurrent = null;
+      renderPrep();
+      prepLoadOrders();
+      focusScan();
+    }).catch(function (err) { setScanStatus(err.message, 'err'); });
+  }
+
+  function prepClose() {
+    prepCurrent = null;
+    renderPrep();
+    setScanStatus('');
+    focusScan();
+  }
+
+  function wireScan() {
+    var input = document.getElementById('scanInput');
+    if (input) {
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+          e.preventDefault();
+          handleScan(input.value);
+          input.value = '';
+        }
+      });
+    }
+    var clearBtn = document.getElementById('scanClearBtn');
+    if (clearBtn) clearBtn.addEventListener('click', function () {
+      scanLast = null;
+      renderScanResult();
+      setScanStatus('');
+      focusScan();
+    });
+    // Le scanner tape dans le champ actif : on garde le focus sur la barre de
+    // scan tant que le panneau Ventes & Stock est ouvert (sauf champs de saisie).
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      var interactive = t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA');
+      if (!interactive) focusScan();
+      var btn = t && t.closest ? t.closest('[data-scan]') : null;
+      if (!btn) return;
+      var act = btn.getAttribute('data-scan');
+      var vid = btn.getAttribute('data-vid');
+      if (act === 'cartAdd') cartAdd();
+      else if (act === 'inv') toggleScanInv();
+      else if (act === 'invSave') invSave();
+      else if (act === 'cartPlus') cartQty(vid, 1);
+      else if (act === 'cartMinus') cartQty(vid, -1);
+      else if (act === 'cartDel') cartDel(vid);
+      else if (act === 'cartClear') { scanCart = []; renderScanCart(); focusScan(); }
+      else if (act === 'prepLoad') prepLoad();
+      else if (act === 'prepClose') prepClose();
+    });
+    // Même taux de taxe que le serveur (réglages admin) pour le panier.
+    call('getSettings').then(function (res) {
+      scanTaxRate = parseFloat(res.settings && res.settings.tax_rate) || 0;
+    }).catch(function () { /* defaults */ });
+  }
+
   /* ---------------- Settings ---------------- */
 
   function loadSettings() {
@@ -2106,6 +2499,7 @@
   wireEditor();
   wireOrders();
   wireSales();
+  wireScan();
   wireReviews();
   wireDemoReviews();
   wireHome();

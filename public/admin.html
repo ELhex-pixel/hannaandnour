@@ -228,6 +228,58 @@
   html[data-theme="dark"] [style*="color:#5c5346"], html[data-theme="dark"] [style*="color:#5c5548"] { color: #D8CDB8 !important; }
   html[data-theme="dark"] [style*="border:1px solid #ddd5c4"] { border-color: #3E3629 !important; }
   html[data-theme="dark"] [style*="border-bottom:1px solid #eee"] { border-color: #3A3327 !important; }
+  html[data-theme="dark"] .scan-bar input, html[data-theme="dark"] .scan-inv input, html[data-theme="dark"] .cart-cust { background: #1A1610; border-color: #3E3629; color: #EDE6DA; }
+  html[data-theme="dark"] .scan-item { border-color: #3A3327; }
+  html[data-theme="dark"] .scan-img { background: #2E2820; }
+  html[data-theme="dark"] .scan-inv { background: #241F18; }
+  html[data-theme="dark"] .cart-row, html[data-theme="dark"] .prep-row { border-color: #3A3327; }
+  html[data-theme="dark"] .c-ctrl button { background: #1A1610; border-color: #3E3629; color: #EDE6DA; }
+  html[data-theme="dark"] .cart-totals { border-color: #3A3327; }
+  html[data-theme="dark"] .cart-totals .tot { border-color: #3A3327; }
+  html[data-theme="dark"] .scan-receipt { background: #22311F; border-color: #3d7a46; }
+
+  /* Zone scanner (Ventes & Stock) */
+  .scan-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .scan-bar input { flex: 1 1 100%; max-width: 460px; padding: 10px 14px; border: 1px solid #ddd5c4; border-radius: 10px; font-size: 15px; }
+  .scan-status { color: #8a7d66; font-size: 12px; min-height: 16px; margin: 4px 0 8px; }
+  .scan-status.err { color: #b03a2e; font-weight: 600; }
+  .scan-status.ok { color: #3d7a46; font-weight: 600; }
+  .scan-item { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; border: 1px solid #E7DECC; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .scan-img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; background: #f6f1e6; flex: none; }
+  .scan-info { flex: 1 1 220px; min-width: 160px; }
+  .scan-name { font-weight: 700; font-size: 15px; }
+  .scan-sub { color: #8a7d66; font-size: 13px; margin-top: 2px; }
+  .scan-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .scan-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .scan-inv { flex-basis: 100%; display: none; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; padding: 10px; background: #faf6ec; border-radius: 10px; }
+  .scan-inv.open { display: flex; }
+  .scan-inv input { width: 110px; padding: 8px; border: 1px solid #ddd5c4; border-radius: 8px; }
+  .scan-hint { font-size: 12px; color: #8a7d66; }
+  .scan-receipt { border: 1px solid #cfe3c4; background: #f1f7ec; border-radius: 12px; padding: 12px; margin-top: 10px; }
+  .scan-receipt .ttl { font-weight: 700; font-size: 15px; }
+
+  /* Caisse (panier scanné) */
+  .cart-head, .prep-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 8px; }
+  .cart-row { display: flex; gap: 8px; align-items: center; border-top: 1px solid #f0e9db; padding: 8px 0; }
+  .cart-name { flex: 1 1 200px; }
+  .cart-name small { display: block; color: #8a7d66; }
+  .c-ctrl { display: flex; gap: 4px; align-items: center; }
+  .c-ctrl button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid #ddd5c4; background: #fff; cursor: pointer; font-weight: 700; line-height: 1; }
+  .c-ctrl .cqty { min-width: 22px; text-align: center; font-weight: 700; }
+  .c-line { min-width: 84px; text-align: right; font-weight: 600; }
+  .c-del { border: 0; background: none; color: #b03a2e; cursor: pointer; font-size: 16px; }
+  .cart-totals { margin: 8px 0; border-top: 1px solid #E7DECC; padding-top: 8px; }
+  .cart-totals > div { display: flex; justify-content: space-between; padding: 2px 0; }
+  .cart-totals .tot { font-size: 16px; font-weight: 700; border-top: 1px dashed #E7DECC; margin-top: 4px; padding-top: 6px; }
+  .cart-cust { width: 100%; max-width: 320px; padding: 8px 10px; border: 1px solid #ddd5c4; border-radius: 8px; margin: 6px 8px 6px 0; }
+
+  /* Préparation de commande */
+  .prep-row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #f0e9db; }
+  .prep-row .p-check { width: 20px; text-align: center; font-size: 16px; }
+  .prep-row.checked .p-check { color: #3d7a46; }
+  .prep-row .p-name { flex: 1 1 200px; }
+  .prep-row .p-name small { display: block; color: #8a7d66; }
+  .prep-foot { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
 
   /* Mobile : les tableaux .admin-table deviennent des cartes empilées (<= 640px ci-dessous) */
   .admin-table { border-collapse: collapse; }
@@ -400,6 +452,17 @@
         <button class="btn btn-danger btn-small" id="resetStockBtn" title="Remet le stock de toutes les variantes à 0 (les commandes existantes ne sont pas modifiées)">Remettre le stock &agrave; 0</button>
         <button class="btn btn-secondary btn-small" id="genBarcodesBtn" title="Attribue un code-barres &agrave; toute variante qui n&rsquo;en a pas encore">G&eacute;n&eacute;rer les codes manquants</button>
         <button class="btn btn-secondary btn-small" id="printLabelsBtn" title="Ouvre la feuille d&rsquo;&eacute;tiquettes code-barres &agrave; imprimer">Imprimer les &eacute;tiquettes</button>
+      </div>
+      <div class="card" id="scanArea">
+        <div class="toolbar scan-bar">
+          <input type="text" id="scanInput" placeholder="Scannez une &eacute;tiquette..." autocomplete="off" title="Scanner USB : branchez-le, ce champ reste actif, scannez.">
+          <button class="btn btn-secondary btn-small" id="scanClearBtn">Effacer</button>
+        </div>
+        <div class="scan-status" id="scanStatus"></div>
+        <div id="scanResult"></div>
+        <div id="scanReceipt"></div>
+        <div id="scanCart"></div>
+        <div id="scanPrepare"></div>
       </div>
       <div class="card" id="salesList"><p class="empty">Chargement...</p></div>
     </div>
