@@ -188,6 +188,17 @@
       }
     }
 
+    // Retour automatique après connexion (lien « next » relatif, même site),
+    // utilisé par la page d'avis (« Votre avis nous intéresse »).
+    function redirectAfterAuth() {
+      var m = window.location.search.match(/[?&]next=([^&]+)/);
+      if (!m) return;
+      var next = decodeURIComponent(m[1]);
+      if (next && next.indexOf('http') !== 0 && next.indexOf('/') !== 0) {
+        window.location.href = next;
+      }
+    }
+
     if (tabLogin) tabLogin.addEventListener('click', function () { setAuthError(''); showTab(false); });
     if (tabSignup) tabSignup.addEventListener('click', function () { setAuthError(''); showTab(true); });
 
@@ -202,6 +213,7 @@
         setBusy(loginForm, false);
         setAuthError('');
         renderAuthState();
+        redirectAfterAuth();
         window.hnToast && hnToast(tr('cartAdd'), tr('authWelcome').replace('{n}', '').trim(), 'success');
       }).catch(function (err) {
         setBusy(loginForm, false);
@@ -221,6 +233,7 @@
         setBusy(signupForm, false);
         setAuthError('');
         renderAuthState();
+        redirectAfterAuth();
         window.hnToast && hnToast(tr('cartAdd'), tr('authGenericError'), 'success');
       }).catch(function (err) {
         setBusy(signupForm, false);

@@ -511,9 +511,10 @@ if (body.shipping_status !== undefined) {
         }
 
         // Envoie un email d'invitation à noter les produits quand la commande
-        // est marquée livrée (best-effort). Gardes : commande payée, email réel
-        // et compte lié (le formulaire d'avis de la page produit exige un client
-        // connecté). review_email_sent_at rend l'envoi idempotent (claim-first).
+        // est marquée livrée (best-effort). Gardes : commande payée et email
+        // réel. Clients avec compte comme invités : les invités prouvent leur
+        // achat (numéro de commande + email) sur review.html. review_email_sent_at
+        // rend l'envoi idempotent (claim-first).
         if (update.shipping_status === 'delivered') {
           try {
             const { data: ord, error: oErr2 } = await sb
@@ -521,7 +522,7 @@ if (body.shipping_status !== undefined) {
               .select('*, order_items(product_name, product_slug, quantity, variant)')
               .eq('id', body.id)
               .single();
-            if (!oErr2 && ord && ord.email && ord.user_id && ord.status === 'paid') {
+            if (!oErr2 && ord && ord.email && ord.status === 'paid') {
               const claimed = await sb
                 .from('orders')
                 .update({ review_email_sent_at: new Date().toISOString() })
@@ -532,7 +533,7 @@ if (body.shipping_status !== undefined) {
               if (claimed.data && claimed.data.length) {
                 const items = (ord.order_items || []).filter((it) => it.product_slug);
                 const links = items.map((it) => {
-                  const url = siteUrl + '/review.html?slug=' + encodeURIComponent(it.product_slug);
+                  const url = siteUrl + '/review.html?slug=' + encodeURIComponent(it.product_slug) + '&order=' + encodeURIComponent(ord.order_number);
                   return '<li style="margin:0 0 8px 0;"><a href="' + url + '" style="display:inline-block;background:#8a2c2c;color:#fff;text-decoration:none;border-radius:6px;padding:8px 14px;font-size:13px;">Donner mon avis sur ' + esc(it.product_name || 'ce produit') + '</a></li>';
                 }).join('');
                 const html =
