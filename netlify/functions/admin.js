@@ -18,6 +18,11 @@
  *   updateOrder        { id, tracking_number?, shipping_status?, delivery_type?, pickup_point? } -> { ok }
  *   saleStats          { period?, threshold? }                      -> { totals, products, monthly }
  *   recordReturn       { order_id, order_item_id, quantity, reason?, return_ref } -> { ok, refundCents }
+ *   resetStock         {}                                            -> { reset } (toutes les variantes a 0)
+ *   ensureBarcodes     {}                                            -> { generated } (codes manquants)
+ *   scanLookup         { barcode }                                   -> { variant, product, stats, pending }
+ *   scanSetStock       { variant_id, qty }                           -> { ok, stock }
+ *   scanSale           { items, customer_name? }                     -> { ok, order_number, total_cents }
  *   getSettings        {}                                          -> { settings, catalog }
  *   saveSettings       { shipping, catalog? }                       -> { ok }
  *   listMessages       {}                                          -> { messages }
@@ -180,6 +185,19 @@ function strArr(v) {
   return (String(v == null ? '' : v).split(',').map((x) => x.trim()).filter(Boolean));
 }
 
+function cleanBarcode(v) {
+  const b = v && typeof v.barcode === 'string' ? v.barcode.trim().toUpperCase() : '';
+  return b.slice(0, 40);
+}
+
+// Attribue le prochain code-barres HN0000001, ... (compteur dans les réglages).
+async function nextBarcode(sb) {
+  const cur = await getSetting(sb, 'barcode_seq', 0);
+  const n = (typeof cur === 'number' ? cur : parseInt(cur, 10) || 0) + 1;
+  await saveSetting(sb, 'barcode_seq', n);
+  return 'HN' + String(n).padStart(7, '0');
+}
+
 function cleanProductFields(body) {
   const p = {};
   const map = {
@@ -255,7 +273,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
       case 'listProducts': {
         const { data, error } = await sb
           .from('products')
-          .select('*, product_variants(id, color, size, stock, active)')
+          .select('*, product_variants(id, color, size, stock, active, barcode)')
           .order('created_at', { ascending: true });
         if (error) throw error;
         const products = (data || []).map((p) => ({ ...p, variants: p.product_variants || [] }));
@@ -282,16 +300,44 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
         }
 
         // ---- Replace variants ----
+        // Chaque variante garde son code-barres s'il est fourni, sinon se voit
+        // attribuer automatiquement le prochain code de la séquence HN0000001...
         if (Array.isArray(body.variants)) {
-          await sb.from('product_variants').delete().eq('product_id', productId);
-          const rows = body.variants
-            .map((v) => ({
+          const rows = [];
+          for (const v of body.variants) {
+            const row = {
               product_id: productId,
               color: String(v.color || ''),
               size: String(v.size || ''),
               stock: Math.max(0, parseInt(v.stock, 10) || 0),
               active: v.active !== false
-            }));
+            };
+            let code = cleanBarcode(v);
+            if (!code) code = await nextBarcode(sb);
+            row.barcode = code;
+            rows.push(row);
+          }
+          const codes = rows.map((r) => r.barcode);
+          const localSeen = {};
+          for (const code of codes) {
+            if (localSeen[code]) return json(400, { error: 'Code-barres en double dans la grille : ' + code });
+            localSeen[code] = true;
+          }
+          // Collisions avec d'AUTRES produits (les variantes de ce produit vont
+          // être remplacées de toute façon). Vérifié AVANT la suppression pour
+          // ne jamais laisser un produit sans variantes en cas d'erreur.
+          if (codes.length) {
+            const { data: dup, error: dupErr } = await sb
+              .from('product_variants')
+              .select('barcode')
+              .in('barcode', codes)
+              .neq('product_id', productId);
+            if (dupErr) throw dupErr;
+            for (const d of dup || []) {
+              return json(400, { error: 'Code-barres d\u00e9j\u00e0 utilis\u00e9 par une autre variante : ' + d.barcode });
+            }
+          }
+          await sb.from('product_variants').delete().eq('product_id', productId);
           if (rows.length) {
             const { error: vErr } = await sb.from('product_variants').insert(rows);
             if (vErr) throw vErr;
@@ -300,7 +346,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
 
         const { data: saved, error: savedErr } = await sb
           .from('products')
-          .select('*, product_variants(id, color, size, stock, active)')
+          .select('*, product_variants(id, color, size, stock, active, barcode)')
           .eq('id', productId)
           .maybeSingle();
         if (savedErr) throw savedErr;
@@ -974,6 +1020,242 @@ case 'deleteMessage': {
           },
           products: productRows,
           monthly
+        });
+      }
+
+      case 'resetStock': {
+        // Action admin volontaire : toutes les variantes repassent à 0.
+        // Les commandes existantes (et leur facturation) ne sont pas touchées.
+        // Les futures ventes seront bloquées atomiquement (decrement_stock exige stock >= qty).
+        const { error } = await sb
+          .from('product_variants')
+          .update({ stock: 0 })
+          .neq('stock', 0);
+        if (error) throw error;
+        return json(200, { reset: true });
+      }
+
+      case 'ensureBarcodes': {
+        // Attribue un code-barres à toute variante qui n'en a pas encore.
+        const { data: variants, error: vErr } = await sb
+          .from('product_variants')
+          .select('id, barcode');
+        if (vErr) throw vErr;
+        const missing = (variants || []).filter((v) => !v.barcode || !String(v.barcode).trim());
+        for (const v of missing) {
+          const code = await nextBarcode(sb);
+          const { error: upErr } = await sb.from('product_variants').update({ barcode: code }).eq('id', v.id);
+          if (upErr) throw upErr;
+        }
+        return json(200, { generated: missing.length });
+      }
+
+      case 'scanLookup': {
+        // Fiche d'une variante à partir du code scanné : stock + ventes de
+        // CETTE variante (commandes payées, retours déduits) + commandes en
+        // attente qui la contiennent (préparation).
+        const code = cleanBarcode(body);
+        if (!code) return json(400, { error: 'Code barres vide' });
+        const currency = (await getSetting(sb, 'currency', null)) || { code: 'usd', symbol: '$' };
+        const { data: v, error: vErr } = await sb
+          .from('product_variants')
+          .select('id, product_id, color, size, stock, active, barcode, products(id, slug, name_en, name_fr, price_cents, image, active)')
+          .eq('barcode', code)
+          .maybeSingle();
+        if (vErr) throw vErr;
+        if (!v) return json(404, { error: 'Article introuvable' });
+        const prod = v.products || {};
+
+        let sold = 0, revenueCents = 0;
+        const { data: items, error: iErr } = await sb
+          .from('order_items')
+          .select('quantity, unit_price_cents, orders(status)')
+          .eq('variant_id', v.id)
+          .limit(2000);
+        if (iErr) throw iErr;
+        for (const it of items || []) {
+          if (it.orders && it.orders.status === 'paid') {
+            sold += it.quantity;
+            revenueCents += it.quantity * (it.unit_price_cents || 0);
+          }
+        }
+
+        let returned = 0;
+        const { data: rets, error: rErr } = await sb
+          .from('order_returns')
+          .select('quantity, order_items(variant_id)')
+          .limit(2000);
+        if (rErr) throw rErr;
+        for (const rt of rets || []) {
+          if (rt.order_items && rt.order_items.variant_id === v.id) returned += rt.quantity;
+        }
+
+        const pending = [];
+        const { data: pendItems, error: pErr } = await sb
+          .from('order_items')
+          .select('quantity, orders(order_number, status, shipping_status)')
+          .eq('variant_id', v.id)
+          .limit(500);
+        if (pErr) throw pErr;
+        for (const it of pendItems || []) {
+          const o = it.orders || {};
+          if (o.status === 'paid' && (o.shipping_status === 'new' || o.shipping_status == null)) {
+            pending.push({ order_number: o.order_number, quantity: it.quantity });
+          }
+        }
+
+        return json(200, {
+          variant: { id: v.id, product_id: v.product_id, color: v.color, size: v.size, stock: v.stock, active: v.active, barcode: v.barcode },
+          product: {
+            id: prod.id, slug: prod.slug, name_fr: prod.name_fr, name_en: prod.name_en,
+            price_cents: prod.price_cents, image: prod.image, active: prod.active
+          },
+          stats: { sold, revenueCents, returned },
+          pending,
+          currency
+        });
+      }
+
+      case 'scanSetStock': {
+        // Comptage réel : remplace le stock d'une variante.
+        const vid = String(body.variant_id || '').trim();
+        const qty = parseInt(body.qty, 10);
+        if (!vid) return json(400, { error: 'variant_id requis' });
+        if (!(qty >= 0)) return json(400, { error: 'Quantit\u00e9 invalide' });
+        const { data, error } = await sb
+          .from('product_variants')
+          .update({ stock: qty })
+          .eq('id', vid)
+          .select('id, stock')
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) return json(404, { error: 'Variante introuvable' });
+        return json(200, { ok: true, stock: data.stock });
+      }
+
+      case 'scanSale': {
+        // Caisse manuelle : l'admin encaisse lui-même et confirme la vente.
+        // Crée une commande 'paid' (remise en main propre) et décrémente le
+        // stock de façon atomique — si une ligne manque, rien n'est débité.
+        const lines = Array.isArray(body.items) ? body.items : [];
+        const merged = {};
+        for (const li of lines) {
+          const vid = String(li.variant_id || '').trim();
+          const qty = parseInt(li.qty, 10);
+          if (!vid || !(qty >= 1)) return json(400, { error: 'Ligne de vente invalide' });
+          merged[vid] = (merged[vid] || 0) + qty;
+        }
+        const cleaned = Object.keys(merged).map((vid) => ({ variant_id: vid, qty: merged[vid] }));
+        if (!cleaned.length) return json(400, { error: 'Panier vide' });
+
+        const { data: variants, error: vErr } = await sb
+          .from('product_variants')
+          .select('id, product_id, color, size, stock, active, products(id, slug, name_en, name_fr, image, price_cents, active)')
+          .in('id', cleaned.map((c) => c.variant_id));
+        if (vErr) throw vErr;
+        const byId = {};
+        for (const v of variants || []) byId[v.id] = v;
+        if (cleaned.some((c) => {
+          const v = byId[c.variant_id];
+          return !v || v.active === false || !v.products || v.products.active === false;
+        })) {
+          return json(400, { error: 'Article inactif ou introuvable' });
+        }
+
+        // Décrément atomique (stock >= qty), tout ou rien.
+        const debited = [];
+        for (const c of cleaned) {
+          const r = await sb.rpc('decrement_stock', { p_variant_id: c.variant_id, p_qty: c.qty });
+          if (r.error) throw r.error;
+          if (r.data !== true) {
+            for (const d of debited) {
+              await sb.from('product_variants').update({ stock: d.stock + d.qty }).eq('id', d.variant_id);
+            }
+            const v = byId[c.variant_id];
+            const name = v && v.products ? (v.products.name_fr || v.products.name_en) : c.variant_id;
+            return json(400, { error: 'Stock insuffisant pour ' + name });
+          }
+          debited.push({ variant_id: c.variant_id, qty: c.qty, stock: byId[c.variant_id].stock });
+        }
+
+        // Totaux : mêmes sources que l'affichage client (prix produit + taxe).
+        const ship = await loadSettings(sb);
+        const currency = (await getSetting(sb, 'currency', null)) || { code: 'usd', symbol: '$' };
+        const taxRate = typeof ship.tax_rate === 'number' ? ship.tax_rate : 0;
+        let subtotal = 0;
+        const itemsRows = [];
+        for (const c of cleaned) {
+          const v = byId[c.variant_id];
+          const p = v.products;
+          const unit = p.price_cents;
+          const variantLabel = [v.color, v.size].filter(Boolean).join(' x ');
+          subtotal += unit * c.qty;
+          itemsRows.push({
+            product_id: p.id,
+            product_slug: p.slug,
+            product_name: (p.name_fr || p.name_en) + (variantLabel ? ' - ' + variantLabel : ''),
+            image: p.image,
+            unit_price_cents: unit,
+            quantity: c.qty,
+            variant_id: v.id,
+            variant: variantLabel || null
+          });
+        }
+        const taxCents = taxRate > 0 ? Math.round(subtotal * taxRate) : 0;
+        const totalCents = subtotal + taxCents;
+
+        const orderId = crypto.randomUUID();
+        const orderNumber = 'HN-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+        const now = new Date().toISOString();
+        const { error: oErr } = await sb.from('orders').insert({
+          id: orderId,
+          order_number: orderNumber,
+          email: 'vente@directe.local',
+          customer_name: String(body.customer_name || '').trim().slice(0, 80) || 'Vente directe',
+          phone: null,
+          address1: 'Vente directe',
+          address2: null,
+          city: '\u2014',
+          state: '\u2014',
+          postal_code: '\u2014',
+          country: '\u2014',
+          shipping_method: 'pickup',
+          delivery_type: 'pickup',
+          pickup_point: 'Vente directe',
+          subtotal_cents: subtotal,
+          shipping_cents: 0,
+          tax_cents: taxCents,
+          discount_cents: 0,
+          total_cents: totalCents,
+          currency: currency.code,
+          status: 'paid',
+          paid_at: now,
+          created_at: now,
+          shipping_status: 'delivered',
+          delivered_at: now
+        });
+        if (oErr) {
+          for (const d of debited) {
+            await sb.from('product_variants').update({ stock: d.stock + d.qty }).eq('id', d.variant_id);
+          }
+          throw oErr;
+        }
+        const insertItems = itemsRows.map((r) => Object.assign({ order_id: orderId }, r));
+        const { error: itemsErr } = await sb.from('order_items').insert(insertItems);
+        if (itemsErr) {
+          await sb.from('orders').delete().eq('id', orderId);
+          for (const d of debited) {
+            await sb.from('product_variants').update({ stock: d.stock + d.qty }).eq('id', d.variant_id);
+          }
+          throw itemsErr;
+        }
+        return json(200, {
+          ok: true,
+          order_number: orderNumber,
+          total_cents: totalCents,
+          currency: currency.code,
+          symbol: currency.symbol,
+          item_count: cleaned.length
         });
       }
 
