@@ -77,7 +77,7 @@
   .editor-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
 
   .variant-grid { display: grid; gap: 8px; margin-top: 8px; }
-  .variant-row { display: grid; grid-template-columns: 130px 1fr 90px 90px; gap: 8px; align-items: center; }
+  .variant-row { display: grid; grid-template-columns: 130px 1fr 90px 60px 170px; gap: 8px; align-items: center; }
   .variant-row input { padding: 6px 8px; border: 1px solid #E2D8C5; border-radius: 8px; }
 
   .gallery-item { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; border: 1px solid #E7DECC; border-radius: 10px; padding: 6px; margin: 0 8px 8px 0; }
@@ -239,6 +239,7 @@
   @media (max-width: 640px) {
     .form-grid { grid-template-columns: 1fr; }
     .variant-row { grid-template-columns: 1fr 1fr; }
+    .variant-row .v-barcode { grid-column: 1 / -1; }
     .story-grid { grid-template-columns: 1fr; }
     .admin-container { padding: 16px 12px 48px; }
     .admin-header { flex-direction: column; align-items: stretch; gap: 10px; }
@@ -397,6 +398,8 @@
         <input type="number" id="salesThreshold" value="5" min="0" style="width:70px; padding:8px; border:1px solid #ddd5c4; border-radius:8px;" title="Seuil stock faible">
         <button class="btn btn-secondary" id="refreshSalesBtn">Actualiser</button>
         <button class="btn btn-danger btn-small" id="resetStockBtn" title="Remet le stock de toutes les variantes à 0 (les commandes existantes ne sont pas modifiées)">Remettre le stock &agrave; 0</button>
+        <button class="btn btn-secondary btn-small" id="genBarcodesBtn" title="Attribue un code-barres &agrave; toute variante qui n&rsquo;en a pas encore">G&eacute;n&eacute;rer les codes manquants</button>
+        <button class="btn btn-secondary btn-small" id="printLabelsBtn" title="Ouvre la feuille d&rsquo;&eacute;tiquettes code-barres &agrave; imprimer">Imprimer les &eacute;tiquettes</button>
       </div>
       <div class="card" id="salesList"><p class="empty">Chargement...</p></div>
     </div>
@@ -786,6 +789,7 @@
   <div class="toast" id="toast"></div>
   <script src="js/config.js"></script>
   <script src="js/colors.js"></script>
+  <script src="vendor/jsbarcode.min.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/theme-toggle.js"></script>
 </body>

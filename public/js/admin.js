@@ -420,14 +420,19 @@
     var colors = strToList(getVal('f-colors'));
     var sizes = strToList(getVal('f-sizes'));
 
-    // Keep previously typed stock values when the lists change.
+    // Keep previously typed stock/barcode values when the lists change.
     var keep = {};
     (editing.variants || []).forEach(function (v) {
-      keep[v.color + '||' + v.size] = v.stock;
+      keep[v.color + '||' + v.size] = { stock: v.stock, barcode: v.barcode || '' };
     });
 
     function stockFor(color, size) {
-      return keep[color + '||' + size] != null ? keep[color + '||' + size] : '';
+      var k = keep[color + '||' + size];
+      return k ? k.stock : '';
+    }
+    function barcodeFor(color, size) {
+      var k = keep[color + '||' + size];
+      return k ? k.barcode : '';
     }
 
     var rows = [];
@@ -447,6 +452,7 @@
         '<input type="text" class="v-size" value="' + esc(r.size) + '" placeholder="Taille" ' + (r.size ? 'readonly' : '') + '>' +
         '<input type="number" class="v-stock" min="0" step="1" value="' + (stockFor(r.color, r.size) === '' ? '' : stockFor(r.color, r.size)) + '" placeholder="0">' +
         '<span style="font-size:12px;color:#8a7d66;">stock</span>' +
+        '<input type="text" class="v-barcode" value="' + esc(barcodeFor(r.color, r.size)) + '" placeholder="Code-barres (auto)">' +
         '</div>';
     }).join('');
 
@@ -462,7 +468,13 @@
       var size = row.querySelector('.v-size').value.trim();
       var stockRaw = row.querySelector('.v-stock').value.trim();
       if (stockRaw === '' ) return; // untouched => unmanaged row
-      out.push({ color: color, size: size, stock: Math.max(0, parseInt(stockRaw, 10) || 0) });
+      var barcodeEl = row.querySelector('.v-barcode');
+      out.push({
+        color: color,
+        size: size,
+        stock: Math.max(0, parseInt(stockRaw, 10) || 0),
+        barcode: barcodeEl ? barcodeEl.value.trim() : ''
+      });
     });
     return out;
   }
@@ -1182,6 +1194,79 @@
         resetBtn.disabled = false;
       });
     });
+    var genBtn = document.getElementById('genBarcodesBtn');
+    if (genBtn) genBtn.addEventListener('click', function () {
+      genBtn.disabled = true;
+      call('ensureBarcodes').then(function (res) {
+        var n = res.generated || 0;
+        toast(n === 0 ? 'Toutes les variantes ont déjà un code' : n + ' code(s) généré(s)', 'ok');
+        loadSales();
+      }).catch(function (err) {
+        toast(err.message, 'err');
+      }).then(function () {
+        genBtn.disabled = false;
+      });
+    });
+    var printBtn = document.getElementById('printLabelsBtn');
+    if (printBtn) printBtn.addEventListener('click', printLabels);
+  }
+
+  /* ---- Étiquettes code-barres (feuille A4 à imprimer) ---- */
+
+  function printLabels() {
+    call('listProducts').then(function (res) {
+      var labels = [];
+      (res.products || []).forEach(function (p) {
+        (p.variants || []).forEach(function (v) {
+          var code = String(v.barcode || '').trim();
+          if (!code || v.active === false) return;
+          labels.push({
+            name: p.name_fr || p.name_en || p.slug,
+            variant: [v.color, v.size].filter(Boolean).join(' x '),
+            code: code
+          });
+        });
+      });
+      if (!labels.length) {
+        toast('Aucun code-barres : lancez d\u2019abord \u00ab G\u00e9n\u00e9rer les codes manquants \u00bb', 'err');
+        return;
+      }
+      var w = window.open('', '_blank', 'width=900,height=700');
+      if (!w) { toast('Autorisez les fen\u00eatres pop-up pour imprimer', 'err'); return; }
+      var printCss =
+        '@page { size: A4; margin: 8mm; }' +
+        '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+        'body { font-family: Arial, Helvetica, sans-serif; }' +
+        '.labels { display: flex; flex-wrap: wrap; gap: 6mm; }' +
+        '.label { width: 60mm; border: 1px dashed #ccc; border-radius: 2mm; padding: 3mm; text-align: center; page-break-inside: avoid; }' +
+        '.label .nm { font-weight: bold; font-size: 11px; margin-bottom: 1mm; }' +
+        '.label .vt { color: #666; font-size: 10px; margin-bottom: 2mm; }' +
+        '.label svg { max-width: 100%; height: auto; }' +
+        '@media print { .label { border-color: #aaa; } }';
+      var items = labels.map(function (l) {
+        return '<div class="label"><div class="nm">' + esc(l.name) + '</div>' +
+          '<div class="vt">' + esc(l.variant) + '</div>' +
+          '<svg class="bc" data-code="' + esc(l.code) + '"></svg></div>';
+      }).join('');
+      var html = '<!doctype html><html><head><meta charset="utf-8"><title>\u00c9tiquettes Hanna &amp; Nour</title>' +
+        '<script src="vendor/jsbarcode.min.js"><\/script>' +
+        '<style>' + printCss + '</style></head><body><div class="labels">' + items + '</div>' +
+        '<script>' +
+        'function draw(){' +
+        '  var els=document.querySelectorAll(".bc");' +
+        '  if(!window.JsBarcode){ window.setTimeout(draw,150); return; }' +
+        '  for(var i=0;i<els.length;i++){' +
+        '    window.JsBarcode(els[i], els[i].getAttribute("data-code"),' +
+        '      { format:"CODE128", width:1.6, height:40, displayValue:true, font:"monospace", fontSize:13, margin:0 });' +
+        '  }' +
+        '  window.setTimeout(function(){ window.print(); }, 200);' +
+        '}' +
+        'window.setTimeout(draw, 100);' +
+        '<\/script></body></html>';
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    }).catch(function (e) { toast(e.message, 'err'); });
   }
 
   /* ---------------- Settings ---------------- */
