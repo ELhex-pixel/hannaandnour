@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { describe } = require('../netlify/functions/lib/product-assistant');
 const { siteUrl } = require('../netlify/functions/shared');
+const timers = require('node:timers/promises');
 const image = siteUrl + '/images/product.jpg';
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00]);
 const entry = { name: 'Veste', description: 'Veste à boutons visibles.', features: ['Boutons visibles'] };
@@ -16,6 +17,7 @@ function setup(t, env = {}) {
   const saved = keys.map(key => process.env[key]);
   keys.forEach(key => delete process.env[key]);
   Object.assign(process.env, { GEMINI_API_KEY: 'test-only-gemini-key' }, env);
+  t.mock.method(timers, 'setTimeout', async () => {});
   const fetch = global.fetch;
   t.after(() => {
     global.fetch = fetch;
@@ -37,7 +39,7 @@ test('Gemini reçoit une photo bornée et une clé en en-tête, jamais dans une 
   assert.equal(calls[0].url, image);
   assert.equal(calls[0].options.headers, undefined);
   assert.equal(calls[0].options.redirect, 'error');
-  assert.equal(calls[1].url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent');
+  assert.equal(calls[1].url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent');
   assert.equal(calls[1].options.headers['x-goog-api-key'], process.env.GEMINI_API_KEY);
   assert.equal(calls[1].options.redirect, 'error');
   assert(!calls.some(call => call.url.includes(process.env.GEMINI_API_KEY)));
@@ -131,6 +133,107 @@ test('seuls les codes Google autorisés figurent dans les diagnostics', async t 
   await assert.rejects(describe(image), error => /HTTP 400/.test(error.message) && !error.message.includes(process.env.GEMINI_API_KEY));
   global.fetch = async url => url === image ? imageResponse() : Response.json({ error: { message: 'API key not valid. ' + process.env.GEMINI_API_KEY } }, { status: 400 });
   await assert.rejects(describe(image), error => /Clé Gemini invalide/.test(error.message) && !error.message.includes(process.env.GEMINI_API_KEY));
+});
+
+test('les erreurs temporaires Gemini sont reprises sur le même modèle uniquement', async t => {
+  setup(t, { GEMINI_MODEL: 'gemini-3.5-flash-lite' });
+  for (const status of [500, 502, 503, 504]) {
+    const urls = [];
+    let downloaded = 0;
+    global.fetch = async url => {
+      if (url === image) { downloaded++; return imageResponse(); }
+      urls.push(url);
+      return urls.length === 1 ? Response.json({ error: { status: 'UNAVAILABLE' } }, { status }) : geminiResponse();
+    };
+    assert.equal((await describe(image)).name_fr, entry.name);
+    assert.equal(downloaded, 1);
+    assert.equal(urls.length, 2);
+    assert(urls.every(url => url === 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent'));
+  }
+});
+
+test('une indisponibilité persistante s’arrête après trois appels et indique le modèle', async t => {
+  setup(t);
+  let attempts = 0;
+  global.fetch = async url => {
+    if (url === image) return imageResponse();
+    attempts++;
+    return Response.json({ error: { status: 'UNAVAILABLE' } }, { status: 503 });
+  };
+  await assert.rejects(describe(image), error => /HTTP 503 \/ UNAVAILABLE/.test(error.message) && /modèle : gemini-3.5-flash-lite, tentatives : 3/.test(error.message));
+  assert.equal(attempts, 3);
+  assert.equal(timers.setTimeout.mock.calls.length, 2);
+  const waits = timers.setTimeout.mock.calls;
+  assert(waits[0].arguments[0] >= 500 && waits[0].arguments[0] < 750);
+  assert(waits[1].arguments[0] >= 1000 && waits[1].arguments[0] < 1250);
+  assert.equal(waits[0].arguments[2].signal, waits[1].arguments[2].signal);
+});
+
+test('les erreurs de clé, de configuration et de quota Gemini ne sont jamais reprises', async t => {
+  setup(t);
+  for (const status of [400, 401, 402, 403, 404, 429]) {
+    let attempts = 0;
+    global.fetch = async url => {
+      if (url === image) return imageResponse();
+      attempts++;
+      return Response.json({ error: {} }, { status });
+    };
+    await assert.rejects(describe(image));
+    assert.equal(attempts, 1);
+  }
+  assert.equal(timers.setTimeout.mock.calls.length, 0);
+});
+
+test('un Retry-After trop long arrête les reprises Gemini sans attendre', async t => {
+  setup(t);
+  let attempts = 0;
+  global.fetch = async url => {
+    if (url === image) return imageResponse();
+    attempts++;
+    return Response.json({ error: { status: 'UNAVAILABLE' } }, { status: 503, headers: { 'retry-after': '60' } });
+  };
+  await assert.rejects(describe(image), /tentatives : 1/);
+  assert.equal(attempts, 1);
+  assert.equal(timers.setTimeout.mock.calls.length, 0);
+});
+
+test('un Retry-After court est respecté sans modifier le modèle', async t => {
+  setup(t);
+  let attempts = 0;
+  global.fetch = async url => {
+    if (url === image) return imageResponse();
+    attempts++;
+    return attempts === 1 ? Response.json({ error: {} }, { status: 503, headers: { 'retry-after': '2' } }) : geminiResponse();
+  };
+  assert.equal((await describe(image)).category, 'jacket');
+  assert.equal(timers.setTimeout.mock.calls[0].arguments[0], 2000);
+});
+
+test('un délai restant insuffisant ou une interruption arrête les reprises Gemini', async t => {
+  setup(t);
+  const start = Date.now();
+  let elapsed = 0;
+  t.mock.method(Date, 'now', () => start + elapsed);
+  let attempts = 0;
+  global.fetch = async url => {
+    if (url === image) return imageResponse();
+    attempts++;
+    elapsed = 19500;
+    return Response.json({ error: { status: 'UNAVAILABLE' } }, { status: 503 });
+  };
+  await assert.rejects(describe(image), /tentatives : 1/);
+  assert.equal(attempts, 1);
+  assert.equal(timers.setTimeout.mock.calls.length, 0);
+  elapsed = 0;
+  attempts = 0;
+  timers.setTimeout.mock.mockImplementation(async () => { throw new Error('Abort'); });
+  global.fetch = async url => {
+    if (url === image) return imageResponse();
+    attempts++;
+    return Response.json({ error: {} }, { status: 503 });
+  };
+  await assert.rejects(describe(image), /délai dépassé — modèle : gemini-3.5-flash-lite/);
+  assert.equal(attempts, 1);
 });
 
 test('Gemini refuse une sortie bloquée, tronquée, invalide ou sans les trois langues', async t => {
