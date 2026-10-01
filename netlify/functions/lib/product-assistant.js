@@ -62,6 +62,27 @@ function parseDraft(text) {
   catch { throw new Error('Réponse IA inexploitable : relancez l’analyse de la photo'); }
 }
 
+async function geminiError(response) {
+  let error;
+  try { error = (await response.json())?.error; } catch {}
+  const codes = ['INVALID_ARGUMENT', 'FAILED_PRECONDITION', 'UNAUTHENTICATED', 'PERMISSION_DENIED', 'NOT_FOUND', 'RESOURCE_EXHAUSTED', 'INTERNAL', 'UNAVAILABLE', 'DEADLINE_EXCEEDED', 'API_KEY_INVALID', 'API_KEY_EXPIRED', 'API_KEY_SERVICE_BLOCKED', 'API_KEY_HTTP_REFERRER_BLOCKED', 'API_KEY_IP_ADDRESS_BLOCKED', 'SERVICE_DISABLED', 'BILLING_DISABLED'];
+  const details = Array.isArray(error?.details) ? error.details : [];
+  const reason = details.map(detail => detail?.reason).find(value => codes.includes(value));
+  const code = reason || (codes.includes(error?.status) ? error.status : '');
+  const reference = ' (HTTP ' + response.status + (code ? ' / ' + code : '') + ')';
+  const message = typeof error?.message === 'string' ? error.message : '';
+  if (['API_KEY_INVALID', 'API_KEY_EXPIRED', 'UNAUTHENTICATED'].includes(code) || /API key (?:not valid|expired|invalid)/i.test(message) || response.status === 401) {
+    return new Error('Clé Gemini invalide ou expirée : remplacez GEMINI_API_KEY dans Netlify puis redéployez' + reference);
+  }
+  if (code === 'SERVICE_DISABLED') return new Error('Activez la Generative Language API dans le projet Google associé à la clé Gemini' + reference);
+  if (code === 'BILLING_DISABLED' || code === 'FAILED_PRECONDITION' || response.status === 402) return new Error('Vérifiez la facturation et les conditions d’accès à Gemini dans Google AI Studio' + reference);
+  if (code.startsWith('API_KEY_') || code === 'PERMISSION_DENIED' || response.status === 403) return new Error('Vérifiez la clé GEMINI_API_KEY et ses autorisations pour les appels serveur Netlify' + reference);
+  if (response.status === 429) return new Error('Quota Gemini atteint : vérifiez les limites et la facturation Google AI Studio' + reference);
+  if (response.status === 404) return new Error('Modèle Gemini indisponible : vérifiez GEMINI_MODEL dans Netlify' + reference);
+  if (response.status === 400) return new Error('Gemini a refusé la requête : vérifiez le modèle, la photo et la configuration de la clé' + reference);
+  return new Error('Service Gemini temporairement indisponible' + reference);
+}
+
 async function describeGemini(image) {
   const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   if (!/^gemini-[a-zA-Z0-9._-]+$/.test(model)) throw new Error('GEMINI_MODEL doit contenir un identifiant de modèle Gemini valide');
@@ -86,10 +107,7 @@ async function describeGemini(image) {
       })
     });
   } catch { throw new Error('Service Gemini temporairement indisponible ou délai dépassé'); }
-  if ([401, 403].includes(response.status)) throw new Error('Vérifiez la clé GEMINI_API_KEY et ses autorisations dans Netlify');
-  if (response.status === 429) throw new Error('Quota Gemini atteint : vérifiez les limites et la facturation Google AI Studio');
-  if (response.status === 404) throw new Error('Modèle Gemini indisponible : vérifiez GEMINI_MODEL dans Netlify');
-  if (!response.ok) throw new Error('Service Gemini temporairement indisponible');
+  if (!response.ok) throw await geminiError(response);
   let body;
   try { body = await response.json(); }
   catch { throw new Error('Réponse Gemini inexploitable'); }

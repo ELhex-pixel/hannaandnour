@@ -96,12 +96,41 @@ test('Gemini refuse une taille annoncée excessive et les fichiers non image', a
 
 test('les erreurs Gemini ne révèlent ni clé ni corps de réponse du fournisseur', async t => {
   setup(t);
-  for (const [status, message] of [[401, /autorisations/], [403, /autorisations/], [429, /Quota/], [404, /Modèle/], [500, /indisponible/]]) {
+  for (const [status, message] of [[401, /invalide/], [403, /autorisations/], [429, /Quota/], [404, /Modèle/], [500, /indisponible/]]) {
     global.fetch = async url => url === image ? imageResponse() : new Response(process.env.GEMINI_API_KEY, { status });
     await assert.rejects(describe(image), error => message.test(error.message) && !error.message.includes(process.env.GEMINI_API_KEY));
   }
   global.fetch = async url => { if (url === image) return imageResponse(); throw new Error(process.env.GEMINI_API_KEY); };
   await assert.rejects(describe(image), error => /indisponible/.test(error.message) && !error.message.includes(process.env.GEMINI_API_KEY));
+});
+
+test('une clé Gemini invalide en HTTP 400 est identifiée sans révéler le secret', async t => {
+  setup(t);
+  global.fetch = async url => url === image ? imageResponse() : Response.json({ error: {
+    status: 'INVALID_ARGUMENT', message: process.env.GEMINI_API_KEY,
+    details: [{ reason: 'API_KEY_INVALID', metadata: { key: process.env.GEMINI_API_KEY } }]
+  } }, { status: 400 });
+  await assert.rejects(describe(image), error => /Clé Gemini invalide/.test(error.message) && /HTTP 400 \/ API_KEY_INVALID/.test(error.message) && !error.message.includes(process.env.GEMINI_API_KEY));
+});
+
+test('les diagnostics Gemini distinguent clé bloquée, API désactivée et facturation', async t => {
+  setup(t);
+  for (const [reason, message] of [['API_KEY_HTTP_REFERRER_BLOCKED', /appels serveur Netlify/], ['SERVICE_DISABLED', /Activez la Generative Language API/], ['BILLING_DISABLED', /facturation/]]) {
+    global.fetch = async url => url === image ? imageResponse() : Response.json({ error: { details: [{ reason }], message: process.env.GEMINI_API_KEY } }, { status: 403 });
+    await assert.rejects(describe(image), error => message.test(error.message) && !error.message.includes(process.env.GEMINI_API_KEY));
+  }
+  global.fetch = async url => url === image ? imageResponse() : Response.json({ error: { status: 'FAILED_PRECONDITION' } }, { status: 400 });
+  await assert.rejects(describe(image), /facturation/);
+});
+
+test('seuls les codes Google autorisés figurent dans les diagnostics', async t => {
+  setup(t);
+  global.fetch = async url => url === image ? imageResponse() : Response.json({ error: {
+    status: process.env.GEMINI_API_KEY, details: [{ reason: process.env.GEMINI_API_KEY }], message: process.env.GEMINI_API_KEY
+  } }, { status: 400 });
+  await assert.rejects(describe(image), error => /HTTP 400/.test(error.message) && !error.message.includes(process.env.GEMINI_API_KEY));
+  global.fetch = async url => url === image ? imageResponse() : Response.json({ error: { message: 'API key not valid. ' + process.env.GEMINI_API_KEY } }, { status: 400 });
+  await assert.rejects(describe(image), error => /Clé Gemini invalide/.test(error.message) && !error.message.includes(process.env.GEMINI_API_KEY));
 });
 
 test('Gemini refuse une sortie bloquée, tronquée, invalide ou sans les trois langues', async t => {
