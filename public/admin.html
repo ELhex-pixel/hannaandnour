@@ -389,6 +389,7 @@
       <button class="admin-tab active" data-tab="products">Produits</button>
       <button class="admin-tab" data-tab="orders">Commandes</button>
       <button class="admin-tab" data-tab="returns">Retours clients</button>
+      <button class="admin-tab" data-tab="tiktok">Export TikTok</button>
       <button class="admin-tab" data-tab="sales">Ventes &amp; Stock</button>
       <button class="admin-tab" data-tab="reviews">Avis</button>
       <button class="admin-tab" data-tab="home">Accueil</button>
@@ -418,6 +419,26 @@
     </div>
 
     <!-- ORDERS -->
+    <div class="admin-panel" id="panel-tiktok">
+      <div class="card">
+        <h2>Exporter les produits vers TikTok Shop France</h2>
+        <p>Choisissez le modèle officiel XLSX de la catégorie (20 Mo maximum). Le fichier reste dans votre navigateur. Les colonnes, onglets cachés et validations TikTok sont conservés.</p>
+        <div class="field"><label for="tiktokTemplate">1. Modèle officiel TikTok de création</label><input type="file" id="tiktokTemplate" accept=".xlsx"></div>
+        <pre id="tiktokTemplateInfo" style="white-space:pre-wrap;"></pre>
+        <p>Prix TTC en EUR selon le taux configuré sur le site, hors livraison et promotions. Le stock disponible, y compris 0, est exporté sans modifier le stock du site.</p>
+        <p><strong>Ce fichier crée des produits : il ne synchronise ni les ventes ni le stock des annonces TikTok existantes.</strong> Pour modifier ces dernières, utilisez l’outil de mise à jour du Seller Center. Un stock partagé reste exposé aux doubles ventes.</p>
+        <p>Vérifiez les droits sur vos photos et les obligations du Seller Center. Les images doivent être publiques, en JPG/PNG, de moins de 5 Mo ; privilégiez une image carrée de 600 à 1 200 pixels sur fond blanc.</p>
+        <button type="button" class="btn btn-secondary" id="refreshTiktokProducts">Actualiser les produits</button>
+        <div class="field"><label for="tiktokProduct">2. Compléter les informations TikTok d’un produit enregistré</label><select id="tiktokProduct"><option value="">Choisir un produit</option></select></div>
+        <div class="form-grid" id="tiktokFields"></div>
+        <button type="button" class="btn btn-secondary" id="saveTiktokMetadata" disabled>Enregistrer les informations TikTok</button>
+        <h3>3. Sélectionner les produits à exporter</h3>
+        <p>Un modèle par catégorie. Ne sélectionnez que les produits appartenant réellement à cette catégorie ; maximum 100 produits / 4 994 variantes.</p>
+        <div id="tiktokProducts"></div>
+        <button type="button" class="btn btn-primary" id="exportTiktokProducts" disabled>Télécharger le XLSX rempli pour TikTok</button>
+        <pre id="tiktokStatus" role="status" aria-live="polite" style="white-space:pre-wrap;"></pre>
+      </div>
+    </div>
     <div class="admin-panel" id="panel-returns">
       <div class="card"><h2>Demandes de retour</h2><p>Accepter une demande ne déclenche aucun remboursement. Confirmez la réception physique pour remettre en stock ; gérez le remboursement depuis la commande.</p><button type="button" class="btn btn-secondary" id="refreshReturnRequests">Actualiser</button><div id="returnRequestsList"></div></div>
     </div>
@@ -875,6 +896,8 @@
   <script src="vendor/jsbarcode.min.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/admin-features.js"></script>
+  <script src="js/tiktok-xlsx.js"></script>
+  <script src="js/admin-tiktok.js"></script>
   <script src="js/theme-toggle.js"></script>
 </body>
 </html>

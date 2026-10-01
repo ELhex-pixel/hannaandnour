@@ -115,6 +115,16 @@ test('migration réelle : stock, paiements, retours, accès et recherche', async
     assert.equal((await db.query("select apply_admin_reset('otp-hash','other-hash') as ok")).rows[0].ok, false);
     assert.equal((await db.query("select (value->>'token_version')::integer as version from settings where key='admin_auth'")).rows[0].version, 1);
     assert.deepEqual((await db.query("select relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity")).rows, []);
+    await db.query("insert into settings(key,value) values($1,$2)", ['tiktok:' + product, JSON.stringify({ manufacturer_ids: 'private-test', rp_ids: 'private-test' })]);
+    await db.exec('grant select, insert, update on public.settings to anon, authenticated');
+    for (const role of ['anon', 'authenticated']) {
+      await db.exec('set role ' + role);
+      try {
+        assert.equal((await db.query("select value from settings where key=$1", ['tiktok:' + product])).rows.length, 0);
+        await assert.rejects(db.query("insert into settings(key,value) values('tiktok:unauthorized','{}')"));
+        assert.equal((await db.query("update settings set value='{}' where key=$1 returning key", ['tiktok:' + product])).rows.length, 0);
+      } finally { await db.exec('reset role'); }
+    }
     const rounding = await draft(3);
     await db.query("update orders set status='paid' where id=$1", [rounding.id]);
     await db.query('update order_items set net_total_cents=203 where id=$1', [rounding.item]);
