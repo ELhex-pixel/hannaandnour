@@ -6,10 +6,12 @@
 
 create or replace function increment_stock(p_variant_id uuid, p_qty integer)
 returns boolean
-language sql
+language plpgsql
 as $$
+begin
   update product_variants
      set stock = stock + p_qty
    where id = p_variant_id;
-  select found;
+  return found;
+end;
 $$;

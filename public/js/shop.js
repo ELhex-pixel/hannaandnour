@@ -34,7 +34,7 @@
   }
 
   function catKey(cat) {
-    return { hijab: 'catHijabs', abaya: 'catAbayas', dress: 'catDresses', prayer: 'catPrayerWear', accessory: 'catAccessories' }[cat] || 'catHijabs';
+    return HN.catKey(cat);
   }
 
   function readValue(list, value) {
@@ -103,23 +103,23 @@
   function buildFilterOptions() {
     var items = state.items;
 
-    var sizes = canonicalSort(collectValues(items, 'sizes'), SIZE_ORDER);
+    var sizes = canonicalSort(state.facets ? state.facets.sizes : collectValues(items, 'sizes'), SIZE_ORDER);
     var sizeEl = document.getElementById('sizeOptions');
     if (sizeEl) {
       sizeEl.innerHTML = sizes.map(function (s) {
         return '<label class="filter-option" data-group="size" data-value="' + escAttr(s) + '">' +
           '<span class="filter-checkbox"></span> <span>' + escAttr(s) + '</span>' +
-          '<span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">' + countValue(items, 'sizes', s) + '</span></label>';
+          '<span class="filter-count" style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">' + (state.facets ? '' : countValue(items, 'sizes', s)) + '</span></label>';
       }).join('');
     }
 
-    var occasions = canonicalSort(collectValues(items, 'occasions'), OCC_ORDER);
+    var occasions = canonicalSort(state.facets ? state.facets.occasions : collectValues(items, 'occasions'), OCC_ORDER);
     var occEl = document.getElementById('occasionOptions');
     if (occEl) {
       occEl.innerHTML = occasions.map(function (o) {
         return '<label class="filter-option" data-group="occasion" data-value="' + escAttr(o) + '">' +
           '<span class="filter-checkbox"></span> <span>' + escAttr(o) + '</span>' +
-          '<span style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">' + countValue(items, 'occasions', o) + '</span></label>';
+          '<span class="filter-count" style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">' + (state.facets ? '' : countValue(items, 'occasions', o)) + '</span></label>';
       }).join('');
     }
 
@@ -194,6 +194,7 @@
     return HN.loadProducts().then(function (products) {
       state.items = (products || []).filter(function (p) { return p.active !== false; });
       state.source = 'api';
+      return fetch(HN.api('products') + '?facets=true').then(function (res) { if (!res.ok) throw new Error('facets'); return res.json(); }).then(function (facets) { state.facets = facets; });
     }).catch(function () {
       state.items = itemsFromStaticCards();
       state.source = 'static';
@@ -231,6 +232,7 @@
 
   function render() {
     if (!grid) return;
+    if (state.source === 'api') { renderRemote(); return; }
     var list = applyFilters();
     var start = 0;
     var end = Math.min(list.length, state.page * PAGE_SIZE);
@@ -254,14 +256,42 @@
 
   /* ---- Active filter tags ---- */
 
+  var remoteRevision = 0;
+  var remoteSignature = '';
+  var remoteItems = [];
+  function renderRemote() {
+    var params = new URLSearchParams({ category: state.categories.join(','), sizes: state.sizes.join(','), occasions: state.occasions.join(','), sort: state.sort, limit: PAGE_SIZE });
+    if (state.minCents !== null) params.set('min', state.minCents);
+    if (state.maxCents !== null) params.set('max', state.maxCents);
+    var signature = params.toString();
+    if (signature !== remoteSignature || state.page === 1) remoteItems = [];
+    remoteSignature = signature;
+    params.set('page', state.page);
+    var revision = ++remoteRevision;
+    if (loadMoreBtn) loadMoreBtn.disabled = true;
+    fetch(HN.api('products') + '?' + params.toString()).then(function (res) { if (!res.ok) throw new Error('catalog'); return res.json(); })
+      .then(function (data) {
+        if (revision !== remoteRevision) return;
+        var seen = {};
+        remoteItems = remoteItems.concat(data.products || []).filter(function (p) { if (seen[p.slug]) return false; seen[p.slug] = true; return true; });
+        HN.rememberProducts(data.products || []);
+        grid.innerHTML = remoteItems.map(buildCard).join('') || '<p class="text-center">' + tr('emptyCatalog') + '</p>';
+        HN.updateWishlistHearts();
+        if (resultsEl) resultsEl.textContent = tr('showingResults', { visible: remoteItems.length, total: data.total });
+        if (loadMoreBtn) { loadMoreBtn.disabled = false; loadMoreBtn.style.display = data.has_more ? '' : 'none'; }
+        document.querySelectorAll('.filter-count').forEach(function (node) { node.textContent = ''; });
+        updateActiveFilters();
+      }).catch(function () { if (revision === remoteRevision) { if (loadMoreBtn) loadMoreBtn.disabled = false; if (resultsEl) resultsEl.textContent = tr('emptyCatalog'); } });
+  }
+
   function updateActiveFilters() {
     if (!activeFiltersEl) return;
     var tags = [];
     state.categories.forEach(function (c) {
-      tags.push({ text: tr(catKey(c)), remove: function () { state.categories = []; setFilterControls(); render(); } });
+      tags.push({ text: tr(catKey(c)), remove: function () { state.categories = []; state.page = 1; setFilterControls(); render(); } });
     });
-    state.occasions.forEach(function (o) { tags.push({ text: o, remove: function () { state.occasions = []; setFilterControls(); render(); } }); });
-    state.sizes.forEach(function (s) { tags.push({ text: s, remove: function () { state.sizes = []; setFilterControls(); render(); } }); });
+    state.occasions.forEach(function (o) { tags.push({ text: o, remove: function () { state.occasions = []; state.page = 1; setFilterControls(); render(); } }); });
+    state.sizes.forEach(function (s) { tags.push({ text: s, remove: function () { state.sizes = []; state.page = 1; setFilterControls(); render(); } }); });
 
     activeFiltersEl.textContent = '';
     if (!tags.length) {
@@ -375,7 +405,7 @@
       loadMoreBtn.addEventListener('click', function () {
         state.page += 1;
         render();
-        if ((state.page * PAGE_SIZE) >= state.items.length) {
+        if (state.source !== 'api' && (state.page * PAGE_SIZE) >= state.items.length) {
           loadMoreBtn.style.display = 'none';
         }
       });

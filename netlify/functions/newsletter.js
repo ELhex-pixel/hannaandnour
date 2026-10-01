@@ -3,7 +3,7 @@
  * Body: { "email": "someone@example.com" }
  * Stores the subscription in the Supabase newsletter table.
  */
-const { json, getSupabase, isConfigured, readBody } = require('./shared');
+const { json, getSupabase, isConfigured, readBody, rateLimit } = require('./shared');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -24,11 +24,13 @@ exports.handler = async function (event) {
     const body = readBody(event);
     const email = String(body.email || '').trim().toLowerCase();
 
-    if (!EMAIL_RE.test(email)) {
+    if (!EMAIL_RE.test(email) || email.length > 254) {
       return json(400, { error: 'Invalid email address' });
     }
 
     const sb = getSupabase();
+    const limited = await rateLimit(sb, event, 'newsletter', 5, 600, email);
+    if (limited) return limited;
     const { error } = await sb
       .from('newsletter')
       .upsert({ email, source: String(body.source || 'footer').slice(0, 50) }, { onConflict: 'email' });

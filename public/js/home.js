@@ -87,11 +87,12 @@
   }
 
   function init() {
-    HN.loadProducts()
-      .then(function (products) {
-        return HN.loadConfig().then(function (cfg) {
-          return { products: products, cfg: cfg || {} };
-        });
+    HN.loadConfig()
+      .then(function (cfg) {
+        cfg = cfg || {};
+        var slugs = cfg.home && cfg.home.bestsellers;
+        var products = Array.isArray(slugs) && slugs.length ? HN.loadProductSlugs(slugs) : HN.fetchProducts({ bestseller: true, limit: 48 });
+        return products.then(function (items) { return { products: items, cfg: cfg }; });
       })
       .then(function (res) {
         var cfg = res.cfg;

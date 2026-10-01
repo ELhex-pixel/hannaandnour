@@ -1332,7 +1332,33 @@
     }
   };
 
-  var lang = localStorage.getItem('hn-lang');
+  Object.assign(DICT.en, {
+    authConfirmationSent: 'Check your email to confirm your account, then sign in.', quoteUnavailable: 'Prices unavailable — reload to retry', quoteChanged: 'Your total changed. Review it and click again to confirm.',
+    claimGuestTitle: 'Find my guest orders', claimGuestHelp: 'Confirm ownership of your email to attach past guest orders.', claimGuestSend: 'Email me a code', claimGuestCode: '6-digit code', claimGuestConfirm: 'Confirm', claimGuestSent: 'Code sent. Check your inbox.', claimGuestDone: 'Your guest orders are now attached.',
+    returnPortalTitle: 'Returns', returnPortalHelp: 'Request a return after delivery, within the store return window. Approval does not automatically refund payment.', returnReason: 'Reason for the return', returnSubmit: 'Request a return', returnSent: 'Request submitted for review.', returnStatus_requested: 'Awaiting approval', returnStatus_approved: 'Approved', returnStatus_rejected: 'Rejected', returnStatus_received: 'Received', trackOrder: 'Track my order', trackCarrier: 'Open carrier tracking',
+    catKnitwear: 'Knitwear', catJackets: 'Jackets', catSkirts: 'Skirts', catTops: 'Tops', catTrousers: 'Trousers', productFit: 'Fit', productMeasurements: 'Verified measurements', productOpacity: 'Opacity', opacity_opaque: 'Opaque', 'opacity_semi-sheer': 'Semi-sheer', opacity_sheer: 'Sheer', productVideo: 'View product video'
+  });
+  Object.assign(DICT.fr, {
+    authConfirmationSent: 'Confirmez votre compte depuis votre email, puis connectez-vous.', quoteUnavailable: 'Tarifs indisponibles — rechargez pour réessayer', quoteChanged: 'Le total a changé. Vérifiez-le puis confirmez à nouveau.',
+    claimGuestTitle: 'Retrouver mes commandes invitées', claimGuestHelp: 'Confirmez votre adresse email pour rattacher vos anciennes commandes invitées.', claimGuestSend: 'Recevoir un code par email', claimGuestCode: 'Code à 6 chiffres', claimGuestConfirm: 'Confirmer', claimGuestSent: 'Code envoyé : consultez votre messagerie.', claimGuestDone: 'Vos commandes invitées sont rattachées.',
+    returnPortalTitle: 'Retours', returnPortalHelp: 'Demandez un retour après livraison, dans le délai de la boutique. L’accord ne déclenche pas de remboursement automatique.', returnReason: 'Motif du retour', returnSubmit: 'Demander un retour', returnSent: 'Demande envoyée pour validation.', returnStatus_requested: 'En attente', returnStatus_approved: 'Accepté', returnStatus_rejected: 'Refusé', returnStatus_received: 'Reçu', trackOrder: 'Suivre ma commande', trackCarrier: 'Ouvrir le suivi transporteur',
+    catKnitwear: 'Pulls et maille', catJackets: 'Vestes', catSkirts: 'Jupes', catTops: 'Hauts', catTrousers: 'Pantalons', productFit: 'Coupe', productMeasurements: 'Mesures vérifiées', productOpacity: 'Transparence', opacity_opaque: 'Opaque', 'opacity_semi-sheer': 'Semi-transparente', opacity_sheer: 'Transparente', productVideo: 'Voir la vidéo du produit'
+  });
+  Object.assign(DICT.ar, {
+    authConfirmationSent: 'أكد حسابك عبر البريد الإلكتروني ثم سجّل الدخول.', quoteUnavailable: 'الأسعار غير متاحة — أعد تحميل الصفحة', quoteChanged: 'تغير المجموع. راجعه ثم أكد مرة أخرى.',
+    claimGuestTitle: 'استعادة طلباتي السابقة', claimGuestHelp: 'أكد ملكية بريدك الإلكتروني لربط طلبات الضيف السابقة بحسابك.', claimGuestSend: 'أرسل رمزاً إلى بريدي', claimGuestCode: 'رمز من 6 أرقام', claimGuestConfirm: 'تأكيد', claimGuestSent: 'تم إرسال الرمز. تحقق من بريدك.', claimGuestDone: 'تم ربط طلباتك السابقة.',
+    returnPortalTitle: 'الإرجاع', returnPortalHelp: 'اطلب الإرجاع بعد التسليم ضمن مهلة المتجر. الموافقة لا تعني استرداد المبلغ تلقائياً.', returnReason: 'سبب الإرجاع', returnSubmit: 'طلب إرجاع', returnSent: 'أرسل الطلب للمراجعة.', returnStatus_requested: 'قيد المراجعة', returnStatus_approved: 'مقبول', returnStatus_rejected: 'مرفوض', returnStatus_received: 'تم الاستلام', trackOrder: 'تتبع طلبي', trackCarrier: 'فتح تتبع شركة الشحن',
+    catKnitwear: 'كنزات', catJackets: 'سترات', catSkirts: 'تنانير', catTops: 'قطع علوية', catTrousers: 'سراويل', productFit: 'القصة', productMeasurements: 'قياسات مؤكدة', productOpacity: 'الشفافية', opacity_opaque: 'غير شفاف', 'opacity_semi-sheer': 'شبه شفاف', opacity_sheer: 'شفاف', productVideo: 'مشاهدة فيديو المنتج'
+  });
+  Object.assign(DICT.en, { returnPhoto: 'Optional photo (JPG, PNG, WebP, max 2 MB)', returnPhotoFailed: 'Request saved, but the photo could not be uploaded. Contact support.' });
+  Object.assign(DICT.en, { authPassword: 'Password (8+ characters)', resetPassword: 'New password (8+ characters)', resetMin: 'Password must contain 8 to 256 characters.' });
+  Object.assign(DICT.fr, { authPassword: 'Mot de passe (8 caractères minimum)', resetPassword: 'Nouveau mot de passe (8 caractères minimum)', resetMin: 'Le mot de passe doit contenir 8 à 256 caractères.' });
+  Object.assign(DICT.ar, { authPassword: 'كلمة المرور (8 أحرف على الأقل)', resetPassword: 'كلمة مرور جديدة (8 أحرف على الأقل)', resetMin: 'يجب أن تتكون كلمة المرور من 8 إلى 256 حرفاً.' });
+  Object.assign(DICT.fr, { returnPhoto: 'Photo facultative (JPG, PNG, WebP, 2 Mo maximum)', returnPhotoFailed: 'Demande enregistrée, mais la photo n’a pas été transmise. Contactez le support.' });
+  Object.assign(DICT.ar, { returnPhoto: 'صورة اختيارية (JPG، PNG، WebP، بحد أقصى 2 ميغابايت)', returnPhotoFailed: 'تم حفظ الطلب ولكن تعذر تحميل الصورة. اتصل بالدعم.' });
+  if (typeof module === 'object' && module.exports) { module.exports = DICT; return; }
+  var pathLang = window.location.pathname.split('/')[1];
+  var lang = SUPPORTED.indexOf(pathLang) >= 0 ? pathLang : localStorage.getItem('hn-lang');
   if (SUPPORTED.indexOf(lang) === -1) {
     lang = navigator.language ? (navigator.language.toLowerCase().indexOf('fr') === 0 ? 'fr' : (navigator.language.toLowerCase().indexOf('ar') === 0 ? 'ar' : 'fr')) : 'fr';
   }
@@ -1349,7 +1375,7 @@
         link = document.createElement('link');
         link.id = 'arabicFont';
         link.rel = 'stylesheet';
-        link.href = 'fonts/cairo.css';
+        link.href = '/fonts/cairo.css';
         document.head.appendChild(link);
       }
     }
@@ -1426,6 +1452,12 @@
 
   function setLang(nextLang) {
     if (SUPPORTED.indexOf(nextLang) === -1) return;
+    var target = window.location.pathname.replace(/^\/(fr|en|ar)(?=\/)/, '');
+    if (window.location.protocol !== 'file:') {
+      localStorage.setItem('hn-lang', nextLang);
+      window.location.href = '/' + nextLang + (target === '/' ? '/index.html' : target) + window.location.search + window.location.hash;
+      return;
+    }
     lang = nextLang;
     localStorage.setItem('hn-lang', lang);
     applyTranslations();

@@ -4,7 +4,7 @@
  * and, as best-effort, forwards it by email to the store address when Resend is
  * configured (RECIPIENT: process.env.CONTACT_EMAIL, default care@hannaandnour.com).
  */
-const { json, getSupabase, isConfigured, readBody, sendEmail } = require('./shared');
+const { json, getSupabase, isConfigured, readBody, sendEmail, rateLimit } = require('./shared');
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -42,6 +42,8 @@ exports.handler = async function (event) {
       return json(503, { error: 'Supabase is not configured' });
     }
     const sb = getSupabase();
+    const limited = await rateLimit(sb, event, 'contact', 5, 600, email);
+    if (limited) return limited;
 
     const { data: row, error } = await sb
       .from('contact_messages')

@@ -57,6 +57,7 @@ async function handler() {
           .update({ relance_sent_at: new Date().toISOString() })
           .eq('id', order.id)
           .is('relance_sent_at', null)
+          .in('status', ['pending', 'abandoned'])
           .select('id');
         if (claimErr) throw claimErr;
         if (!claimed || claimed.length === 0) continue; // already claimed

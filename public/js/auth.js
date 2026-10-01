@@ -137,6 +137,7 @@
   function login(email, password) {
     return call({ action: 'login', email: email, password: password })
       .then(function (d) {
+        if (d.confirmation_required || !d.session) return { confirmation_required: true };
         saveSession(d.session);
         current.user = d.user;
         writeLS(SESSION_KEY, current);
@@ -148,6 +149,7 @@
   function signup(firstName, email, password) {
     return call({ action: 'signup', first_name: firstName, email: email, password: password })
       .then(function (d) {
+        if (d.confirmation_required || !d.session) return { confirmation_required: true };
         saveSession(d.session);
         current.user = d.user;
         writeLS(SESSION_KEY, current);
@@ -197,6 +199,11 @@
 
   // Restore a stored session on page load (me -> refresh -> clear).
   function boot() {
+    var params = new URLSearchParams(window.location.hash.slice(1));
+    if (params.get('access_token') && params.get('refresh_token')) {
+      saveSession({ access_token: params.get('access_token'), refresh_token: params.get('refresh_token') });
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
     var sess = loadSession();
     if (!sess) return Promise.resolve(null);
     current = sess;

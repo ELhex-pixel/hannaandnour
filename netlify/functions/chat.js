@@ -589,6 +589,16 @@ async function askAI(message, ctx) {
 
 // ---------- Handler ----------
 
+let cachedContext = null;
+let contextUntil = 0;
+async function context(sb) {
+  if (!cachedContext || Date.now() >= contextUntil) {
+    contextUntil = Date.now() + 60000;
+    cachedContext = buildContext(sb).catch(error => { cachedContext = null; throw error; });
+  }
+  return cachedContext;
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204 };
@@ -608,15 +618,17 @@ exports.handler = async function (event) {
       return json(503, { error: 'Supabase is not configured' });
     }
     const sb = getSupabase();
-    const ctx = await buildContext(sb);
-    ctx.lang = lang;
+    const limited = await require('./shared').rateLimit(sb, event, 'chat', 20, 600);
+    if (limited) return limited;
+    const ctx = { ...(await context(sb)), lang };
 
     const ans = answer(message, ctx);
     if (ans) {
       return json(200, ans);
     }
 
-    const ai = await askAI(message, ctx);
+    const quota = await require('./shared').rateLimit(sb, event, 'chat-ai-budget', parseInt(process.env.CHAT_DAILY_LIMIT, 10) || 200, 86400, 'global');
+    const ai = quota ? null : await askAI(message, ctx);
     if (ai) {
       return json(200, { reply: ai + '\n\n' + FOLLOW_UP[lang], source: 'ai', suggestions: GENERIC_SUGGESTIONS[lang] });
     }

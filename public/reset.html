@@ -32,7 +32,7 @@
         </div>
 
         <form id="resetForm" class="auth-form" novalidate style="display: none;">
-          <input type="password" class="form-input" id="resetPassword" autocomplete="new-password" placeholder="New password (6+ characters)" required minlength="6" data-i18n-placeholder="resetPassword">
+          <input type="password" class="form-input" id="resetPassword" autocomplete="new-password" placeholder="New password (8+ characters)" required minlength="8" maxlength="256" data-i18n-placeholder="resetPassword">
           <button type="submit" class="btn btn-primary" id="resetSubmit" data-i18n="resetCta">Update password</button>
           <p class="auth-msg auth-msg-error" id="resetError" style="display:none;"></p>
         </form>

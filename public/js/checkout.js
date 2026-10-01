@@ -17,7 +17,7 @@
   };
   var PROMO_LOCAL = { WELCOME15: 0.15 };
 
-  var state = { method: 'standard', settings: DEFAULTS, loaded: false };
+  var state = { method: 'standard', settings: DEFAULTS, loaded: false, quote: null, revision: 0 };
 
   function getPromo() {
     try { return window.sessionStorage.getItem('hn-promo') || ''; } catch (e) { return ''; }
@@ -46,23 +46,40 @@
   }
 
   function totals() {
-    var s = state.settings;
-    var items = HN.cart.list();
-    var subtotal = 0;
-    for (var i = 0; i < items.length; i++) subtotal += (items[i].priceCents || 0) * (items[i].qty || 1);
-    var rate = promoRate();
-    var discount = Math.round(subtotal * rate);
-    var shipping;
-    if (state.method === 'pickup') {
-      shipping = s.pickup_cents || 0;
-    } else if (state.method === 'standard' && subtotal >= s.free_threshold_cents) {
-      shipping = 0;
-    } else {
-      shipping = state.method === 'express' ? s.express_cents : state.method === 'next_day' ? s.nextday_cents : s.standard_cents;
-    }
-    var tax = subtotal > 0 ? Math.round((subtotal - discount) * (s.tax_rate || 0)) : 0;
-    var total = Math.max(0, subtotal + shipping + tax - discount);
-    return { subtotal: subtotal, shipping: shipping, discount: discount, tax: tax, total: total };
+    if (state.quote) return state.quote.totals;
+    return { subtotal: 0, shipping: 0, discount: 0, tax: 0, total: 0 };
+  }
+
+  function acceptQuote(data) {
+    state.quote = data;
+    HN.rememberProducts(data.items);
+    HN.cart.replace(data.items.map(function (item) { return Object.assign({}, item, { priceCents: item.price_cents }); }));
+    renderItems();
+    renderSummary();
+    renderShippingMethodPrices();
+    var btn = document.getElementById('placeOrderBtn');
+    if (btn) { btn.disabled = false; btn.textContent = tr('placeOrder') + ' • ' + formatMoney(data.totals.total); }
+  }
+
+  function formatMoney(cents) {
+    return state.quote ? state.quote.currency.symbol + (cents / 100).toFixed(2) : HN.money(cents);
+  }
+
+  function refreshQuote() {
+    var revision = ++state.revision;
+    state.quote = null;
+    var btn = document.getElementById('placeOrderBtn');
+    if (btn) { btn.disabled = true; btn.textContent = tr('processing'); }
+    return fetch(HN.api('checkout'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'quote', items: HN.cart.list(), shipping_method: state.method, promo: getPromo() })
+    }).then(function (res) { return res.json().then(function (data) { if (!res.ok) throw new Error(data.error); return data; }); })
+      .then(function (data) { if (revision === state.revision) acceptQuote(data); })
+      .catch(function (err) {
+        if (revision !== state.revision) return;
+        if (btn) { btn.textContent = tr('quoteUnavailable'); btn.disabled = true; }
+        window.hnToast && hnToast(tr('checkoutError'), err.message || tr('quoteUnavailable'), 'error');
+      });
   }
 
   function renderSummary() {
@@ -79,15 +96,15 @@
     var labelEl = document.getElementById('sumSubtotalLabel');
 
     if (labelEl) labelEl.textContent = tr('sumSubtotal') + (count ? ' (' + count + ')' : '');
-    if (subEl) subEl.textContent = HN.money(t.subtotal);
-    if (shipEl) shipEl.textContent = t.shipping === 0 && t.subtotal > 0 ? tr('free') : HN.money(t.shipping);
-    if (taxEl) taxEl.textContent = HN.money(t.tax);
+    if (subEl) subEl.textContent = formatMoney(t.subtotal);
+    if (shipEl) shipEl.textContent = t.shipping === 0 && t.subtotal > 0 ? tr('free') : formatMoney(t.shipping);
+    if (taxEl) taxEl.textContent = formatMoney(t.tax);
     if (discRow) discRow.style.display = t.discount > 0 ? '' : 'none';
-    if (discEl) discEl.textContent = '-' + HN.money(t.discount);
-    if (totalEl) totalEl.textContent = HN.money(t.total);
+    if (discEl) discEl.textContent = '-' + formatMoney(t.discount);
+    if (totalEl) totalEl.textContent = formatMoney(t.total);
 
     var btn = document.getElementById('placeOrderBtn');
-    if (btn && !btn.disabled) btn.textContent = tr('placeOrder') + ' \u2022 ' + HN.money(t.total);
+    if (btn && !btn.disabled) btn.textContent = tr('placeOrder') + ' \u2022 ' + formatMoney(t.total);
   }
 
   function setEmptyCartButton() {
@@ -109,10 +126,10 @@
       var it = items[i];
       var variant = [it.color, it.size].filter(Boolean).join(' \u2022 ');
       html += '<div style="display: flex; gap: var(--spacing-md); align-items: center;">' +
-        '<img src="' + (it.image || 'images/hero.jpg') + '" alt="" style="width: 60px; height: 80px; object-fit: cover; border-radius: var(--radius-sm);">' +
+        '<img src="' + esc(it.image || 'images/hero.jpg') + '" alt="" style="width: 60px; height: 80px; object-fit: cover; border-radius: var(--radius-sm);">' +
         '<div style="flex: 1;"><p style="font-size: 0.9375rem; font-weight: 600;">' + esc(localizedName(it)) + '</p>' +
         (variant ? '<p style="font-size: 0.875rem; color: var(--color-gray);">' + esc(variant) + ' \u2022 Qty: ' + (it.qty || 1) + '</p>' : '') +
-        '</div><span>' + HN.money(it.priceCents) + '</span></div>';
+        '</div><span>' + formatMoney(it.priceCents) + '</span></div>';
     }
     holder.innerHTML = html;
   }
@@ -186,7 +203,7 @@
         m.classList.add('selected');
         state.method = m.getAttribute('data-method');
         updateDeliveryUI();
-        renderSummary();
+        refreshQuote();
       });
     });
 
@@ -216,7 +233,7 @@
     if (applyBtn && input) {
       applyBtn.addEventListener('click', function () {
         var code = input.value.trim().toUpperCase();
-        if (!code) { window.hnToast && hnToast(tr('noCode'), tr('noCodeMsg'), 'error'); return; }
+        if (!code) { setPromo(''); refreshQuote(); return; }
         var rate = window.HN && typeof window.HN.promoRate === 'function'
           ? window.HN.promoRate(code)
           : (PROMO_LOCAL[code] || 0);
@@ -227,7 +244,7 @@
           setPromo('');
           window.hnToast && hnToast(tr('invalidCode'), tr('invalidCodeMsg'), 'error');
         }
-        renderSummary();
+        refreshQuote();
       });
     }
   }
@@ -242,6 +259,7 @@
     if (!btn) return;
 
     btn.addEventListener('click', function () {
+      if (!state.quote) return;
       var items = HN.cart.list();
       if (!items.length) {
         window.location.href = 'cart.html';
@@ -276,7 +294,8 @@
         pickup_point: isPickup ? pickupPoint : '',
         delivery_type: isPickup ? 'pickup' : 'home',
         promo: getPromo(),
-        auth_token: window.HN_AUTH && HN_AUTH.isAuthed() ? HN_AUTH.token() : ''
+        expected_total_cents: state.quote.totals.total,
+        expected_currency: state.quote.currency.code
       };
 
       if (!email || !name) {
@@ -300,20 +319,23 @@
 
       fetch(HN.api('checkout'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: Object.assign({ 'Content-Type': 'application/json' }, window.HN_AUTH && HN_AUTH.isAuthed() ? { 'Authorization': 'Bearer ' + HN_AUTH.token() } : {}),
         body: JSON.stringify(payload)
       })
         .then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
         .then(function (out) {
           if (out.status === 200 && out.data.url) {
             window.location.href = out.data.url;
+          } else if (out.status === 409 && out.data.totals) {
+            acceptQuote(out.data);
+            window.hnToast && hnToast(tr('checkoutError'), tr('quoteChanged'), 'error');
           } else {
             throw new Error(out.data.error || 'checkout failed');
           }
         })
         .catch(function (err) {
           btn.disabled = false;
-          btn.textContent = tr('placeOrder') + ' \u2022 ' + HN.money(totals().total);
+          btn.textContent = tr('placeOrder') + ' \u2022 ' + formatMoney(totals().total);
           window.hnToast && hnToast(tr('checkoutError'), err.message || tr('demoMsg'), 'error');
         });
     });
@@ -350,6 +372,7 @@
         renderSummary();
         wirePromo();
         wirePlaceOrder();
+        refreshQuote();
       });
 
     document.addEventListener('langchange', function () { renderShippingMethodPrices(); renderSummary(); });

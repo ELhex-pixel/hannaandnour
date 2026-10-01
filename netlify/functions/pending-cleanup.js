@@ -60,6 +60,7 @@ async function send24hEmails(sb) {
         .update({ reminder_24h_sent_at: new Date().toISOString() })
         .eq('id', order.id)
         .is('reminder_24h_sent_at', null)
+        .in('status', ['pending', 'abandoned'])
         .select('id');
       if (claimErr) throw claimErr;
       if (!claimed || claimed.length === 0) continue;
@@ -82,6 +83,8 @@ async function deleteStaleOrders(sb) {
   const { data, error } = await sb
     .from('orders')
     .select('id')
+    .eq('admin_archived', false)
+    .eq('inventory_reserved', false)
     .in('status', ['pending', 'abandoned'])
     .lte('created_at', cutoff)
     .order('created_at', { ascending: true })
@@ -90,7 +93,7 @@ async function deleteStaleOrders(sb) {
 
   let deleted = 0;
   for (const row of data || []) {
-    const { error: delErr } = await sb.from('orders').delete().eq('id', row.id);
+    const { error: delErr } = await sb.from('orders').update({ admin_archived: true }).eq('id', row.id).eq('inventory_reserved', false).in('status', ['pending', 'abandoned']);
     if (delErr) {
       console.error('pending-cleanup delete failed for ' + row.id + ':', delErr.message);
       continue;
@@ -105,6 +108,39 @@ async function handler() {
     return { statusCode: 503, body: 'Supabase not configured' };
   }
   const sb = getSupabase();
+  await sb.from('rate_limits').delete().lt('window_start', new Date(Date.now() - 48 * HOUR).toISOString());
+  if (process.env.STRIPE_SECRET_KEY) {
+    const stripe = new (require('stripe'))(process.env.STRIPE_SECRET_KEY);
+    const { data: stale, error } = await sb.from('orders').select('id, stripe_session_id, stripe_creation_started, created_at').eq('inventory_reserved', true).eq('status', 'pending').lt('created_at', new Date(Date.now() - HOUR).toISOString()).limit(50);
+    if (error) throw error;
+    for (const order of stale || []) {
+      if (!order.stripe_session_id && order.stripe_creation_started) {
+        let cursor;
+        for (let page = 0; page < 10 && !order.stripe_session_id; page++) {
+          const sessions = await stripe.checkout.sessions.list({ limit: 100, created: { gte: Math.floor(new Date(order.created_at).getTime() / 1000) - 60 }, ...(cursor ? { starting_after: cursor } : {}) });
+          const match = sessions.data.find(session => session.client_reference_id === order.id);
+          if (match) {
+            order.stripe_session_id = match.id;
+            const { error: bindError } = await sb.from('orders').update({ stripe_session_id: match.id }).eq('id', order.id).is('stripe_session_id', null);
+            if (bindError) throw bindError;
+          }
+          if (!sessions.has_more) break;
+          cursor = sessions.data[sessions.data.length - 1].id;
+        }
+        if (!order.stripe_session_id) { console.error('Unbound checkout needs manual reconciliation', order.id); continue; }
+      }
+      if (order.stripe_session_id) {
+        const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
+        if (session.status === 'complete' && ['paid', 'no_payment_required'].includes(session.payment_status)) {
+          await require('./stripe-webhook').markPaid(session, sb);
+          continue;
+        }
+        if (session.status !== 'expired') continue;
+      }
+      const { error: releaseError } = await sb.rpc('release_order', { p_order_id: order.id, p_status: 'abandoned' });
+      if (releaseError) throw releaseError;
+    }
+  }
   const result = { emails: 0, deleted: 0 };
   try {
     result.emails = await send24hEmails(sb);

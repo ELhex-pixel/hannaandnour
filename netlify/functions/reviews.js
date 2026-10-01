@@ -60,6 +60,7 @@ async function guestCreate(sb, body, slug, rating, text) {
     .from('reviews')
     .select('id')
     .eq('order_id', found.order.id)
+    .eq('product_id', product.id)
     .limit(1);
   if (dupErr) throw dupErr;
   if (existing && existing.length) return json(409, { error: 'already_reviewed' });
@@ -74,6 +75,7 @@ async function guestCreate(sb, body, slug, rating, text) {
       status: 'pending',
       order_id: found.order.id
     });
+  if (insertError && insertError.code === '23505') return json(409, { error: 'already_reviewed' });
   if (insertError) throw insertError;
 
   // Do NOT touch the aggregate here: only approved reviews count towards
@@ -189,18 +191,17 @@ exports.handler = async function (event) {
       // contenant ce produit. On inclut les commandes passées en invité avec
       // le même e-mail (le client a pu créer son compte après coup).
       const sel = 'id, status, shipping_status, order_items(*)';
-      const [q1, q2] = await Promise.all([
-        sb.from('orders').select(sel).eq('user_id', user.id).eq('status', 'paid').eq('shipping_status', 'delivered').limit(100),
-        sb.from('orders').select(sel).eq('email', user.email).eq('status', 'paid').eq('shipping_status', 'delivered').limit(100)
-      ]);
+      const q1 = await sb.from('orders').select(sel).eq('user_id', user.id).eq('status', 'paid').eq('shipping_status', 'delivered').limit(100);
       if (q1.error) throw q1.error;
-      if (q2.error) throw q2.error;
-      const orders = [...(q1.data || []), ...(q2.data || [])];
+      const orders = q1.data || [];
       const eligibleOrder = orders.find((o) =>
         Array.isArray(o.order_items) &&
         o.order_items.some((it) => it.product_slug === slug)
       );
       if (!eligibleOrder) return json(403, { error: 'not_eligible' });
+      const { data: duplicate, error: duplicateError } = await sb.from('reviews').select('id').eq('order_id', eligibleOrder.id).eq('product_id', product.id).limit(1);
+      if (duplicateError) throw duplicateError;
+      if (duplicate && duplicate.length) return json(409, { error: 'already_reviewed' });
 
       // Author comes from the account, never from the form.
       const meta = user.user_metadata || {};
@@ -216,6 +217,7 @@ exports.handler = async function (event) {
           status: 'pending',
           order_id: eligibleOrder.id
         });
+      if (insertError && insertError.code === '23505') return json(409, { error: 'already_reviewed' });
       if (insertError) throw insertError;
 
       return json(201, { ok: true, pending: true });

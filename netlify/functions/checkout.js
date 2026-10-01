@@ -1,371 +1,102 @@
-/**
- * POST /api/checkout
- * Creates a Stripe Checkout Session from the real cart.
- *
- * Body: {
- *   items: [{ slug, qty, color?, size? }],
- *   email, customer_name, phone, address1, address2, city, state, postal_code, country,
- *   shipping_method: "standard" | "express" | "next_day",
- *   promo?: "WELCOME15"
- * }
- *
- * Prices are always re-verified against the Supabase catalog server-side,
- * never trusted from the client.
- */
 const { randomUUID, randomBytes } = require('crypto');
 const Stripe = require('stripe');
-const { json, getSupabase, isConfigured, readBody, getSetting, intEnv, floatEnv, requireUser, siteUrl } = require('./shared');
-
-const STRIPE = () => new Stripe(process.env.STRIPE_SECRET_KEY || '');
+const { json, getSupabase, isConfigured, readBody, requireUser, getBearer, rateLimit, siteUrl, CORS_HEADERS } = require('./shared');
+const { quote, publicQuote, discountedLines } = require('./lib/commerce');
 
 exports.handler = async function (event) {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204 };
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return json(405, { error: 'Method not allowed' });
-  }
-
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS_HEADERS };
+  if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
+  if (!isConfigured()) return json(503, { error: 'temporarily_unavailable' });
+  const sb = getSupabase();
+  const body = readBody(event);
+  if (body.action && body.action !== 'quote') return json(400, { error: 'Unknown action' });
+  let orderId = null;
+  let session = null;
+  let stripe;
+  let stripeAttempted = false;
   try {
-    if (!isConfigured()) {
-      return json(503, { error: 'Supabase is not configured' });
+    const limited = await rateLimit(sb, event, body.action === 'quote' ? 'quote' : 'checkout', body.action === 'quote' ? 60 : 10, 600);
+    if (limited) return limited;
+    const value = await quote(sb, body);
+    if (body.action === 'quote') return json(200, publicQuote(value));
+    if (!process.env.STRIPE_SECRET_KEY) return json(503, { error: 'Stripe is not configured' });
+    if (body.expected_total_cents !== value.totals.total || body.expected_currency !== value.currency.code) {
+      return json(409, { error: 'quote_changed', ...publicQuote(value) });
     }
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return json(503, { error: 'Stripe is not configured' });
+    const fields = {};
+    const limits = { email: 254, customer_name: 120, phone: 40, address1: 250, address2: 250, city: 120, state: 120, postal_code: 20, country: 2, pickup_point: 250 };
+    for (const [name, limit] of Object.entries(limits)) {
+      fields[name] = String(body[name] || '').trim();
+      if (fields[name].length > limit) return json(400, { error: 'Invalid customer details' });
     }
-
-    const proto = String((event.headers && (event.headers['x-forwarded-proto'] || event.headers['X-Forwarded-Proto'])) || 'https').split(',')[0].trim();
-    const host = String(event.headers && (event.headers.host || event.headers.Host) || '').split(',')[0].trim();
-    // Site URL is a trusted setting, never derived from the caller-controlled
-    // Host header (would allow a forged redirect to a phishing domain).
-    const sb = getSupabase();
-    const body = readBody(event);
-
-    // ---- Auth: link the order to the account when a valid session is sent ----
-    let orderUserId = null;
-    if (body.auth_token) {
-      const auth = await requireUser(sb, String(body.auth_token));
-      if (!auth.ok) return json(401, { error: auth.error });
-      orderUserId = auth.user.id;
+    fields.email = fields.email.toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email) || !fields.customer_name) return json(400, { error: 'Invalid customer details' });
+    if (value.method === 'pickup' ? !fields.pickup_point : !fields.address1 || !fields.city || !fields.postal_code || !/^[A-Za-z]{2}$/.test(fields.country)) return json(400, { error: 'Missing shipping details' });
+    let userId = null;
+    if (getBearer(event)) {
+      const auth = await requireUser(sb, getBearer(event));
+      if (!auth.ok) return json(401, { error: 'Not authenticated' });
+      userId = auth.user.id;
     }
-
-    // ---- Currency (admin-editable `settings` key, then env, then usd) ----
-    let currencyCode = String(process.env.STRIPE_PRICE_CURRENCY || 'usd').toLowerCase();
-    const curSetting = await getSetting(sb, 'currency', null);
-    if (curSetting && (curSetting.code === 'usd' || curSetting.code === 'eur')) {
-      currencyCode = curSetting.code;
-    }
-
-    // ---- Validate payload ----
-    if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > 50) {
-      return json(400, { error: 'Invalid cart' });
-    }
-
-    const email = String(body.email || '').trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return json(400, { error: 'Invalid email address' });
-    }
-
-    const customerName = String(body.customer_name || '').trim();
-
-    const shippingMethod = ['standard', 'express', 'next_day', 'pickup'].includes(body.shipping_method)
-      ? body.shipping_method
-      : 'standard';
-    const deliveryType = shippingMethod === 'pickup' ? 'pickup' : 'home';
-
-    if (deliveryType === 'home') {
-      if (!customerName || !body.address1 || !body.city || !body.postal_code || !body.country) {
-        return json(400, { error: 'Missing shipping details' });
-      }
-    } else {
-      if (!customerName || !String(body.pickup_point || '').trim()) {
-        return json(400, { error: 'Merci de choisir un point de retrait' });
-      }
-    }
-    if (!customerName || !email) {
-      return json(400, { error: 'Missing customer details' });
-    }
-
-    // ---- Load products & verify prices ----
-    const slugs = body.items.map((i) => String(i.slug || '').trim()).filter(Boolean);
-    if (slugs.length === 0) return json(400, { error: 'Invalid cart items' });
-
-    const { data: dbProducts, error: prodError } = await sb
-      .from('products')
-      .select('id, slug, name_en, price_cents, image, active')
-      .in('slug', slugs);
-    if (prodError) throw prodError;
-
-    const bySlug = {};
-    (dbProducts || []).forEach((p) => { bySlug[p.slug] = p; });
-    const productIds = (dbProducts || []).map((p) => p.id);
-
-    // ---- Load variants (color x size stock) for the cart products ----
-    const variantByKey = {};
-    const productsWithVariants = new Set();
-    if (productIds.length) {
-      const { data: variants, error: variantsError } = await sb
-        .from('product_variants')
-        .select('id, product_id, color, size, stock, active')
-        .in('product_id', productIds);
-      if (variantsError) throw variantsError;
-      (variants || []).forEach((v) => {
-        productsWithVariants.add(v.product_id);
-        const key = v.product_id + '|' + String(v.color || '').toLowerCase() + '|' + String(v.size || '').toLowerCase();
-        variantByKey[key] = v;
-      });
-    }
-
-    const lineItems = [];
-    const resolvedItems = [];
-    let subtotal = 0;
-
-    for (const item of body.items) {
-      const product = bySlug[item.slug];
-      if (!product || !product.active) {
-        return json(400, { error: 'Unknown product in cart' });
-      }
-      const qty = Math.min(10, Math.max(1, parseInt(item.qty, 10) || 1));
-
-      const color = String(item.color || '').trim();
-      const size = String(item.size || '').trim();
-      const hasOptions = !!(color || size);
-      let variantId = null;
-
-      if (hasOptions) {
-        const key = product.id + '|' + color.toLowerCase() + '|' + size.toLowerCase();
-        const variant = variantByKey[key];
-        if (variant) {
-          if (!variant.active || variant.stock < qty) {
-            return json(400, {
-              error: 'stock', message: 'Stock insuffisant pour ' + product.name_en,
-              item: { slug: product.slug, color, size, available: variant.stock }
-            });
-          }
-          variantId = variant.id;
-        } else if (productsWithVariants.has(product.id)) {
-          return json(400, { error: 'Cette variante n\u2019est pas disponible' });
-        }
-        // No variant rows for this product => unlimited legacy product.
-      } else if (productsWithVariants.has(product.id)) {
-        // Managed-stock product sent without color/size: the client-side
-        // variant control was bypassed, so refuse instead of selling unbounded.
-        return json(400, { error: 'Cette variante n\u2019est pas disponible' });
-      }
-
-      const parts = [];
-      if (color) parts.push(color);
-      if (size) parts.push(size);
-      const variant = parts.join(' / ');
-
-      lineItems.push({
-        quantity: qty,
-        price_data: {
-          currency: currencyCode,
-          unit_amount: product.price_cents,
-          product_data: {
-            name: product.name_en + (variant ? ` - ${variant}` : ''),
-            images: [product.image && String(product.image).indexOf('http') === 0 ? product.image : siteUrl + '/' + product.image]
-          }
-        }
-      });
-      resolvedItems.push({ product, color, size, variant, variantId, qty });
-      subtotal += product.price_cents * qty;
-    }
-
-    // ---- Shipping (settings table, then env fallbacks) ----
-    const shipSettings = await getSetting(sb, 'shipping', null);
-    const hasShip = shipSettings && typeof shipSettings === 'object';
-    const shipRates = {
-      standard: hasShip && typeof shipSettings.standard_cents === 'number'
-        ? shipSettings.standard_cents : intEnv('SHIPPING_STANDARD_CENTS', 699),
-      express: hasShip && typeof shipSettings.express_cents === 'number'
-        ? shipSettings.express_cents : intEnv('SHIPPING_EXPRESS_CENTS', 1200),
-      next_day: hasShip && typeof shipSettings.nextday_cents === 'number'
-        ? shipSettings.nextday_cents : intEnv('SHIPPING_NEXTDAY_CENTS', 2500),
-      pickup: hasShip && typeof shipSettings.pickup_cents === 'number'
-        ? shipSettings.pickup_cents : 0
-    };
-    const freeThreshold = hasShip && typeof shipSettings.free_threshold_cents === 'number'
-      ? shipSettings.free_threshold_cents : intEnv('FREE_SHIPPING_THRESHOLD_CENTS', 7500);
-    const shippingCents = shippingMethod === 'standard' && subtotal >= freeThreshold
-      ? 0
-      : shipRates[shippingMethod] || 0;
-
-    // ---- Promo code ----
-    let discountCents = 0;
-    let promoCode = null;
-
-    const promoRaw = String(body.promo || '').trim().toUpperCase();
-    if (promoRaw) {
-      const { data: promoRow, error: promoError } = await sb
-        .from('promo_codes')
-        .select('code, percent_off, active, expires_at, single_use')
-        .eq('code', promoRaw)
-        .maybeSingle();
-      if (promoError) throw promoError;
-
-      const valid = promoRow &&
-        promoRow.active &&
-        (!promoRow.expires_at || new Date(promoRow.expires_at) > new Date());
-
-      if (!valid) {
-        return json(400, { error: 'Invalid promo code', message: 'Ce code promo est invalide ou expiré' });
-      }
-
-      // Atomically claim single-use codes: the RPC only succeeds for the first
-      // order (used_count 0 -> 1). A concurrent checkout sees no eligible row
-      // and is rejected instead of double-spending the code.
-      if (promoRow.single_use) {
-        const { data: claimed, error: claimError } = await sb
-          .rpc('claim_single_use_promo', { p_code: promoRow.code });
-        if (claimError) throw claimError;
-        if (claimed !== true) {
-          return json(400, { error: 'Invalid promo code', message: 'Ce code promo a déjà été utilisé' });
-        }
-      }
-
-      promoCode = promoRow.code;
-      discountCents = Math.round((subtotal * promoRow.percent_off) / 100);
-    }
-
-    // Apply the discount directly to the product line items so the amount
-    // Stripe charges matches total_cents exactly. Using a Stripe coupon
-    // instead would also discount the added "Tax" line, so the charged total
-    // would drift from what the client shows and the order records.
-    if (discountCents > 0) {
-      const n = lineItems.length;
-      const lineTotals = lineItems.map(function (li) { return li.price_data.unit_amount * li.quantity; });
-      const sumLines = lineTotals.reduce(function (a, b) { return a + b; }, 0);
-      if (sumLines > 0) {
-        const alloc = lineTotals.map(function (t) { return Math.floor((t * discountCents) / sumLines); });
-        const fracs = lineTotals.map(function (t, i) { return (t * discountCents) / sumLines - alloc[i]; });
-        const order = lineTotals.map(function (_, i) { return i; }).sort(function (a, b) { return fracs[b] - fracs[a]; });
-        let remaining = discountCents;
-        for (var di = 0; di < n; di++) remaining -= alloc[di];
-        for (var dk = 0; dk < remaining; dk++) alloc[order[dk % n]] += 1;
-        let leftovers = 0;
-        for (var dli = 0; dli < n; dli++) {
-          const perUnit = Math.floor(alloc[dli] / lineItems[dli].quantity);
-          alloc[dli] -= perUnit * lineItems[dli].quantity;
-          leftovers += alloc[dli];
-          lineItems[dli].price_data.unit_amount = Math.max(1, lineItems[dli].price_data.unit_amount - perUnit);
-        }
-        // Absorb penny-leftovers on a single-unit line for an exact match.
-        for (var dl2 = 0; dl2 < n && leftovers > 0; dl2++) {
-          if (lineItems[dl2].quantity === 1 && lineItems[dl2].price_data.unit_amount - leftovers >= 1) {
-            lineItems[dl2].price_data.unit_amount -= leftovers;
-            leftovers = 0;
-          }
-        }
-        if (leftovers > 0) console.warn('checkout discount rounding leftover:', leftovers, 'cents');
-      }
-    }
-
-    // ---- Tax ----
-    const taxRate = hasShip && typeof shipSettings.tax_rate === 'number'
-      ? shipSettings.tax_rate : floatEnv('TAX_RATE', 0.07);
-    const taxable = Math.max(0, subtotal - discountCents);
-    const taxCents = taxRate > 0 ? Math.round(taxable * taxRate) : 0;
-    if (taxCents > 0) {
-      lineItems.push({
-        quantity: 1,
-        price_data: {
-          currency: currencyCode,
-          unit_amount: taxCents,
-          product_data: { name: 'Tax (est.)' }
-        }
-      });
-    }
-
-    const totalCents = subtotal + shippingCents + taxCents - discountCents;
-
-    // ---- Persist order draft ----
-    const orderId = randomUUID();
-    const orderNumber = 'HN-' + randomBytes(3).toString('hex').toUpperCase();
-    const cartToken = randomBytes(24).toString('hex');
-
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    orderId = randomUUID();
+    const orderNumber = 'HN-' + randomBytes(8).toString('hex').toUpperCase();
+    const t = value.totals;
+    const allocation = discountedLines(value.items, t.discount);
     const { error: orderError } = await sb.from('orders').insert({
-      id: orderId,
-      order_number: orderNumber,
-      cart_restore_token: cartToken,
-      email,
-      customer_name: customerName,
-      phone: String(body.phone || '').slice(0, 40),
-      address1: String(body.address1 || ''),
-      address2: String(body.address2 || '') || null,
-      city: String(body.city || ''),
-      state: String(body.state || ''),
-      postal_code: String(body.postal_code || ''),
-      country: deliveryType === 'home' ? String(body.country || '') : '—',
-      shipping_method: shippingMethod,
-      delivery_type: deliveryType,
-      pickup_point: deliveryType === 'pickup' ? String(body.pickup_point || '').trim() : null,
-      subtotal_cents: subtotal,
-      shipping_cents: shippingCents,
-      tax_cents: taxCents,
-      discount_cents: discountCents,
-      total_cents: totalCents,
-      currency: currencyCode,
-      status: 'pending',
-      promo_code: promoCode,
-      user_id: orderUserId
+      ...fields, id: orderId, order_number: orderNumber, cart_restore_token: randomBytes(24).toString('hex'),
+      shipping_method: value.method, delivery_type: value.method === 'pickup' ? 'pickup' : 'home',
+      subtotal_cents: t.subtotal, shipping_cents: t.shipping, tax_cents: t.tax, discount_cents: t.discount,
+      total_cents: t.total, currency: value.currency.code, status: 'pending', promo_code: value.promo ? value.promo.code : null, user_id: userId
     });
     if (orderError) throw orderError;
-
-    const orderItems = resolvedItems.map((r) => ({
-      order_id: orderId,
-      product_id: r.product.id,
-      product_slug: r.product.slug,
-      product_name: r.product.name_en + (r.variant ? ' - ' + r.variant : ''),
-      image: r.product.image,
-      unit_price_cents: r.product.price_cents,
-      quantity: r.qty,
-      variant_id: r.variantId || null,
-      variant: r.variant || null
-    }));
-
-    const { error: itemsError } = await sb.from('order_items').insert(orderItems);
+    const { error: itemsError } = await sb.from('order_items').insert(value.items.map(i => ({
+      order_id: orderId, product_id: i.product.id, product_slug: i.slug, product_name: i.product.name_en,
+      image: i.product.image, unit_price_cents: i.price_cents, net_total_cents: allocation.filter(line => line.item === i).reduce((sum, line) => sum + line.quantity * line.unit_amount, 0), quantity: i.qty, variant_id: i.variantId,
+      variant: [i.color, i.size].filter(Boolean).join(' / ')
+    })));
     if (itemsError) throw itemsError;
-
-    // ---- Create Stripe Checkout Session ----
-    const session = await STRIPE().checkout.sessions.create({
-      mode: 'payment',
-      client_reference_id: orderId,
-      customer_email: email,
-      line_items: lineItems,
-      shipping_options: [
-        {
-          shipping_rate_data: {
-            type: 'fixed_amount',
-            fixed_amount: { amount: shippingCents, currency: currencyCode },
-            display_name: shippingMethod === 'standard' ? 'Standard Shipping' : shippingMethod === 'express' ? 'Express Shipping' : shippingMethod === 'pickup' ? 'Pickup / Point Relais' : 'Next Day Delivery'
-          }
-        }
-      ],
-      metadata: {
-        order_id: orderId,
-        shipping_method: shippingMethod,
-        promo_code: promoCode || '',
-        subtotal_cents: String(subtotal),
-        shipping_cents: String(shippingCents),
-        tax_cents: String(taxCents),
-        discount_cents: String(discountCents)
-      },
-      success_url: `${siteUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/cart.html`
-    });
-
-    await sb.from('orders').update({ stripe_session_id: session.id }).eq('id', orderId);
-
-    return json(200, {
-      url: session.url,
-      orderId,
-      total_cents: totalCents
-    });
+    const { data: reserved, error: reserveError } = await sb.rpc('reserve_order', { p_order_id: orderId });
+    if (reserveError) throw reserveError;
+    if (!reserved) {
+      await sb.from('orders').delete().eq('id', orderId).eq('status', 'pending');
+      orderId = null;
+      return json(409, { error: 'Stock or promo unavailable' });
+    }
+    const lineItems = allocation.map(line => ({
+      quantity: line.quantity,
+      price_data: { currency: value.currency.code, unit_amount: line.unit_amount,
+        product_data: { name: line.item.product.name_en + (line.item.color || line.item.size ? ' - ' + [line.item.color, line.item.size].filter(Boolean).join(' / ') : '') }
+      }
+    }));
+    if (t.tax) lineItems.push({ quantity: 1, price_data: { currency: value.currency.code, unit_amount: t.tax, product_data: { name: 'Tax' } } });
+    if (lineItems.reduce((n, i) => n + i.quantity * i.price_data.unit_amount, 0) + t.shipping !== t.total) throw new Error('Invalid allocation');
+    const { error: attemptError } = await sb.from('orders').update({ stripe_creation_started: true }).eq('id', orderId);
+    if (attemptError) throw attemptError;
+    stripeAttempted = true;
+    session = await stripe.checkout.sessions.create({
+      mode: 'payment', client_reference_id: orderId, customer_email: fields.email, line_items: lineItems,
+      expires_at: Math.floor(Date.now() / 1000) + 1800,
+      shipping_options: [{ shipping_rate_data: { type: 'fixed_amount', fixed_amount: { amount: t.shipping, currency: value.currency.code }, display_name: value.method } }],
+      metadata: { order_id: orderId }, payment_intent_data: { metadata: { order_id: orderId } },
+      success_url: `${siteUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${siteUrl}/cart.html`
+    }, { idempotencyKey: 'checkout-' + orderId });
+    const { error: bindError } = await sb.from('orders').update({ stripe_session_id: session.id }).eq('id', orderId);
+    if (bindError) throw bindError;
+    return json(200, { url: session.url, orderId, total_cents: t.total });
   } catch (err) {
-    console.error('checkout.js error:', err);
-    return json(500, { error: err.message || 'Internal error' });
+    if (orderId) {
+      try {
+        if (stripeAttempted && !session) {
+          console.error('Checkout session requires reconciliation', orderId);
+          return json(503, { error: 'Checkout temporarily unavailable' });
+        }
+        if (session) await stripe.checkout.sessions.expire(session.id);
+        const { error } = await sb.rpc('release_order', { p_order_id: orderId, p_status: 'abandoned' });
+        if (error) console.error('Checkout reservation release failed');
+      } catch (releaseError) { console.error('Checkout recovery required', orderId); }
+    }
+    const invalid = /Invalid|unavailable|Pickup/.test(err.message || '') && !orderId;
+    return json(invalid ? 400 : 500, { error: invalid ? err.message : 'Checkout temporarily unavailable' });
   }
 };

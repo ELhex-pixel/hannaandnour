@@ -32,19 +32,12 @@
  */
 const { json, getSupabase, isConfigured, readBody, CORS_HEADERS, sendEmail,
   signToken, verifyToken, requireAdmin, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv,
-  hashAdminPassword, checkAdminCredentials, siteUrl } = require('./shared');
+   hashAdminPassword, checkAdminCredentials, siteUrl, rateLimit } = require('./shared');
 
 const crypto = require('crypto');
 const Stripe = require('stripe');
 
 const STRIPE = () => new Stripe(process.env.STRIPE_SECRET_KEY || '');
-
-const ADMIN_RESET_TTL_MS = 15 * 60 * 1000;
-const ADMIN_RESET_COOLDOWN_MS = 60 * 1000;
-const MAX_RESET_ATTEMPTS = 5;
-
-const LOGIN_MAX_ATTEMPTS = 10;
-const LOGIN_LOCK_MS = 5 * 60 * 1000;
 
 // Reception address for the admin reset code. Falls back to the owner's
 // Resend-verified inbox until a brand address is configured later.
@@ -62,22 +55,11 @@ async function handleForgotPassword(sb, body) {
   if (email !== adminResetEmail().toLowerCase()) {
     return json(200, { ok: true });
   }
-  const auth = (await getSetting(sb, 'admin_auth', null)) || {};
-  // Throttle: at most one reset code every 60s to avoid flooding the inbox.
-  if (auth.reset_sent_at && Date.now() - auth.reset_sent_at < ADMIN_RESET_COOLDOWN_MS) {
-    return json(200, { ok: true });
-  }
-  const otp = String(Math.floor(100000 + Math.random() * 900000));
-  await saveSetting(sb, 'admin_auth', Object.assign({}, auth, {
-    reset_otp_hash: otpHash(otp),
-    reset_otp_exp: Date.now() + ADMIN_RESET_TTL_MS,
-    reset_otp_attempts: 0,
-    reset_sent_at: Date.now()
-  }));
-  if (!process.env.RESEND_API_KEY) {
-    console.log('[admin reset] RESEND_API_KEY not set; OTP=' + otp + ' for ' + adminResetEmail());
-    return json(200, { ok: true });
-  }
+  if (!process.env.RESEND_API_KEY) return json(503, { error: 'Email unavailable' });
+  const otp = String(crypto.randomInt(100000, 1000000));
+  const { data: claimed, error } = await sb.rpc('start_admin_reset', { p_hash: otpHash(otp) });
+  if (error) throw error;
+  if (!claimed) return json(200, { ok: true });
   try {
     await sendEmail({
       to: adminResetEmail(),
@@ -91,7 +73,7 @@ async function handleForgotPassword(sb, body) {
     });
   } catch (err) {
     console.error('[admin reset] email error:', err);
-    return json(502, { error: 'send_failed', detail: String(err.message || err) });
+    return json(502, { error: 'send_failed' });
   }
   return json(200, { ok: true });
 }
@@ -101,34 +83,10 @@ async function handleApplyReset(sb, body) {
   const otp = String(body.otp || '').replace(/\D/g, '');
   const password = String(body.password || '');
   if (otp.length !== 6) return json(400, { error: 'Code invalide' });
-  if (password.length < 6) return json(400, { error: 'Le mot de passe doit contenir au moins 6 caract\u00e8res' });
-  const auth = (await getSetting(sb, 'admin_auth', null)) || {};
-  if (!auth.reset_otp_hash || typeof auth.reset_otp_exp !== 'number') {
-    return json(400, { error: 'Aucune demande de r\u00e9initialisation en cours' });
-  }
-  if (Date.now() > auth.reset_otp_exp) {
-    return json(400, { error: 'Code expir\u00e9. Relancez une demande.' });
-  }
-  const attempt = (auth.reset_otp_attempts || 0) + 1;
-  const a = Buffer.from(auth.reset_otp_hash);
-  const b = Buffer.from(otpHash(otp));
-  const match = a.length === b.length && crypto.timingSafeEqual(a, b);
-  if (!match) {
-    if (attempt >= MAX_RESET_ATTEMPTS) {
-      await saveSetting(sb, 'admin_auth', Object.assign({}, auth, {
-        reset_otp_hash: null, reset_otp_exp: null, reset_otp_attempts: 0
-      }));
-      return json(400, { error: 'Trop de tentatives. Relancez une demande.' });
-    }
-    await saveSetting(sb, 'admin_auth', Object.assign({}, auth, { reset_otp_attempts: attempt }));
-    return json(400, { error: 'Code incorrect' });
-  }
-  await saveSetting(sb, 'admin_auth', Object.assign({}, auth, {
-    password_hash: hashAdminPassword(password),
-    reset_otp_hash: null,
-    reset_otp_exp: null,
-    reset_otp_attempts: 0
-  }));
+  if (password.length < 8 || password.length > 256) return json(400, { error: 'Le mot de passe doit contenir 8 à 256 caractères' });
+  const { data, error } = await sb.rpc('apply_admin_reset', { p_hash: otpHash(otp), p_password_hash: hashAdminPassword(password) });
+  if (error) throw error;
+  if (!data) return json(400, { error: 'Code invalide ou expiré' });
   return json(200, { ok: true });
 }
 
@@ -138,31 +96,14 @@ async function handleApplyReset(sb, body) {
 async function handleLogin(sb, body) {
   const secret = process.env.ADMIN_PASSWORD;
   if (!secret) return json(503, { error: 'ADMIN_PASSWORD is not set on the server' });
-  const auth = (await getSetting(sb, 'admin_auth', null)) || {};
-  if (auth.login_locked_until && Date.now() < auth.login_locked_until) {
-    return json(429, { error: 'Trop de tentatives. Réessayez dans quelques minutes.' });
-  }
+  const { data, error } = await sb.from('settings').select('value').eq('key', 'admin_auth').maybeSingle();
+  if (error) throw error;
+  const auth = data && data.value || {};
   const given = String(body.password || '');
+  if (given.length > 256) return json(401, { error: 'Mot de passe incorrect' });
   const match = await checkAdminCredentials(sb, given);
-  if (!match) {
-    const attempts = (auth.login_attempts || 0) + 1;
-    if (attempts >= LOGIN_MAX_ATTEMPTS) {
-      await saveSetting(sb, 'admin_auth', Object.assign({}, auth, {
-        login_attempts: 0,
-        login_locked_until: Date.now() + LOGIN_LOCK_MS
-      }));
-      return json(429, { error: 'Trop de tentatives. Réessayez dans quelques minutes.' });
-    }
-    await saveSetting(sb, 'admin_auth', Object.assign({}, auth, { login_attempts: attempts }));
-    return json(401, { error: 'Mot de passe incorrect' });
-  }
-  if (auth.login_attempts || auth.login_locked_until) {
-    await saveSetting(sb, 'admin_auth', Object.assign({}, auth, {
-      login_attempts: 0,
-      login_locked_until: null
-    }));
-  }
-  return json(200, { token: signToken(secret) });
+  if (!match) return json(401, { error: 'Mot de passe incorrect' });
+  return json(200, { token: signToken(secret, auth.token_version || 0) });
 }
 
 async function ensureBucket(sb) {
@@ -194,10 +135,9 @@ function cleanBarcode(v) {
 
 // Attribue le prochain code-barres HN0000001, ... (compteur dans les réglages).
 async function nextBarcode(sb) {
-  const cur = await getSetting(sb, 'barcode_seq', 0);
-  const n = (typeof cur === 'number' ? cur : parseInt(cur, 10) || 0) + 1;
-  await saveSetting(sb, 'barcode_seq', n);
-  return 'HN' + String(n).padStart(7, '0');
+  const { data, error } = await sb.rpc('next_variant_barcode');
+  if (error) throw error;
+  return data;
 }
 
 function cleanProductFields(body) {
@@ -229,7 +169,7 @@ function cleanProductFields(body) {
   p.compare_at_price_cents = body.compare_at_price_cents != null && body.compare_at_price_cents
     ? Math.max(0, parseInt(body.compare_at_price_cents, 10))
     : null;
-  p.category = ['hijab', 'abaya', 'prayer', 'dress', 'accessory'].includes(body.category)
+  p.category = require('./lib/product-assistant').categories.includes(body.category)
     ? body.category
     : 'hijab';
   p.badge = String(body.badge || '').trim() || null;
@@ -241,6 +181,10 @@ function cleanProductFields(body) {
   if (!p.gallery.length && p.image) p.gallery = [p.image];
   p.rating = Math.min(5, Math.max(0, parseFloat(body.rating) || 4.5));
   p.review_count = Math.max(0, parseInt(body.review_count, 10) || 0);
+  ['fit', 'measurements'].forEach(field => ['en', 'fr', 'ar'].forEach(lang => { p[field + '_' + lang] = String(body[field + '_' + lang] || '').trim().slice(0, 2000); }));
+  p.opacity = ['opaque', 'semi-sheer', 'sheer'].includes(body.opacity) ? body.opacity : 'unspecified';
+  p.video_url = String(body.video_url || '').trim().slice(0, 500);
+  if (p.video_url && !/^https:\/\//.test(p.video_url)) p.video_url = '';
   return p;
 }
 
@@ -256,6 +200,10 @@ exports.handler = async function (event) {
     const sb = getSupabase();
     const body = readBody(event);
 const action = body.action || (event.queryStringParameters && event.queryStringParameters.action);
+    if (['login', 'forgotPassword', 'applyReset'].includes(action)) {
+      const limited = await rateLimit(sb, event, 'admin:' + action, 10, 600, 'admin');
+      if (limited) return limited;
+    }
 
     if (event.httpMethod !== 'POST') {
       return json(405, { error: 'Method not allowed' });
@@ -268,8 +216,15 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     if (action === 'login') return handleLogin(sb, body);
 
     // ---- Everything below requires a valid admin session ----
-    const auth = requireAdmin(event);
+    const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (['recordReturn', 'listReturnRequests', 'updateReturnRequest'].includes(action)) return require('./lib/returns').adminReturns(sb, action, body);
+    if (action === 'describeProduct') {
+      const limited = await rateLimit(sb, event, 'product-vision', 30, 3600, 'admin');
+      if (limited) return limited;
+      try { return json(200, { draft: await require('./lib/product-assistant').describe(body.image) }); }
+      catch (error) { return json(502, { error: error.message }); }
+    }
 
     switch (action) {
       case 'listProducts': {
@@ -312,7 +267,8 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
               color: String(v.color || ''),
               size: String(v.size || ''),
               stock: Math.max(0, parseInt(v.stock, 10) || 0),
-              active: v.active !== false
+              active: v.active !== false,
+              expected_stock: Number.isInteger(v.expected_stock) ? v.expected_stock : null
             };
             let code = cleanBarcode(v);
             if (!code) code = await nextBarcode(sb);
@@ -339,11 +295,9 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
               return json(400, { error: 'Code-barres d\u00e9j\u00e0 utilis\u00e9 par une autre variante : ' + d.barcode });
             }
           }
-          await sb.from('product_variants').delete().eq('product_id', productId);
-          if (rows.length) {
-            const { error: vErr } = await sb.from('product_variants').insert(rows);
-            if (vErr) throw vErr;
-          }
+          const { error: vErr } = await sb.rpc('save_product_variants', { p_product_id: productId, p_rows: rows });
+          if (vErr && vErr.message === 'Stock changed') return json(409, { error: 'Le stock a changé depuis l’ouverture de la fiche. Rechargez avant de modifier les quantités.' });
+          if (vErr) throw vErr;
         }
 
         const { data: saved, error: savedErr } = await sb
@@ -357,9 +311,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
 
       case 'deleteProduct': {
         if (!body.id) return json(400, { error: 'Missing id' });
-        await sb.from('reviews').delete().eq('product_id', body.id);
-        await sb.from('product_variants').delete().eq('product_id', body.id);
-        const { error } = await sb.from('products').delete().eq('id', body.id);
+        const { error } = await sb.from('products').update({ active: false }).eq('id', body.id);
         if (error) throw error;
         return json(200, { ok: true });
       }
@@ -407,6 +359,7 @@ if (!ext) return json(400, { error: 'Type de fichier non supporté (JPG, PNG ou 
         let q = sb
           .from('orders')
           .select('*, order_items(*)')
+          .eq('admin_archived', false)
           .order('created_at', { ascending: false })
           .limit(200);
         if (body.status) q = q.eq('status', body.status);
@@ -440,9 +393,7 @@ case 'getOrder': {
       case 'deleteOrder': {
         const oid = String(body.id || '').trim();
         if (!oid) return json(400, { error: 'Missing id' });
-        const delItems = await sb.from('order_items').delete().eq('order_id', oid);
-        if (delItems.error) throw delItems.error;
-        const { error } = await sb.from('orders').delete().eq('id', oid);
+        const { error } = await sb.from('orders').update({ admin_archived: true }).eq('id', oid);
         if (error) throw error;
         return json(200, { ok: true });
       }
@@ -450,6 +401,7 @@ case 'getOrder': {
       case 'updateOrder': {
         if (!body.id) return json(400, { error: 'Missing id' });
         const update = {};
+        if (body.carrier !== undefined) update.carrier = ['colissimo', 'chronopost', 'mondialrelay', 'dhl'].includes(body.carrier) ? body.carrier : null;
         if (body.tracking_number !== undefined) update.tracking_number = String(body.tracking_number || '').trim() || null;
         if (body.delivery_type !== undefined) update.delivery_type = body.delivery_type === 'pickup' ? 'pickup' : 'home';
         if (body.pickup_point !== undefined) update.pickup_point = String(body.pickup_point || '').trim() || null;
@@ -835,6 +787,7 @@ case 'deleteMessage': {
           .maybeSingle();
         if (oErr) throw oErr;
         if (!order) return json(404, { error: 'Commande introuvable' });
+        if (order.status === 'refunded') { await restockOrder(sb, order); return json(200, { ok: true, already: true }); }
         if (order.status !== 'paid') return json(400, { error: 'Seules les commandes payées peuvent être remboursées' });
 
         const ref = await stripeRefund(order);
@@ -845,7 +798,7 @@ case 'deleteMessage': {
         // Guarded update: only a still-paid order may become refunded, so two
         // refunds racing each other cannot double-restock or double-email.
         const { data: refunded, error: updErr } = await sb.from('orders')
-          .update({ status: 'refunded' })
+          .update({ status: 'refunded', refunded_cents: order.total_cents })
           .eq('id', order.id)
           .eq('status', 'paid')
           .select('id');
@@ -882,13 +835,23 @@ case 'deleteMessage': {
           .maybeSingle();
         if (oErr) throw oErr;
         if (!order) return json(404, { error: 'Commande introuvable' });
+        if (order.status === 'cancelled') {
+          if (order.cancel_reason === 'out_of_stock') await restockOrder(sb, order);
+          return json(200, { ok: true, already: true });
+        }
         if (order.status !== 'paid') return json(400, { error: 'Seules les commandes pay\u00e9es peuvent \u00eatre annul\u00e9es' });
+        if (reason !== 'out_of_stock') {
+          const { error: policyError } = await sb.from('orders').update({ refund_restock: false }).eq('id', order.id).eq('status', 'paid');
+          if (policyError) throw policyError;
+        }
+        const ref = await stripeRefund(order);
+        if (!ref.ok) return json(502, { error: 'Remboursement impossible : annulation non effectuée' });
 
         // Guarded update: two cancels (or a refund race) cannot double-act.
         const { data: cancelled, error: updErr } = await sb.from('orders')
-          .update({ status: 'cancelled', cancel_reason: reason === 'other' ? comment : reason, cancelled_at: new Date().toISOString() })
+          .update({ status: 'cancelled', refunded_cents: order.total_cents, cancel_reason: reason === 'other' ? comment : reason, cancelled_at: new Date().toISOString() })
           .eq('id', order.id)
-          .eq('status', 'paid')
+          .in('status', ['paid', 'refunded'])
           .select('id');
         if (updErr) throw updErr;
         if (!cancelled || cancelled.length === 0) {
@@ -900,8 +863,6 @@ case 'deleteMessage': {
         if (reason === 'out_of_stock') await restockOrder(sb, order);
 
         // Remboursement Stripe automatique (best-effort, non bloquant).
-        const ref = await stripeRefund(order);
-        if (!ref.ok) console.error('Cancel refund failed:', ref.error);
 
         try {
           const { sendEmail } = require('./shared');
@@ -1093,7 +1054,8 @@ case 'deleteMessage': {
           .limit(5000);
         if (error) throw error;
         const cell = (v) => {
-          const s = v == null ? '' : String(v);
+          let s = v == null ? '' : String(v);
+          if (/^[\s]*[=+\-@]|^[\t\r\n]/.test(s)) s = "'" + s;
           return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
         };
         const money = (c) => ((parseInt(c, 10) || 0) / 100).toFixed(2).replace('.', ',');
@@ -1129,6 +1091,11 @@ case 'deleteMessage': {
       }
 
       case 'resetAll': {
+        if (String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_live_')) return json(403, { error: 'La remise à zéro est interdite avec des paiements réels' });
+        if (body.confirm !== true || body.confirm_text !== 'EFFACER') return json(400, { error: 'Confirmation EFFACER requise' });
+        const { count: pending, error: pendingErr } = await sb.from('orders').select('id', { count: 'exact', head: true }).eq('inventory_reserved', true);
+        if (pendingErr) throw pendingErr;
+        if (pending) return json(409, { error: 'Des paiements réservent encore du stock' });
         // Tout remettre à zéro (admin volontaire, IRRÉVERSIBLE — l'export CSV
         // est supposé téléchargé avant l'appel) :
         //  1) supprime TOUTES les commandes (order_items et order_returns en
@@ -1538,23 +1505,18 @@ function esc(s) {
 
 // Recomputes the product rating/review_count from approved reviews only.
 async function recomputeRating(sb, productId) {
-  const { data: rows, error } = await sb
-    .from('reviews')
-    .select('rating')
-    .eq('product_id', productId)
-    .eq('status', 'approved');
+  const { data: rows, error } = await sb.rpc('product_review_stats', { p_ids: [productId] });
   if (error) throw error;
-  const count = rows ? rows.length : 0;
-  const sum = rows ? rows.reduce((n, r) => n + r.rating, 0) : 0;
-  const rating = count ? Math.round((sum / count) * 10) / 10 : 4.5;
-  await sb.from('products').update({ rating, review_count: count }).eq('id', productId);
+  const stats = rows && rows[0];
+  const { error: updateError } = await sb.from('products').update({ rating: stats ? stats.approved_rating : 4.5, review_count: stats ? Number(stats.approved_count) : 0 }).eq('id', productId);
+  if (updateError) throw updateError;
 }
 
 // Full Stripe refund for a paid order. Returns { ok, already, error }.
 async function stripeRefund(order) {
   if (!process.env.STRIPE_SECRET_KEY) return { ok: false, error: 'Stripe is not configured' };
-  let paymentIntent = null;
-  if (order.stripe_session_id) {
+  let paymentIntent = order.payment_intent_id || null;
+  if (!paymentIntent && order.stripe_session_id) {
     const sess = await STRIPE().checkout.sessions.retrieve(order.stripe_session_id);
     paymentIntent = sess && sess.payment_intent;
   }
@@ -1564,24 +1526,23 @@ async function stripeRefund(order) {
   }
   if (!paymentIntent) return { ok: false, error: 'Aucun paiement associ\u00e9 \u00e0 cette commande' };
   try {
-    await STRIPE().refunds.create({ payment_intent: paymentIntent });
+    const refund = await STRIPE().refunds.create({ payment_intent: paymentIntent }, { idempotencyKey: 'refund-' + order.id });
+    if (refund.status !== 'succeeded') return { ok: false, error: 'Remboursement non confirmé. Vérifiez son statut dans Stripe avant de réessayer.' };
     return { ok: true };
   } catch (err) {
-    if (/already been refunded|anymore/i.test(err.message)) return { ok: true, already: true };
-    return { ok: false, error: err.message };
+    if (err.code === 'charge_already_refunded') {
+      const intent = await STRIPE().paymentIntents.retrieve(paymentIntent, { expand: ['latest_charge'] });
+      const charge = intent.latest_charge;
+      if (charge && charge.refunded && charge.amount_refunded === order.total_cents && charge.currency === order.currency) return { ok: true, already: true };
+    }
+    return { ok: false, error: 'Remboursement impossible. Vérifiez le paiement dans Stripe.' };
   }
 }
 
 // Puts managed-variant stock back after a refund (only for managed products).
 async function restockOrder(sb, order) {
-  const items = (order.order_items || []).filter((it) => it.variant_id);
-  for (const it of items) {
-    try {
-      await sb.rpc('increment_stock', { p_variant_id: it.variant_id, p_qty: parseInt(it.quantity, 10) || 1 });
-    } catch (e) {
-      console.error('restock failed for ' + it.variant_id + ':', e.message);
-    }
-  }
+  const { error } = await sb.rpc('restock_order', { p_order_id: order.id });
+  if (error) throw error;
 }
 
 function buildRefundEmail(order) {

@@ -32,7 +32,7 @@
   };
 
   function catKey(cat) {
-    return { hijab: 'catHijabs', abaya: 'catAbayas', dress: 'catDresses', prayer: 'catPrayerWear', accessory: 'catAccessories' }[cat] || 'catHijabs';
+    return HN.catKey(cat);
   }
 
   function colorHex(name) {
@@ -95,8 +95,8 @@
       var html = '';
       for (var i = 0; i < images.length; i++) {
         var filter = images.length > 1 && i === 1 && images[1] === images[0] ? 'hue-rotate(160deg)' : '';
-        html += '<div class="product-thumbnail' + (i === 0 ? ' active' : '') + '" data-img="' + images[i] + '">' +
-          '<img src="' + images[i] + '" alt="' + esc(HN.productName(p)) + ' view"' + (filter ? ' style="filter:' + filter + ';"' : '') + '></div>';
+        html += '<div class="product-thumbnail' + (i === 0 ? ' active' : '') + '" data-img="' + esc(images[i]) + '">' +
+          '<img src="' + esc(images[i]) + '" alt="' + esc(HN.productName(p)) + ' view"' + (filter ? ' style="filter:' + filter + ';"' : '') + '></div>';
       }
       thumbs.innerHTML = html;
     }
@@ -185,19 +185,24 @@
     var schema = {
       '@context': 'https://schema.org',
       '@type': 'Product',
-      name: p.name_en || p.slug,
-      image: [p.image || 'https://hannanour.netlify.app/images/hero.jpg'],
-      description: p.description_en || '',
+      name: HN.productName(p),
+      image: [new URL(p.image || 'images/hero.jpg', window.location.origin + '/').href],
+      description: localized(p, 'description_en', 'description_fr', 'description_ar', ''),
       sku: p.sku || p.slug,
       brand: { '@type': 'Brand', name: 'Hanna & Nour' },
       offers: {
         '@type': 'Offer',
-        url: 'https://hannanour.netlify.app/product.html?slug=' + encodeURIComponent(p.slug),
-        priceCurrency: (typeof HN.currency === 'function' ? HN.currency() : '') || 'USD',
+        url: window.location.origin + '/' + HN.lang() + '/product.html?slug=' + encodeURIComponent(p.slug),
+        priceCurrency: ((typeof HN.currency === 'function' ? HN.currency() : '') || 'USD').toUpperCase(),
         price: ((parseInt(p.price_cents, 10) || 0) / 100).toFixed(2),
-        availability: 'https://schema.org/InStock'
+        availability: (p.variants || []).length && !(p.variants || []).some(function (v) { return v.active && v.stock > 0; }) ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock'
       }
     };
+    var canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.href = schema.offers.url;
+    var description = document.querySelector('meta[name="description"]');
+    if (description) description.content = schema.description.slice(0, 160);
+    document.querySelectorAll('link[hreflang]').forEach(function (link) { var lang = link.hreflang === 'x-default' ? 'fr' : link.hreflang; link.href = window.location.origin + '/' + lang + '/product.html?slug=' + encodeURIComponent(p.slug); });
 
     var script = document.createElement('script');
     script.type = 'application/ld+json';
@@ -221,6 +226,17 @@
           list.innerHTML = html;
         }
       }
+      var extra = document.getElementById('productRichDetails');
+      if (!extra) { extra = document.createElement('div'); extra.id = 'productRichDetails'; descTab.appendChild(extra); }
+      extra.textContent = '';
+      ['fit', 'measurements'].forEach(function (field) {
+        var value = localized(p, field + '_en', field + '_fr', field + '_ar', '');
+        if (!value) return;
+        var title = document.createElement('h3'); title.textContent = tr(field === 'fit' ? 'productFit' : 'productMeasurements'); extra.appendChild(title);
+        var text = document.createElement('p'); text.textContent = value; text.style.whiteSpace = 'pre-line'; extra.appendChild(text);
+      });
+      if (p.opacity && p.opacity !== 'unspecified') { var opacity = document.createElement('p'); opacity.textContent = tr('productOpacity') + ' : ' + tr('opacity_' + p.opacity); extra.appendChild(opacity); }
+      if (/^https:\/\//.test(p.video_url || '')) { var link = document.createElement('a'); link.href = p.video_url; link.textContent = tr('productVideo'); link.target = '_blank'; link.rel = 'noopener noreferrer'; extra.appendChild(link); }
     }
 
     // Fabric & Care tab
@@ -722,7 +738,7 @@
         if (!isNaN(d) && d > 0) RETURNS_DAYS = d;
       }
       if (cfg && cfg.reviews) DEMO_ON = !!cfg.reviews.show_demo;
-      return HN.loadProducts();
+      return fetch(HN.api('products') + '?slug=' + encodeURIComponent(slug)).then(function (res) { if (!res.ok) throw new Error('not found'); return res.json(); }).then(function (data) { HN.rememberProducts(data.products || []); return data.products || []; });
     })
       .then(function (products) {
         var p = null;

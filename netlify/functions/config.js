@@ -7,6 +7,7 @@
  * Netlify env vars / defaults when unset.
  */
 const { json, getSupabase, isConfigured, getSetting, defaultCatalog, intEnv, floatEnv } = require('./shared');
+const { settings: commerceSettings } = require('./lib/commerce');
 
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
@@ -84,7 +85,8 @@ exports.handler = async function (event) {
       story = await getSetting(sb, 'story', null);
     } catch (e) { /* keep default */ }
 
-    return json(200, { settings, catalog, currency, reviews, home, story });
+    const authoritative = await commerceSettings(sb);
+    return json(200, { settings: { ...settings, ...authoritative.shipping }, catalog, currency: authoritative.currency, reviews, home, story });
   } catch (err) {
     console.error('config.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

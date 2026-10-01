@@ -74,13 +74,8 @@
 
   function totals() {
     var items = HN.cart.list();
-    var subtotal = 0;
-    for (var i = 0; i < items.length; i++) subtotal += (items[i].priceCents || 0) * (items[i].qty || 1);
-    var shipping = (subtotal >= FREE_SHIPPING_CENTS || subtotal === 0) ? 0 : STD_SHIPPING_CENTS;
-    var discount = Math.round(subtotal * promoRate());
-    var tax = Math.round((subtotal - discount) * TAX_RATE);
-    var total = subtotal + shipping + tax - discount;
-    return { subtotal: subtotal, shipping: shipping, discount: discount, tax: tax, total: total };
+    if (!items.length) return { subtotal: 0, shipping: 0, discount: 0, tax: 0, total: 0 };
+    return window.HN_COMMERCE.calculate(items.map(function (item) { return { price_cents: item.priceCents, qty: Math.min(10, Math.max(1, parseInt(item.qty, 10) || 1)) }; }), { tax_rate: TAX_RATE, free_threshold_cents: FREE_SHIPPING_CENTS, standard_cents: STD_SHIPPING_CENTS }, 'standard', promoRate() * 100);
   }
 
   function renderItems() {
@@ -103,7 +98,7 @@
       var it = items[i];
       html +=
         '<div class="cart-item" data-index="' + i + '">' +
-        '  <div class="cart-item-image"><img src="' + (it.image || 'images/hero.jpg') + '" alt="' + esc(localizedName(it)) + '"></div>' +
+         '  <div class="cart-item-image"><img src="' + esc(it.image || 'images/hero.jpg') + '" alt="' + esc(localizedName(it)) + '"></div>' +
         '  <div class="cart-item-info">' +
         '    <a href="product.html?slug=' + encodeURIComponent(it.slug) + '"><h2 class="cart-item-title">' + esc(localizedName(it)) + '</h2></a>' +
         '    <span class="cart-item-variant">' + esc(variantText(it)) + '</span>' +

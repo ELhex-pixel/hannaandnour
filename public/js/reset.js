@@ -53,7 +53,7 @@
       e.preventDefault();
       if (errEl) errEl.style.display = 'none';
       var password = passInput ? passInput.value : '';
-      if (password.length < 6) {
+      if (password.length < 8 || password.length > 256) {
         if (errEl) {
           errEl.textContent = tr('resetMin');
           errEl.style.display = 'block';

@@ -277,6 +277,7 @@
     });
   }
 
+  function escapeSearch(value) { return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function renderSearchResults(list, q, box) {
     if (!box) return;
     if (list.length === 0) {
@@ -287,9 +288,9 @@
       const name = window.HN.productName(p);
       const url = 'product.html?slug=' + encodeURIComponent(p.slug);
       return '<a class="search-result" href="' + url + '">' +
-        '  <img class="search-result-img" src="' + (p.image || 'images/hero.jpg') + '" alt="' + name.replace(/"/g, '&quot;') + '" loading="lazy">' +
+        '  <img class="search-result-img" src="' + escapeSearch(p.image || 'images/hero.jpg') + '" alt="' + escapeSearch(name) + '" loading="lazy">' +
         '  <div class="search-result-body">' +
-        '    <p class="search-result-name">' + name + '</p>' +
+        '    <p class="search-result-name">' + escapeSearch(name) + '</p>' +
         '    <p class="search-result-meta">' + window.HN.money(p.price_cents) + '</p>' +
         '  </div>' +
         '</a>';
@@ -324,15 +325,17 @@
       document.body.style.overflow = '';
     }
 
+    let searchRevision = 0;
     function runSearch(q) {
+      const revision = ++searchRevision;
       const query = String(q || '').trim();
       if (query.length < 2 || !window.HN) {
         renderSearchResults([], query, results);
         return;
       }
-      const all = (window.HN.products ? window.HN.products() : []) || [];
-      const list = all.filter(function (p) { return p.active !== false && searchMatches(p, query); }).slice(0, 12);
-      renderSearchResults(list, query, results);
+      fetch(window.HN.api('products') + '?q=' + encodeURIComponent(query) + '&limit=12').then(function (res) { if (!res.ok) throw new Error('offline'); return res.json(); })
+        .then(function (data) { if (revision !== searchRevision) return; window.HN.rememberProducts(data.products || []); renderSearchResults(data.products || [], query, results); })
+        .catch(function () { if (revision !== searchRevision) return; const all = window.HN.products() || []; renderSearchResults(all.filter(function (p) { return searchMatches(p, query); }).slice(0, 12), query, results); });
     }
 
     let debounceTimer;

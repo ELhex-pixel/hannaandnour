@@ -305,6 +305,19 @@
     return productsPromise;
   }
 
+  function fetchProducts(params) {
+    return fetch(apiUrl('products') + '?' + new URLSearchParams(params || {}).toString()).then(function (res) {
+      if (!res.ok) throw new Error('products request failed');
+      return res.json();
+    }).then(function (data) { window.HN.rememberProducts(data.products || []); return data.products || []; });
+  }
+
+  function loadProductSlugs(slugs) {
+    var batches = [];
+    for (var i = 0; i < slugs.length; i += 20) batches.push(slugs.slice(i, i + 20));
+    return Promise.all(batches.map(function (batch) { return fetchProducts({ slug: batch.join(','), limit: 48 }); })).then(function (results) { return [].concat.apply([], results); });
+  }
+
   function getProduct(slug) {
     for (var i = 0; i < productsList.length; i++) {
       if (productsList[i].slug === slug) return productsList[i];
@@ -330,7 +343,7 @@
   }
 
   function catKey(cat) {
-    return { hijab: 'catHijabs', abaya: 'catAbayas', dress: 'catDresses', prayer: 'catPrayerWear', accessory: 'catAccessories' }[cat] || 'catHijabs';
+    return { hijab: 'catHijabs', abaya: 'catAbayas', dress: 'catDresses', prayer: 'catPrayerWear', accessory: 'catAccessories', knitwear: 'catKnitwear', jacket: 'catJackets', skirt: 'catSkirts', top: 'catTops', trousers: 'catTrousers' }[cat] || 'allProducts';
   }
 
   function badgeFor(p) {
@@ -408,7 +421,11 @@
 
   function getCart() {
     var cart = readLS(CART_KEY);
-    return Array.isArray(cart) ? cart : [];
+    if (!Array.isArray(cart)) return [];
+    return cart.filter(function (item) { return item && typeof item.slug === 'string'; }).map(function (item) {
+      var product = productsList.filter(function (p) { return p.slug === item.slug; })[0];
+      return Object.assign({}, item, { priceCents: product ? product.price_cents : Math.max(1, parseInt(item.priceCents, 10) || 1), qty: Math.min(10, Math.max(1, parseInt(item.qty, 10) || 1)) });
+    });
   }
 
   function saveCart(cart) {
@@ -616,11 +633,15 @@
     lang: currentLang,
     productName: productName,
     loadProducts: loadProducts,
+    fetchProducts: fetchProducts,
+    loadProductSlugs: loadProductSlugs,
+    rememberProducts: function (products) { products.forEach(function (p) { var index = productsList.findIndex(function (existing) { return existing.slug === p.slug; }); if (index >= 0) productsList[index] = Object.assign({}, productsList[index], p); else productsList.push(p); }); },
     getProduct: getProduct,
     card: buildCard,
     catKey: catKey,
     products: function () { return productsList; },
     cart: {
+      replace: function (items) { saveCart(items); refreshBadge(); },
       list: getCart,
       add: addToCart,
       update: updateQty,

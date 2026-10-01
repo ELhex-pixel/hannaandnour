@@ -118,9 +118,9 @@ exports.handler = async function (event) {
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
-    const signature = event.headers['stripe-signature'];
+    const signature = (event.headers || {})['stripe-signature'];
 
-    const rawBody = typeof event.body === 'string' ? event.body : JSON.stringify(event.body || {});
+    const rawBody = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : typeof event.body === 'string' ? event.body : JSON.stringify(event.body || {});
 
     let stripeEvent;
     try {
@@ -132,21 +132,33 @@ exports.handler = async function (event) {
 
     const sb = getSupabase();
     const session = stripeEvent.data.object;
+    if (stripeEvent.type === 'charge.refunded') {
+      const intentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent && session.payment_intent.id;
+      if (!intentId) return json(200, { received: true });
+      const { data, error } = await sb.from('orders').select('id').eq('payment_intent_id', intentId);
+      if (error) throw error;
+      const orders = data || [];
+      if (!orders || !orders.length) {
+        const intent = await stripe.paymentIntents.retrieve(intentId);
+        if (intent.metadata && intent.metadata.order_id) orders.push({ id: intent.metadata.order_id });
+      }
+      for (const order of orders || []) {
+        const { error: refundError } = await sb.rpc('reconcile_order_refund', { p_order_id: order.id, p_intent: intentId, p_amount: session.amount, p_currency: session.currency, p_refunded: session.amount_refunded });
+        if (refundError) throw refundError;
+      }
+      return json(200, { received: true });
+    }
 
     // Accept non-instant payments (e.g. card that goes through an async
     // verification): Stripe delivers these under a distinct event type.
     if (stripeEvent.type === 'checkout.session.async_payment_succeeded') {
-      return markPaid(session, sb);
+      return await markPaid(session, sb);
     }
 
     if (stripeEvent.type === 'checkout.session.async_payment_failed') {
       const orderId = session.client_reference_id;
       if (orderId) {
-        const { error } = await sb
-          .from('orders')
-          .update({ status: 'payment_failed' })
-          .eq('id', orderId)
-          .eq('status', 'pending');
+        const { error } = await sb.rpc('release_order', { p_order_id: orderId, p_status: 'payment_failed' });
         if (error) {
           // Returning 500 lets Stripe retry delivery; a 200 here would swallow
           // the failure and leave the order stuck as `pending`.
@@ -158,7 +170,7 @@ exports.handler = async function (event) {
     }
 
     if (stripeEvent.type === 'checkout.session.completed') {
-      return markPaid(session, sb);
+      return await markPaid(session, sb);
     }
 
     if (stripeEvent.type === 'checkout.session.expired') {
@@ -166,11 +178,7 @@ exports.handler = async function (event) {
       // Never overwrite an already-paid order (Stripe may deliver `expired`
       // after `completed` in races).
       if (orderId) {
-        const { error } = await sb
-          .from('orders')
-          .update({ status: 'abandoned' })
-          .eq('id', orderId)
-          .neq('status', 'paid');
+        const { error } = await sb.rpc('release_order', { p_order_id: orderId, p_status: 'abandoned' });
         if (error) {
           console.error('Marking order abandoned failed:', error.message, 'order', orderId);
           return json(500, { error: 'Failed to mark order as abandoned' });
@@ -180,8 +188,8 @@ exports.handler = async function (event) {
 
     return json(200, { received: true });
   } catch (err) {
-    console.error('stripe-webhook.js error:', err);
-    return json(500, { error: err.message || 'Internal error' });
+    console.error('stripe-webhook processing failed');
+    return json(500, { error: 'Webhook processing failed' });
   }
 };
 
@@ -194,39 +202,17 @@ exports.handler = async function (event) {
 async function markPaid(session, sb) {
   const orderId = session.client_reference_id;
   if (!orderId) return json(200, { received: true });
-
-  const paymentStatus =
-    session.payment_status === 'paid' || session.payment_status === 'no_payment_required'
-      ? 'paid'
-      : 'pending';
-
+  if (!['paid', 'no_payment_required'].includes(session.payment_status)) return json(200, { received: true });
   const customerEmail = (session.customer_details && session.customer_details.email) || null;
-
-  const update = {
-    status: paymentStatus,
-    paid_at: paymentStatus === 'paid' ? new Date().toISOString() : null,
-    stripe_session_id: session.id
-  };
-  if (customerEmail) update.email = customerEmail.toLowerCase();
-
-  // Guarded update: only a pending/abandoned order may transition to paid.
-  // If the order is already paid (or refunded), zero rows match and we stop.
-  const { data: updatedRows, error } = await sb
-    .from('orders')
-    .update(update)
-    .eq('id', orderId)
-    .neq('status', 'paid')
-    .neq('status', 'refunded')
-    .in('status', ['pending', 'abandoned'])
-    .select('id');
+  const { data: result, error } = await sb.rpc('finalize_order_payment', {
+    p_order_id: orderId, p_session_id: session.id, p_amount: session.amount_total,
+    p_currency: session.currency, p_intent: typeof session.payment_intent === 'string' ? session.payment_intent : null
+  });
   if (error) throw error;
-
-  if (!updatedRows || updatedRows.length === 0) {
-    return json(200, { received: true });
-  }
-
-  // Send order confirmation email (best-effort — never fails the webhook).
-  if (paymentStatus === 'paid') {
+  if (result && result.stock_issue) console.error('Paid order requires stock reconciliation', orderId);
+  const { data: claimed, error: claimError } = await sb.from('orders').update({ confirmation_claimed_at: new Date().toISOString() }).eq('id', orderId).eq('status', 'paid').is('confirmation_claimed_at', null).select('id');
+  if (claimError) throw claimError;
+  if (claimed && claimed.length) {
     try {
       const { data: paidOrder, error: fetchErr } = await sb
         .from('orders')
@@ -243,20 +229,6 @@ async function markPaid(session, sb) {
         referrer: 'stripe-webhook'
       }).then(function () {}, function () {});
 
-      // Decrement per-variant stock (atomic, guarded by stock >= qty).
-      const items = paidOrder.order_items || [];
-      for (const it of items) {
-        if (it.variant_id) {
-          const { data: decremented, error: decErr } = await sb
-            .rpc('decrement_stock', { p_variant_id: it.variant_id, p_qty: it.quantity });
-          if (decErr) {
-            console.error('Stock decrement failed:', decErr.message, 'variant', it.variant_id);
-          } else if (decremented === false) {
-            console.error('Stock decrement rejected (insufficient stock) for variant', it.variant_id);
-          }
-        }
-      }
-
       const toEmail = paidOrder.email || customerEmail;
       if (toEmail) {
         const result = await sendEmail({
@@ -264,9 +236,6 @@ async function markPaid(session, sb) {
           subject: 'Commande ' + (paidOrder.order_number || orderId) + ' confirm\u00E9e \u2014 Hanna & Nour',
           html: buildOrderEmail(paidOrder, paidOrder.order_items || [])
         });
-        if (result && result.skipped) {
-          console.log('Order email skipped (RESEND_API_KEY not set) for ' + toEmail);
-        }
       }
       const adminTo = process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'yassinaous92@gmail.com';
       if (adminTo && adminTo !== toEmail) {
@@ -275,9 +244,6 @@ async function markPaid(session, sb) {
           subject: 'Nouvelle commande ' + (paidOrder.order_number || orderId) + ' \u2014 Hanna & Nour',
           html: buildAdminAlertHtml(paidOrder, paidOrder.order_items || [])
         });
-        if (alertResult && alertResult.skipped) {
-          console.log('Sale alert skipped (RESEND_API_KEY not set) for ' + adminTo);
-        }
       }
     } catch (mailErr) {
       console.error('Order confirmation email failed:', mailErr.message);
@@ -286,3 +252,5 @@ async function markPaid(session, sb) {
 
   return json(200, { received: true });
 }
+
+exports.markPaid = markPaid;

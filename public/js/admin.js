@@ -16,26 +16,8 @@
     norm: function (s) { return String(s == null ? '' : s).trim().toLowerCase(); }
   };
 
-  function token() {
-    try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
-  }
-
-  function call(action, data, method) {
-    return fetch(API + '/admin', {
-      method: method || 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token() },
-      body: JSON.stringify(Object.assign({ action: action }, data || {}))
-    }).then(function (res) {
-      return res.json().then(function (body) {
-        if (!res.ok) {
-          var e = new Error(body.error || 'Erreur serveur');
-          if (body.detail) e.detail = body.detail;
-          throw e;
-        }
-        return body;
-      });
-    });
-  }
+  var token = window.HN_ADMIN.token;
+  var call = window.HN_ADMIN.call;
 
   function toast(msg, type) {
     var el = document.getElementById('toast');
@@ -160,7 +142,7 @@
       var code = el('forgotCode').value.replace(/\D/g, '');
       var pw = el('forgotNewPw').value;
       if (code.length !== 6) { msgError('Le code comporte 6 chiffres.'); return; }
-      if (pw.length < 6) { msgError('Le nouveau mot de passe doit contenir au moins 6 caract\u00e8res.'); return; }
+      if (pw.length < 8 || pw.length > 256) { msgError('Le nouveau mot de passe doit contenir 8 à 256 caractères.'); return; }
       var btn = el('forgotApplyBtn');
       btn.disabled = true;
       call('applyReset', { otp: code, password: pw })
@@ -343,6 +325,7 @@
   var editing = null;
 
   function openEditor(p) {
+    document.dispatchEvent(new CustomEvent('hn:product-editor'));
     editing = p || {
       name_en: '', name_fr: '', name_ar: '',
       description_en: '', description_fr: '', description_ar: '',
@@ -379,6 +362,9 @@
     setVal('f-care_fr', (editing.care_fr || []).join(', '));
     setVal('f-care_ar', (editing.care_ar || []).join(', '));
     setVal('f-rating', editing.rating);
+    ['fit', 'measurements'].forEach(function (field) { ['en', 'fr', 'ar'].forEach(function (lang) { setVal('f-' + field + '_' + lang, editing[field + '_' + lang] || ''); }); });
+    setVal('f-opacity', editing.opacity || 'unspecified');
+    setVal('f-video_url', editing.video_url || '');
     setVal('f-image', editing.image || 'images/hero.jpg');
     setVal('f-gallery', (editing.gallery || []).join('\n'));
     renderGalleryGrid();
@@ -469,10 +455,12 @@
       var stockRaw = row.querySelector('.v-stock').value.trim();
       if (stockRaw === '' ) return; // untouched => unmanaged row
       var barcodeEl = row.querySelector('.v-barcode');
+      var existing = (editing.variants || []).filter(function (variant) { return variant.color === color && variant.size === size; })[0];
       out.push({
         color: color,
         size: size,
         stock: Math.max(0, parseInt(stockRaw, 10) || 0),
+        expected_stock: existing ? existing.stock : null,
         barcode: barcodeEl ? barcodeEl.value.trim() : ''
       });
     });
@@ -611,6 +599,9 @@
       variants: collectVariants()
     };
     if (!p.name_en || !p.price_cents) throw new Error('Nom (EN) et prix sont obligatoires');
+    ['fit', 'measurements'].forEach(function (field) { ['en', 'fr', 'ar'].forEach(function (lang) { p[field + '_' + lang] = getVal('f-' + field + '_' + lang); }); });
+    p.opacity = getVal('f-opacity');
+    p.video_url = getVal('f-video_url');
     return p;
   }
 
@@ -636,7 +627,7 @@
     var html = '';
     for (var i = 0; i < lines.length; i++) {
       html += '<div class="gallery-item" data-i="' + i + '">' +
-        '<img src="' + esc(lines[i]) + '" alt="Image ' + (i + 1) + '" onerror="this.classList.add(\'err\');">' +
+        '<img src="' + esc(lines[i]) + '" alt="Image ' + (i + 1) + '">' +
         '<div class="g-actions">' +
         '<button type="button" class="btn btn-secondary btn-small g-up" title="Monter"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
         '<button type="button" class="btn btn-secondary btn-small g-down" title="Descendre"' + (i === lines.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
@@ -715,10 +706,10 @@
     document.getElementById('deleteProductBtn').addEventListener('click', function () {
       var id = document.getElementById('f-id').value;
       if (!id) return;
-      if (!confirm('Supprimer d\u00e9finitivement ce produit ?')) return;
+      if (!confirm('Archiver ce produit ? Il ne sera plus vendu ; les variantes et l’historique seront conservés.')) return;
       call('deleteProduct', { id: id })
         .then(function () {
-          toast('Produit supprim\u00e9', 'ok');
+          toast('Produit archivé', 'ok');
           document.getElementById('productEditor').classList.remove('open');
           return loadProducts();
         })
@@ -765,7 +756,7 @@
       input.addEventListener('input', show);
       input.addEventListener('change', show);
     }
-    bind('uploadMainBtn', 'fileMain', function (url) { setVal('f-image', url); });
+    bind('uploadMainBtn', 'fileMain', function (url) { setVal('f-image', url); document.dispatchEvent(new CustomEvent('hn:main-image-uploaded')); });
     bind('uploadGalleryBtn', 'fileGallery', function (url) {
       var lines = galleryLines();
       if (lines.indexOf(url) < 0) lines.push(url);
@@ -888,6 +879,7 @@
     var ret = returnedByItem(o);
 
     document.getElementById('orderModalBody').innerHTML =
+      (o.stock_issue ? '<p role="alert" class="badge badge-red">Paiement reçu mais stock insuffisant : vérifier avant expédition.</p>' : '') +
       '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; font-size:13px;">' +
       '<div><strong>Client</strong><br>' + esc(o.customer_name) + '<br>' + esc(o.email) + (o.phone ? '<br>' + esc(o.phone) : '') + '</div>' +
       '<div><strong>Livraison</strong><br>' + esc(o.shipping_method || 'standard') + '<br>' + addressBlock +
@@ -914,6 +906,7 @@
       '<div id="trackingRow" style="display:none; margin-top:12px;">' +
       '<label style="font-size:12px; color:#5c5548;">Num&eacute;ro de suivi (facultatif)</label>' +
       '<input type="text" id="trackingInput" style="width:100%; padding:8px; border:1px solid #ddd5c4; border-radius:8px;">' +
+      '<label for="carrierInput">Transporteur</label><select id="carrierInput"><option value="">Non renseigné</option><option value="colissimo">Colissimo</option><option value="chronopost">Chronopost</option><option value="mondialrelay">Mondial Relay</option><option value="dhl">DHL</option></select>' +
       '<button class="btn btn-primary btn-small" id="confirmShipBtn" style="margin-top:8px;">Confirmer l&rsquo;exp&eacute;dition</button></div>' +
       '<div id="cancelRow" style="display:none; margin-top:12px;">' +
       '<label style="font-size:12px; color:#5c5548;">Motif de l&rsquo;annulation (envoy&eacute; au client)</label>' +
@@ -924,6 +917,8 @@
       '<textarea id="cancelNote" placeholder="Pr&eacute;cision (utilis&eacute;e si motif \u00ab autre \u00bb)" style="width:100%; padding:8px; border:1px solid #ddd5c4; border-radius:8px;"></textarea>' +
       '<button class="btn btn-danger btn-small" id="confirmCancelBtn" style="margin-top:8px;">Confirmer l&rsquo;annulation + envoyer l&rsquo;email</button></div>';
     document.getElementById('orderModal').classList.add('open');
+    document.getElementById('trackingInput').value = o.tracking_number || '';
+    document.getElementById('carrierInput').value = o.carrier || '';
     wireOrderActions(o);
   }
 
@@ -960,7 +955,8 @@
           call('updateOrder', {
             id: o.id,
             shipping_status: 'shipped',
-            tracking_number: document.getElementById('trackingInput').value.trim()
+            tracking_number: document.getElementById('trackingInput').value.trim(),
+            carrier: document.getElementById('carrierInput').value
           }).then(function () { return afterUpdate(o.id, 'Marqu\u00e9e exp\u00e9di\u00e9e'); });
           return;
         }
@@ -980,7 +976,8 @@
       call('updateOrder', {
         id: o.id,
         shipping_status: 'shipped',
-        tracking_number: document.getElementById('trackingInput').value.trim()
+        tracking_number: document.getElementById('trackingInput').value.trim(),
+        carrier: document.getElementById('carrierInput').value
       }).then(function () { return afterUpdate(o.id, 'Marqu\u00e9e exp\u00e9di\u00e9e'); });
     });
     var cancelBtn = document.getElementById('confirmCancelBtn');
@@ -1200,7 +1197,8 @@
       resetAllBtn.disabled = true;
       call('exportOrdersCsv').then(function (res) {
         downloadCsv(res.filename, res.csv);
-        return call('resetAll');
+        if (prompt('Tapez EFFACER pour confirmer la suppression définitive') !== 'EFFACER') throw new Error('Suppression annulée');
+        return call('resetAll', { confirm: true, confirm_text: 'EFFACER' });
       }).then(function (res) {
         scanCart = [];
         scanLast = null;

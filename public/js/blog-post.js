@@ -20,7 +20,7 @@
   function paragraphs(body) {
     if (!body) return '';
     return String(body).split(/\n\s*\n/).map(function (p) {
-      var t = p.trim().replace(/\n/g, '<br>');
+      var t = esc(p.trim()).replace(/\n/g, '<br>');
       return t ? '<p>' + t + '</p>' : '';
     }).join('');
   }

@@ -13,7 +13,7 @@ const { WebSocket } = require('ws');
 const crypto = require('crypto');
 
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': new URL((['deploy-preview', 'branch-deploy'].includes(process.env.CONTEXT) ? process.env.DEPLOY_PRIME_URL : process.env.SITE_URL) || 'https://hannanour.netlify.app').origin,
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
 };
@@ -21,7 +21,7 @@ const CORS_HEADERS = {
 function json(statusCode, body) {
   return {
     statusCode,
-    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...CORS_HEADERS },
     body: JSON.stringify(body)
   };
 }
@@ -30,11 +30,14 @@ function getSupabase() {
   return createClient(
     process.env.SUPABASE_URL || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-    { realtime: { transport: WebSocket } }
+    { realtime: { transport: WebSocket }, auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
   );
 }
 
 function isConfigured() {
+  if (process.env.STAGING_MODE === 'true' || ['deploy-preview', 'branch-deploy'].includes(process.env.CONTEXT)) {
+    if (process.env.STAGING_MODE !== 'true' || !process.env.EXPECTED_STAGING_SUPABASE_URL || !process.env.PRODUCTION_SUPABASE_URL || process.env.SUPABASE_URL === process.env.PRODUCTION_SUPABASE_URL || process.env.SUPABASE_URL !== process.env.EXPECTED_STAGING_SUPABASE_URL || !String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_test_')) return false;
+  }
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return false;
   }
@@ -44,7 +47,9 @@ function isConfigured() {
 function readBody(event) {
   if (!event.body) return {};
   try {
-    return typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+    if (typeof event.body === 'string' && Buffer.byteLength(event.body) > 6 * 1024 * 1024) return {};
+    const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+    return body && typeof body === 'object' && !Array.isArray(body) ? body : {};
   } catch (e) {
     return {};
   }
@@ -63,6 +68,7 @@ async function sendEmail({ to, subject, html, from }) {
       'Authorization': 'Bearer ' + apiKey,
       'Content-Type': 'application/json'
     },
+    signal: AbortSignal.timeout(10000),
     body: JSON.stringify({
       from: from || process.env.MAIL_FROM || 'Hanna & Nour <onboarding@resend.dev>',
       to: [to],
@@ -71,8 +77,7 @@ async function sendEmail({ to, subject, html, from }) {
     })
   });
   if (!res.ok) {
-    const errBody = await res.text().catch(() => '');
-    throw new Error('Resend error ' + res.status + ': ' + errBody.slice(0, 300));
+    throw new Error('Email delivery failed (' + res.status + ')');
   }
   return { ok: true };
 }
@@ -84,13 +89,13 @@ async function sendEmail({ to, subject, html, from }) {
 
 const ADMIN_TTL_MS = 12 * 60 * 60 * 1000;
 
-function signToken(secret) {
-  const payload = Buffer.from(JSON.stringify({ e: Date.now() + ADMIN_TTL_MS })).toString('base64url');
+function signToken(secret, version) {
+  const payload = Buffer.from(JSON.stringify({ e: Date.now() + ADMIN_TTL_MS, v: version || 0 })).toString('base64url');
   const sig = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
   return payload + '.' + sig;
 }
 
-function verifyToken(token, secret) {
+function verifyToken(token, secret, version) {
   if (!token || !secret) return false;
   const parts = String(token).split('.');
   if (parts.length !== 2 || !parts[0] || !parts[1]) return false;
@@ -100,7 +105,7 @@ function verifyToken(token, secret) {
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
   try {
     const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
-    return payload.e > Date.now();
+    return payload.e > Date.now() && (version === undefined || (payload.v || 0) === version);
   } catch (e) {
     return false;
   }
@@ -118,13 +123,15 @@ function getBearer(event) {
 // Canonical site URL for emails and redirects. SITE_URL (Netlify env var)
 // wins; the fallback keeps local / `netlify dev` builds working unconfigured.
 const DEFAULT_SITE_URL = 'https://hannanour.netlify.app';
-const siteUrl = (process.env.SITE_URL || DEFAULT_SITE_URL).replace(/\/+$/, '');
+const siteUrl = ((['deploy-preview', 'branch-deploy'].includes(process.env.CONTEXT) ? process.env.DEPLOY_PRIME_URL : process.env.SITE_URL) || DEFAULT_SITE_URL).replace(/\/+$/, '');
 
 // Admin routes check `requireAdmin(event).ok` before doing anything.
-function requireAdmin(event) {
+async function requireAdmin(event, sb) {
   const secret = process.env.ADMIN_PASSWORD;
   if (!secret) return { ok: false, error: 'ADMIN_PASSWORD is not set' };
-  const ok = verifyToken(getBearer(event), secret);
+  const { data, error } = await sb.from('settings').select('value').eq('key', 'admin_auth').maybeSingle();
+  if (error) return { ok: false, error: 'Not authorized' };
+  const ok = verifyToken(getBearer(event), secret, data && data.value ? data.value.token_version || 0 : 0);
   return ok ? { ok: true } : { ok: false, error: 'Not authorized' };
 }
 
@@ -137,11 +144,18 @@ function requireAdmin(event) {
 // Returns "salt:sha256hex" so the hash is unique per reset.
 function hashAdminPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
-  return salt + ':' + crypto.createHash('sha256').update(salt + password).digest('hex');
+  return 'scrypt:' + salt + ':' + crypto.scryptSync(password, salt, 64).toString('hex');
 }
 
 // Constant-time check of a stored "salt:sha256hex" hash.
 function verifyAdminHash(stored, password) {
+  if (String(stored).startsWith('scrypt:')) {
+    const parts = stored.split(':');
+    if (parts.length !== 3) return false;
+    const want = Buffer.from(parts[2], 'hex');
+    const got = crypto.scryptSync(password, parts[1], 64);
+    return want.length === got.length && crypto.timingSafeEqual(want, got);
+  }
   const i = String(stored).indexOf(':');
   if (i <= 0) return false;
   const salt = stored.slice(0, i);
@@ -155,11 +169,13 @@ function verifyAdminHash(stored, password) {
 // Login check: stored salted hash first, then the env ADMIN_PASSWORD fallback.
 async function checkAdminCredentials(sb, password) {
   try {
-    const auth = await getSetting(sb, 'admin_auth', null);
+    const { data, error } = await sb.from('settings').select('value').eq('key', 'admin_auth').maybeSingle();
+    if (error) return false;
+    const auth = data && data.value;
     if (auth && typeof auth.password_hash === 'string' && auth.password_hash) {
       return verifyAdminHash(auth.password_hash, password);
     }
-  } catch (e) { /* fall through to env */ }
+  } catch (e) { return false; }
   const secret = process.env.ADMIN_PASSWORD;
   if (!secret) return false;
   const a = Buffer.from(password);
@@ -221,6 +237,24 @@ function floatEnv(name, fallback) {
   return isNaN(v) ? fallback : v;
 }
 
-module.exports = { json, getSupabase, isConfigured, readBody, sendEmail, CORS_HEADERS,
+async function rateLimit(sb, event, scope, limit, seconds, identifier) {
+  const headers = event.headers || {};
+  const source = headers['x-nf-client-connection-ip'] || (process.env.NETLIFY_DEV === 'true' ? 'local' : 'unknown');
+  const keys = [scope + ':ip:' + source];
+  if (identifier) keys.push(scope + ':id:' + String(identifier).trim().toLowerCase());
+  for (const key of keys) {
+    const hash = crypto.createHash('sha256').update(key).digest('hex');
+    const { data, error } = await sb.rpc('consume_rate_limit', { p_key: hash, p_limit: limit, p_seconds: seconds });
+    if (error) return json(503, { error: 'temporarily_unavailable' });
+    if (!data) {
+      const response = json(429, { error: 'rate_limited' });
+      response.headers['Retry-After'] = String(seconds);
+      return response;
+    }
+  }
+  return null;
+}
+
+module.exports = { json, getSupabase, isConfigured, readBody, sendEmail, CORS_HEADERS, rateLimit,
   signToken, verifyToken, getBearer, requireAdmin, requireUser, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv, siteUrl,
   hashAdminPassword, verifyAdminHash, checkAdminCredentials };

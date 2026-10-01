@@ -388,6 +388,7 @@
     <div class="admin-tabs">
       <button class="admin-tab active" data-tab="products">Produits</button>
       <button class="admin-tab" data-tab="orders">Commandes</button>
+      <button class="admin-tab" data-tab="returns">Retours clients</button>
       <button class="admin-tab" data-tab="sales">Ventes &amp; Stock</button>
       <button class="admin-tab" data-tab="reviews">Avis</button>
       <button class="admin-tab" data-tab="home">Accueil</button>
@@ -409,6 +410,7 @@
           <option value="prayer">Prayer</option>
           <option value="dress">Dress</option>
           <option value="accessory">Accessory</option>
+          <option value="knitwear">Pull / maille</option><option value="jacket">Veste</option><option value="skirt">Jupe</option><option value="top">Haut</option><option value="trousers">Pantalon</option>
         </select>
         <button class="btn btn-primary" id="newProductBtn">+ Nouveau produit</button>
       </div>
@@ -416,6 +418,9 @@
     </div>
 
     <!-- ORDERS -->
+    <div class="admin-panel" id="panel-returns">
+      <div class="card"><h2>Demandes de retour</h2><p>Accepter une demande ne déclenche aucun remboursement. Confirmez la réception physique pour remettre en stock ; gérez le remboursement depuis la commande.</p><button type="button" class="btn btn-secondary" id="refreshReturnRequests">Actualiser</button><div id="returnRequestsList"></div></div>
+    </div>
     <div class="admin-panel" id="panel-orders">
       <div class="toolbar">
         <select id="filterOrderStatus" style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
@@ -770,6 +775,8 @@
             <option value="hijab">Hijab</option><option value="abaya">Abaya</option>
             <option value="prayer">Prayer</option><option value="dress">Dress</option>
             <option value="accessory">Accessory</option>
+            <option value="knitwear">Pull / maille</option><option value="jacket">Veste</option>
+            <option value="skirt">Jupe</option><option value="top">Haut</option><option value="trousers">Pantalon</option>
           </select>
         </div>
         <div class="field"><label>Badge</label><input id="f-badge" placeholder="ex: Bestseller, Nouveau"></div>
@@ -801,11 +808,22 @@
         <div class="field"><label>Entretien (FR, virgules)</label><input id="f-care_fr" placeholder="Lavage à la main, Sécher à plat"></div>
         <div class="field"><label>Entretien (AR, virgules)</label><input id="f-care_ar" placeholder="غسل يدوي، تجفيف مسطح"></div>
         <div class="field"><label>Note</label><input type="number" step="0.1" min="0" max="5" id="f-rating"></div>
+        <div class="field"><label>Coupe (FR)</label><textarea id="f-fit_fr"></textarea></div>
+        <div class="field"><label>Coupe (EN)</label><textarea id="f-fit_en"></textarea></div>
+        <div class="field"><label>Coupe (AR)</label><textarea id="f-fit_ar"></textarea></div>
+        <div class="field"><label>Mesures vérifiées (FR)</label><textarea id="f-measurements_fr"></textarea></div>
+        <div class="field"><label>Mesures vérifiées (EN)</label><textarea id="f-measurements_en"></textarea></div>
+        <div class="field"><label>Mesures vérifiées (AR)</label><textarea id="f-measurements_ar"></textarea></div>
+        <div class="field"><label>Transparence vérifiée</label><select id="f-opacity"><option value="unspecified">Non renseignée</option><option value="opaque">Opaque</option><option value="semi-sheer">Semi-transparente</option><option value="sheer">Transparente</option></select></div>
+        <div class="field"><label>Vidéo produit (URL HTTPS)</label><input id="f-video_url" type="url"></div>
         <div class="field"><label>Image principale (URL)</label><input id="f-image" placeholder="images/... ou URL Supabase"></div>
         <div class="field full"><label>&nbsp;</label>
           <div>
             <button class="btn btn-secondary btn-small" id="uploadMainBtn">Uploader une photo</button>
             <input type="file" id="fileMain" accept="image/jpeg,image/png,image/webp" style="display:none;">
+            <button type="button" class="btn btn-secondary btn-small" id="describePhotoBtn">Reconnaître le vêtement et proposer une description</button>
+            <label><input type="checkbox" id="autoDescribePhoto" checked> Proposer automatiquement après l’upload (service IA payant)</label>
+            <div id="photoDraft" hidden><p>Proposition IA : vérifier avant publication. Matière, entretien et mesures restent à renseigner.</p><pre id="photoDraftText" style="white-space:pre-wrap;"></pre><button type="button" class="btn btn-secondary" id="applyPhotoDraft" disabled>Remplir la fiche avec cette proposition</button></div>
           </div>
         </div>
         <div class="field full"><label>Galerie (images du produit)</label>
@@ -852,9 +870,11 @@
 
   <div class="toast" id="toast"></div>
   <script src="js/config.js"></script>
+  <script src="js/admin-api.js"></script>
   <script src="js/colors.js"></script>
   <script src="vendor/jsbarcode.min.js"></script>
   <script src="js/admin.js"></script>
+  <script src="js/admin-features.js"></script>
   <script src="js/theme-toggle.js"></script>
 </body>
 </html>

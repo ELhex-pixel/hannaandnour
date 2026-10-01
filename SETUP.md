@@ -27,7 +27,10 @@ paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Func
    - `supabase/migration_rls_blog_demo.sql` (RLS sur `blog_posts` et `demo_reviews`)
    - `supabase/migration_promo_single_use.sql` (codes promo à usage unique réellement appliqués)
    - `supabase/migration_order_returns.sql` (retours par ligne : table `order_returns` + RLS pour le tableau de bord « Ventes & Stock »)
-    - `supabase/migration_pending_order_lifecycle.sql` (cycle de vie des commandes en attente : email relance à 24 h + suppression auto à 72 h)
+    - `supabase/migration_pending_order_lifecycle.sql` (colonnes de relance des commandes en attente)
+    - `supabase/migration_guest_reviews.sql` (avis associés à une commande)
+    - `supabase/migration_barcode_scan.sql` (codes-barres des variantes)
+    - `supabase/migration_integrity_features.sql` (sécurité, réservations transactionnelles, retours et recherche)
 3. Récupérez dans **Settings > API** :
    - `Project URL` → `SUPABASE_URL`
    - `service_role secret` → `SUPABASE_SERVICE_ROLE_KEY` (serveur, **jamais** dans le navigateur)
@@ -45,7 +48,7 @@ Les identifiants Supabase vivent uniquement dans les variables d'environnement N
 2. Déployez le site (ou lancez `netlify dev`) puis créez le webhook :
    - **Stripe > Developers > Webhooks > Add endpoint**
    - URL : `https://VOTRE-DOMAINE/api/stripe-webhook`
-   - Événements à écouter : `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded` et `checkout.session.async_payment_failed`
+    - Événements à écouter : `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` et `charge.refunded`
    - Copiez le **Signing secret** `whsec_...` → `STRIPE_WEBHOOK_SECRET`
 3. Testez le paiement avec la carte  `4242 4242 4242 4242`.
 
@@ -116,15 +119,18 @@ Envoie automatiquement un récap de commande à l'acheteur quand le webhook Stri
 
 ```bash
 npm install
+npm run check
+npm test
+npm run build
 netlify login
-netlify deploy --prod
+netlify deploy
 ```
 
-> Le dossier publié est `public/` (`netlify.toml`) : les fichiers de dev (`supabase/`, `AGENTS.md`, `SETUP.md`, l'éventuel `opencode.json`) ne sont donc **pas** servis. Le SQL ci-dessus se lance depuis la console Supabase (lignes dans `supabase/schema.sql` + `seed.sql`, ou SQL Editor). Toutes les clés (`SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `ADMIN_PASSWORD`) sont des variables d'environnement Netlify — ne jamais les committer.
+> Le dossier publié est `dist/` (`netlify.toml`) : les fichiers de dev ne sont pas servis. Le SQL se lance depuis la console Supabase, jamais automatiquement au build. Toutes les clés restent dans les variables d'environnement Netlify — ne jamais les committer. Ne lancer un déploiement de production qu'après validation du staging et demande explicite.
 
-> La version Node est épinglée par `.nvmrc` (`20`) : elle pilote le build ET le runtime des
+> La version Node est épinglée par `.nvmrc` (`22`) : elle pilote le build ET le runtime des
 > fonctions. Pour forcer le runtime des fonctions différemment du build, définissez `AWS_LAMBDA_JS_RUNTIME`
-> (ex. `nodejs20.x`) dans **Netlify > Site settings > Environment variables**.
+> (ex. `nodejs22.x`) dans **Netlify > Site settings > Environment variables**.
 
 ## Règles métier (à garder cohérentes entre client et serveur)
 
@@ -132,14 +138,58 @@ netlify deploy --prod
 - Livraison standard : gratuite ≥ 7500 ¢ sinon 699 ¢ ; express 1200 ¢ ; J+1 2500 ¢.
 - Codes promo : gérés dans la table `promo_codes` depuis **/admin → Promos**. Les codes marqués
   **usage unique** (`single_use`) ne sont acceptés qu'une seule fois (l'ordre le premier à le
-  réclamer l'emporte, RPC `claim_single_use_promo`). Le client les charge via `/api/promos`
+   réserver l'emporte, RPC `reserve_order`). Le client les charge via `/api/promos`
   (`HN.promoRate`), annonce dans le header réalimentée dynamiquement ; `WELCOME15` reste le seed
   et le fallback hors-ligne.
-- Tout changement de prix/taxe/frais doit être répercuté dans le JS client **et** les fonctions Netlify, sinon le total affiché ≠ total facturé.
+- Les formules en centimes sont dans `public/js/commerce.js`, partagées avec le serveur. Le checkout exige une confirmation du devis serveur et reconfirme après tout changement de montant ou de devise.
 - **Relance panier** : `netlify/functions/relance.js` (fonction **planifiée Netlify**, quotidienne à 08:30 UTC — pas de cron externe). Commande `pending` créée il y a > 2 h et jamais relancée → **1 email** avec lien `cart.html?restore=<token>` qui remet les articles dans le panier ; puis `relance_sent_at` est posé. Nécessite `RESEND_API_KEY` + `SITE_URL`.
 - **Analytics maison** (pas de GA4) : le client envoie `pageview`/`product_view`/`add_to_cart`/`checkout_attempt` à `/api/track` (`sendBeacon`), le webhook ajoute `purchase` ; table `analytics_events`, onglet **/admin → Stats** (7 j / 30 j / total, produits et pages les plus vus).
 
-## Commandes de dev
+## Mise à niveau : intégrité, staging et nouvelles fonctionnalités
+
+Le runtime est désormais Node 22 (`.nvmrc`). Avant de déployer ce code, appliquer **en staging d’abord** `supabase/migration_integrity_features.sql`, après les migrations existantes, notamment `migration_guest_reviews.sql`, `migration_pending_order_lifecycle.sql` et `migration_barcode_scan.sql`. Cette migration est transactionnelle et rejouable. Elle n'est jamais exécutée automatiquement contre Supabase par le build.
+
+Avant application, rechercher les doublons de `orders.order_number` et de `reviews(order_id, product_id)` pour les lignes liées à une commande. Les nouveaux index uniques feront échouer la migration plutôt que supprimer des données. Corriger les doublons manuellement, sans effacer des commandes payées.
+
+### Staging isolé
+
+1. Créer un second projet Supabase et y exécuter le schéma et les migrations. Utiliser seulement des données de test, pas les données personnelles de production.
+2. Créer un site Netlify de staging, ou configurer des variables **spécifiques aux contextes** `deploy-preview` / `branch-deploy`. Ne pas hériter des clés de production : URL et service role Supabase staging, clé Stripe `sk_test_…`, secret webhook test distinct, `ADMIN_PASSWORD` distinct, expéditeur de test Resend.
+3. Définir `STAGING_MODE=true`, `EXPECTED_STAGING_SUPABASE_URL` sur l’URL exacte du projet staging et `PRODUCTION_SUPABASE_URL` sur celle de la production (URL publique, sans secret). Le build et les fonctions exigent que ces deux bases diffèrent. Pour un second site Netlify dont le contexte est `production`, ces trois variables doivent aussi être configurées ; ne jamais y copier la clé Supabase de production.
+4. Définir `SITE_URL` sur l’URL du staging. En preview, les liens utilisent `DEPLOY_PRIME_URL`. Configurer les redirections autorisées Supabase Auth pour `/account.html` et `/reset.html` sur chaque domaine de test.
+5. Dans Supabase Auth, activer **Confirm email** et configurer un expéditeur SMTP fonctionnel. L’inscription attend la confirmation ; les anciens comptes auto-confirmés ne récupèrent plus les commandes invitées sans le code email envoyé via Resend.
+6. Configurer le webhook Stripe test : événements checkout déjà documentés **plus `charge.refunded`**. Les stocks sont réservés à la création de la session (30 minutes), libérés sur expiration/échec, puis confirmés atomiquement après vérification du montant et de la devise. Une tâche de récupération traite les sessions expirées dont le webhook a été manqué.
+
+### Build et validations
+
+Lors d'une publication Netlify, le build vérifie en lecture seule la version du schéma Supabase et les colonnes utilisées. Si la migration manque ou si les identifiants serveur ne sont pas disponibles pour le build, la nouvelle publication échoue et la version précédente reste en ligne. Ne pas supprimer cette vérification pour contourner une migration manquante. Pour mettre à jour le site existant, appliquer uniquement les migrations requises sur sa base, jamais les seeds ou la migration de catalogue de démonstration.
+
+`npm ci`, `npm run check`, `npm test`, puis `npm run build`. Publication : **`dist/`**, et non `public/`. Le build génère des pages `/fr/…`, `/en/…`, `/ar/…`, leurs hreflang, le sitemap public, des assets à empreinte avec cache immutable et des images WebP/JPEG optimisées. `public/` reste le code source et l’aperçu statique. Ne plus déployer `public/` par glisser-déposer : cela contournerait le build et les fonctions.
+
+Les tests Node natifs couvrent les formules et allocations exactes en centimes ; PGlite exécute réellement les migrations PostgreSQL, sans connexion à une base externe. Aucun test ne débite Stripe ni ne contacte l’IA. Les paiements Stripe, SMTP, uploads Supabase et le rendu mobile doivent encore être testés sur le staging configuré.
+
+### Usage des nouvelles fonctions
+
+- **Compte client** : code email à usage unique pour retrouver les commandes invitées ; demandes de retour après livraison dans le délai configuré, motif et photo facultative de 2 Mo. Les photos sont dans le bucket **privé** `return-evidence`, créé par le serveur. Seul l'admin reçoit un lien signé de cinq minutes.
+- **Admin → Retours clients** : accepter/refuser, puis confirmer la réception physique pour remettre en stock. Cela ne rembourse pas automatiquement Stripe. Le remboursement complet reste dans la commande ; un remboursement partiel doit être traité dans Stripe puis rapproché. Les deux montants ne doivent pas être confondus.
+- **Suivi** : choisir le transporteur et saisir le numéro lors de l’expédition ; le client voit les jalons enregistrés et le lien Colissimo, Chronopost, Mondial Relay ou DHL. Aucun abonnement API transporteur ni synchronisation automatique de leurs événements n’est configuré.
+- **Fiche produit** : nouvelles catégories pull/maille, veste, jupe, haut, pantalon ; coupe et mesures en trois langues, transparence vérifiée et lien vidéo HTTPS.
+- **Description photo** : définir `OPENAI_API_KEY` **ou** `OPENROUTER_API_KEY` côté serveur. `PRODUCT_VISION_MODEL` est facultatif (défaut vision `gpt-4o-mini` / `openai/gpt-4o-mini`). L’upload propose automatiquement un brouillon si la case est cochée ; le bouton permet aussi de relancer l’analyse. La photo est transmise au fournisseur IA ; le coût est plafonné par le débit admin. La proposition ne modifie ni les prix, ni les stocks, ni la composition/entretien et exige une validation avant enregistrement/publication.
+- **Recherche** : index GIN trilingue, requête serveur, filtres et pagination bornée (48 produits au maximum par requête). Le détail produit est chargé par slug, sans dépendre de la première page du catalogue.
+
+### Données historiques et limites
+
+Les anciennes commandes payées n’ont pas de preuve fiable de débit de stock. La migration ne fabrique pas cette preuve : leur `order_items.stock_debited` reste faux. Réconcilier leur stock manuellement avant de tester un ancien remboursement. Les commandes nouvelles disposent du journal de débit ; retours et remboursements ne réapprovisionnent que les quantités réellement débitées.
+
+Les brouillons impayés de 72 h sont désormais **archivés de la liste admin**, pas détruits, afin de pouvoir réconcilier un événement Stripe tardif. Une anomalie de stock après paiement est conservée comme commande payée avec alerte `stock_issue`, jamais masquée comme paiement échoué. Ne pas expédier ces commandes sans vérification.
+
+Une réponse Stripe perdue conserve la réservation. La tâche de récupération recherche la session par référence de commande (recherche bornée à 1 000 sessions) ; sans correspondance, une réconciliation manuelle est nécessaire. Ne jamais libérer cette réservation sans vérifier Stripe. Les remboursements Stripe livrés avant l'événement de paiement sont rapprochés via les métadonnées du PaymentIntent.
+
+Les produits et commandes supprimés depuis l'admin sont archivés pour préserver l'historique. Les quantités déjà expédiées/livrées ou marquées défectueuses ne sont pas réapprovisionnées sur le seul remboursement financier ; confirmer le retour physique avant remboursement ou réconcilier manuellement. Le montant des retours enregistrés est une suggestion nette des articles, hors taxe et port, pas une preuve de remboursement Stripe.
+
+Le référencement des produits conserve des métadonnées et données structurées calculées côté navigateur. Le sitemap de build contient les pages publiques statiques, pas encore chaque slug du catalogue. Un pré-rendu ou rendu serveur des fiches devra compléter le SEO si une indexation exhaustive sans JavaScript est requise.
+
+Invariants vérifiés : règles communes client/serveur, prix serveur et devis confirmé, allocations exactes, RLS et droits RPC fermés, webhook idempotent, compteurs transactionnels, claim avant email, jetons en en-tête, limites persistantes. Aucun déploiement, secret ou modification de base distante n’est inclus dans cette mise à niveau.
 
 ```bash
 netlify dev          # site + fonctions en local (port 8888)

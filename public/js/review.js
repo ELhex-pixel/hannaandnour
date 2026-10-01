@@ -244,7 +244,7 @@
       return;
     }
     HN.loadConfig()
-      .then(function () { return HN.loadProducts(); })
+      .then(function () { return HN.loadProductSlugs([SLUG]); })
       .then(function (products) {
         var p = null;
         for (var i = 0; i < products.length; i++) {

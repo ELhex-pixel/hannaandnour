@@ -38,12 +38,12 @@
       items.forEach(function (it) {
         itemsHtml +=
           '<div class="order-item">' +
-          '  <div class="order-item-image"><img src="' + (it.image || 'images/hero.jpg') + '" alt=""></div>' +
+          '  <div class="order-item-image"><img src="' + esc(it.image || 'images/hero.jpg') + '" alt=""></div>' +
           '  <div class="order-item-info">' +
           '    <p class="order-item-name">' + esc(it.product_name || '') + '</p>' +
           '    <p class="order-item-variant">' + tr('qtyVar', { n: it.quantity || 1 }) + '</p>' +
           '  </div>' +
-          '  <span class="order-item-price">' + HN.money(it.unit_price_cents) + '</span>' +
+          '  <span class="order-item-price">' + orderMoney(it.unit_price_cents, o.currency) + '</span>' +
           '</div>';
       });
 
@@ -64,7 +64,7 @@
         '      <div class="order-item-info" style="text-align: right; flex: none;">' +
         '        <p class="order-item-name">' + tr('orderTotal') + '</p>' +
         '      </div>' +
-        '      <span class="order-item-price">' + HN.money(o.total_cents) + '</span>' +
+        '      <span class="order-item-price">' + orderMoney(o.total_cents, o.currency) + '</span>' +
         '    </div>' +
         '  </div>' +
         '</div>';
@@ -80,8 +80,9 @@
   }
 
   function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
+  function orderMoney(cents, currency) { return (currency === 'eur' ? '€' : '$') + (cents / 100).toFixed(2); }
 
   function loadAccountOrders() {
     if (!window.HN_AUTH) return;
@@ -229,8 +230,12 @@
         document.getElementById('signupName').value.trim(),
         document.getElementById('signupEmail').value.trim(),
         document.getElementById('signupPassword').value
-      ).then(function () {
+      ).then(function (result) {
         setBusy(signupForm, false);
+        if (result && result.confirmation_required) {
+          setAuthError(tr('authConfirmationSent'));
+          return;
+        }
         setAuthError('');
         renderAuthState();
         redirectAfterAuth();
@@ -310,14 +315,18 @@
       HN_AUTH.ready.then(function () { renderAuthState(); }).catch(function () { renderAuthState(); });
     }
 
-    HN.loadProducts().then(function () {
+    HN.loadProductSlugs(HN.wishlist.list()).then(function () {
       renderWishlist();
     }).catch(function () {
       renderWishlist();
     });
     document.addEventListener('langchange', function () { renderWishlist(); renderAuthState(); });
     // Re-render live when a heart is toggled (hex, event bubbles from store.js).
-    document.addEventListener('hn:wishlist', function () { renderWishlist(); });
+    document.addEventListener('hn:wishlist', function () {
+      renderWishlist();
+      var missing = HN.wishlist.list().filter(function (slug) { return !HN.getProduct(slug); });
+      if (missing.length) HN.loadProductSlugs(missing).then(renderWishlist).catch(function () {});
+    });
   }
 
   function wishlistCard(p) {
@@ -325,10 +334,10 @@
     var url = 'product.html?slug=' + encodeURIComponent(p.slug);
     return '<div class="product-card" data-slug="' + p.slug + '">' +
       '  <a class="product-card-image" href="' + url + '" style="display:block; aspect-ratio: 3/4;">' +
-      '    <img src="' + (p.image || 'images/hero.jpg') + '" alt="' + name.replace(/"/g, '&quot;') + '">' +
+      '    <img src="' + esc(p.image || 'images/hero.jpg') + '" alt="' + esc(name) + '">' +
       '  </a>' +
       '  <div class="product-card-info">' +
-      '    <a href="' + url + '"><h3 class="product-card-title">' + name + '</h3></a>' +
+      '    <a href="' + url + '"><h3 class="product-card-title">' + esc(name) + '</h3></a>' +
       '    <div class="product-card-price"><span class="product-price-current">' + HN.money(p.price_cents) + '</span></div>' +
       '    <button class="btn btn-primary btn-sm wishlist-add" style="width: 100%; margin-top: var(--spacing-sm);">' + tr('addToCart') + '</button>' +
       '    <button class="btn btn-secondary btn-sm wishlist-remove" style="width: 100%; margin-top: var(--spacing-xs);">' + tr('removeProduct') + '</button>' +
