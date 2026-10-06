@@ -25,7 +25,7 @@
       open: 'Ouvrir le chat',
       close: 'Fermer le chat',
       thinking: '…',
-      err: 'Désolé, une erreur est survenue. Réessayez ou écrivez-nous à care@hannaandnour.com.',
+      err: 'Désolé, une erreur est survenue. Réessayez ou écrivez-nous à care@hannanour.com.',
       chips: ['Livraison & retours', 'Suivre ma commande', 'Y a-t-il un code promo ?']
     },
     en: {
@@ -37,7 +37,7 @@
       open: 'Open chat',
       close: 'Close chat',
       thinking: '…',
-      err: 'Sorry, something went wrong. Please try again or email care@hannaandnour.com.',
+      err: 'Sorry, something went wrong. Please try again or email care@hannanour.com.',
       chips: ['Shipping & returns', 'Track my order', 'Is there a promo code?']
     },
     ar: {
@@ -49,7 +49,7 @@
       open: 'فتح المحادثة',
       close: 'إغلاق المحادثة',
       thinking: '…',
-      err: 'عذرًا، حدث خطأ ما. حاولي مجددًا أو راسلينا على care@hannaandnour.com.',
+      err: 'عذرًا، حدث خطأ ما. حاولي مجددًا أو راسلينا على care@hannanour.com.',
       chips: ['التوصيل والإرجاع', 'تتبع طلبي', 'هل يوجد كود خصم؟']
     }
   };

@@ -2,7 +2,7 @@
  * POST /api/contact
  * Public contact form: stores the message in `contact_messages` (admin inbox)
  * and, as best-effort, forwards it by email to the store address when Resend is
- * configured (RECIPIENT: process.env.CONTACT_EMAIL, default care@hannaandnour.com).
+ * configured (RECIPIENT: process.env.CONTACT_EMAIL, default care@hannanour.com).
  */
 const { json, getSupabase, isConfigured, readBody, sendEmail, rateLimit } = require('./shared');
 
@@ -57,7 +57,7 @@ exports.handler = async function (event) {
     // real recipient.
     try {
       await sendEmail({
-        to: process.env.CONTACT_EMAIL || 'care@hannaandnour.com',
+        to: process.env.CONTACT_EMAIL || 'care@hannanour.com',
         subject: 'Nouveau message du site : ' + (subject || '(sans objet)'),
         html:
           '<p><strong>De :</strong> ' +

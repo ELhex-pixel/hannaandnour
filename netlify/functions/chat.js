@@ -12,7 +12,7 @@
  */
 const { json, getSupabase, isConfigured, readBody, getSetting } = require('./shared');
 
-const CONTACT_EMAIL = 'care@hannaandnour.com';
+const CONTACT_EMAIL = 'care@hannanour.com';
 const CONTACT_SUBJECT = encodeURIComponent('Question depuis le chat');
 const SUPPORTED = ['fr', 'en', 'ar'];
 
@@ -379,10 +379,10 @@ const RULES = [
     },
     reply: (ctx) => ({
       text: ctx.lang === 'fr'
-        ? 'Avec plaisir ! Merci de votre visite chez Hanna & Nour, à bientôt ! \uD83D\uDE0A\n\nConversation terminée — notre équipe reste joignable à care@hannaandnour.com.'
+        ? 'Avec plaisir ! Merci de votre visite chez Hanna & Nour, à bientôt ! \uD83D\uDE0A\n\nConversation terminée — notre équipe reste joignable à care@hannanour.com.'
         : ctx.lang === 'en'
-          ? 'You\u2019re welcome! Thank you for visiting Hanna & Nour, see you soon! \uD83D\uDE0A\n\nConversation closed — our team remains reachable at care@hannaandnour.com.'
-          : 'على الرحب والسعة! شكرًا لزيارتك حنا ونور، إلى اللقاء! \uD83D\uDE0A\n\nانتهت المحادثة — فريقنا يبقى متاحًا على care@hannaandnour.com.'
+          ? 'You\u2019re welcome! Thank you for visiting Hanna & Nour, see you soon! \uD83D\uDE0A\n\nConversation closed — our team remains reachable at care@hannanour.com.'
+          : 'على الرحب والسعة! شكرًا لزيارتك حنا ونور، إلى اللقاء! \uD83D\uDE0A\n\nانتهت المحادثة — فريقنا يبقى متاحًا على care@hannanour.com.'
     })
   },
   {
@@ -528,7 +528,7 @@ function systemPrompt(ctx) {
   const promo = ctx.promo ? 'Code ' + ctx.promo.code + ' = ' + ctx.promo.percent_off + '% de réduction.' : 'Aucun code actif pour le moment.';
   const products = ctx.products.map((p) => (ctx.lang === 'fr' ? p.name_fr : p.name_en) + ' — ' + moneyStr(p.price_cents, cur, ctx.lang)).join(' ; ') || 'N/A';
   const lines = [
-    'Tu es l\u2019assistant de la boutique en ligne Hanna & Nour (mode modeste pour femme : hijabs, abayas, tenues de prière, robes, accessoires). Site : hannanour.netlify.app. Paiement sécurisé via Stripe (Visa, Mastercard, Amex, PayPal, Apple Pay, Klarna).',
+    'Tu es l\u2019assistant de la boutique en ligne Hanna & Nour (mode modeste pour femme : hijabs, abayas, tenues de prière, robes, accessoires). Site : hannanour.com. Paiement sécurisé via Stripe (Visa, Mastercard, Amex, PayPal, Apple Pay, Klarna).',
     'Livraison : standard ' + std + ' (5–7 j ouvrés), express ' + exp + ' (2–3 j), lendemain avant 21h ' + next + (s.pickup_enabled ? ', retrait gratuit en boutique.' : '.'),
     'Livraison gratuite dès ' + free + '.',
     'Retours sous ' + days + ' jours : ' + CONTACT_EMAIL + '.',
@@ -566,7 +566,7 @@ async function askAI(message, ctx) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + (openAiKey || routerKey),
-        ...(routerKey ? { 'HTTP-Referer': 'https://hannanour.netlify.app', 'X-Title': 'Hanna & Nour Chat' } : {})
+        ...(routerKey ? { 'HTTP-Referer': 'https://hannanour.com', 'X-Title': 'Hanna & Nour Chat' } : {})
       },
       body: JSON.stringify(payload),
       signal: controller ? controller.signal : undefined

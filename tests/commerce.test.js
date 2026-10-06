@@ -5,6 +5,7 @@ const { validateDraft, imageUrl } = require('../netlify/functions/lib/product-as
 const { trackingLink } = require('../netlify/functions/lib/tracking');
 const { signToken, verifyToken, getBearer, json, readBody } = require('../netlify/functions/shared');
 const { isConfigured } = require('../netlify/functions/shared');
+const { execFileSync } = require('node:child_process');
 
 test('les doublons sont regroupés et la quantité totale est plafonnée', () => {
   assert.deepEqual(normalize([{ slug: 'pull', qty: 8, color: 'Beige' }, { slug: 'pull', qty: 8, color: 'beige' }]), [{ slug: 'pull', color: 'Beige', size: '', qty: 10 }]);
@@ -69,4 +70,18 @@ test('le staging refuse la base de production et les clés Stripe live', () => {
     process.env.STRIPE_SECRET_KEY = 'sk_live_fake';
     assert(!isConfigured());
   } finally { keys.forEach((key, i) => { if (saved[i] === undefined) delete process.env[key]; else process.env[key] = saved[i]; }); }
+});
+test('les liens serveur et CORS utilisent le domaine officiel sans écraser les URLs configurées', () => {
+  function config(env) {
+    const code = "const shared = require('./netlify/functions/shared'); console.log(JSON.stringify({ siteUrl: shared.siteUrl, origin: shared.CORS_HEADERS['Access-Control-Allow-Origin'] }));";
+    return JSON.parse(execFileSync(process.execPath, ['-e', code], { env, encoding: 'utf8', timeout: 10000 }));
+  }
+  assert.deepEqual(config({}), { siteUrl: 'https://hannanour.com', origin: 'https://hannanour.com' });
+  assert.deepEqual(config({ SITE_URL: 'http://localhost:8888/' }), { siteUrl: 'http://localhost:8888', origin: 'http://localhost:8888' });
+  assert.deepEqual(config({ SITE_URL: 'https://staging.example.test/' }), { siteUrl: 'https://staging.example.test', origin: 'https://staging.example.test' });
+  for (const context of ['deploy-preview', 'branch-deploy']) {
+    assert.deepEqual(config({ CONTEXT: context, SITE_URL: 'https://hannanour.com', DEPLOY_PRIME_URL: 'https://preview.example.test/' }), {
+      siteUrl: 'https://preview.example.test', origin: 'https://preview.example.test'
+    });
+  }
 });

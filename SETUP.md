@@ -72,7 +72,7 @@ Copiez `.env.example` en `.env` pour `netlify dev`, et définissez les mêmes va
 | `SHIPPING_NEXTDAY_CENTS` | frais J+1 en centimes, ex. `2500` |
 | `RESEND_API_KEY` | clé API Resend (optionnel) pour l'email de confirmation de commande |
 | `MAIL_FROM` | expéditeur des emails (optionnel), ex. `Hanna & Nour <no-reply@votre-domaine.com>` |
-| `CONTACT_EMAIL` | destinataire des messages du formulaire de contact (optionnel, défaut `care@hannaandnour.com`) |
+| `CONTACT_EMAIL` | destinataire des messages du formulaire de contact (optionnel, défaut `care@hannanour.com`) |
 | `ADMIN_PASSWORD` | mot de passe de l'espace admin (`/admin`) — le définir obligatoirement |
 
 ## 4ter. Espace administrateur (`/admin`)

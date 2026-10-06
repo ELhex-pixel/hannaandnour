@@ -13,7 +13,7 @@ const { WebSocket } = require('ws');
 const crypto = require('crypto');
 
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': new URL((['deploy-preview', 'branch-deploy'].includes(process.env.CONTEXT) ? process.env.DEPLOY_PRIME_URL : process.env.SITE_URL) || 'https://hannanour.netlify.app').origin,
+  'Access-Control-Allow-Origin': new URL((['deploy-preview', 'branch-deploy'].includes(process.env.CONTEXT) ? process.env.DEPLOY_PRIME_URL : process.env.SITE_URL) || 'https://hannanour.com').origin,
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
 };
@@ -122,7 +122,7 @@ function getBearer(event) {
 
 // Canonical site URL for emails and redirects. SITE_URL (Netlify env var)
 // wins; the fallback keeps local / `netlify dev` builds working unconfigured.
-const DEFAULT_SITE_URL = 'https://hannanour.netlify.app';
+const DEFAULT_SITE_URL = 'https://hannanour.com';
 const siteUrl = ((['deploy-preview', 'branch-deploy'].includes(process.env.CONTEXT) ? process.env.DEPLOY_PRIME_URL : process.env.SITE_URL) || DEFAULT_SITE_URL).replace(/\/+$/, '');
 
 // Admin routes check `requireAdmin(event).ok` before doing anything.

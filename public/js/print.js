@@ -33,8 +33,8 @@
   var STORE = {
     name: 'Hanna & Nour',
     tagline: 'Modest Fashion for the Modern Woman',
-    email: 'care@hannaandnour.com',
-    site: 'https://hannanour.netlify.app'
+    email: 'care@hannanour.com',
+    site: 'https://hannanour.com'
   };
 
   function customerAddress(o) {

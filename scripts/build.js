@@ -11,7 +11,7 @@ async function build() {
   if (preview && process.env.STAGING_MODE !== 'true') throw new Error('Preview désactivée : configurez un environnement staging isolé avant de déployer.');
   if ((preview || process.env.STAGING_MODE === 'true') && (!process.env.EXPECTED_STAGING_SUPABASE_URL || !process.env.PRODUCTION_SUPABASE_URL || process.env.SUPABASE_URL === process.env.PRODUCTION_SUPABASE_URL || process.env.SUPABASE_URL !== process.env.EXPECTED_STAGING_SUPABASE_URL || !String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_test_'))) throw new Error('Le staging exige sa propre base Supabase, une PRODUCTION_SUPABASE_URL distincte et une clé Stripe test.');
   await preflight();
-  const origin = (preview ? process.env.DEPLOY_PRIME_URL : process.env.SITE_URL) || 'https://hannanour.netlify.app';
+  const origin = (preview ? process.env.DEPLOY_PRIME_URL : process.env.SITE_URL) || 'https://hannanour.com';
   await fs.mkdir('dist', { recursive: true });
   await fs.cp('public', 'dist', { recursive: true });
   await fs.mkdir('dist/assets', { recursive: true });
