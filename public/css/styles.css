@@ -28,6 +28,7 @@
   --color-gold: #B78A4A;
   --color-gold-light: #D4B483;
   --color-cream-dark: #EFE6D8;
+  --account-surface: #FFFFFF;
   
   /* Typography */
   --font-display: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
@@ -2739,6 +2740,94 @@ body[data-menu-open="true"] .nav-mobile {
 .account-content-title {
   font-family: var(--font-display);
   font-size: 1.75rem;
+}
+
+.account-page .page-header {
+  padding: var(--spacing-2xl) 0 var(--spacing-lg);
+  background: transparent;
+  text-align: start;
+}
+.account-page .page-header-title { font-size: clamp(2rem, 4vw, 3rem); margin: var(--spacing-sm) 0; }
+.account-page-intro { color: var(--color-gray); max-width: 42rem; }
+.account-page .page-header-breadcrumb { justify-content: flex-start; margin-top: var(--spacing-md); }
+.account-page .account-layout { grid-template-columns: 240px minmax(0, 1fr); gap: var(--spacing-lg); padding: var(--spacing-lg) 0 var(--spacing-3xl); align-items: start; }
+.account-page .account-sidebar { position: sticky; top: 120px; background: var(--account-surface); border: 1px solid var(--color-cream-dark); border-radius: var(--radius-lg); padding: var(--spacing-lg); }
+.account-page .account-user { text-align: start; border-color: var(--color-cream-dark); }
+.account-page .account-avatar { width: 48px; height: 48px; margin: 0 0 var(--spacing-md); background: var(--color-blush-light); color: var(--color-dark); font-size: 1rem; border: 1px solid var(--color-sage-light); }
+.account-page .account-email { font-size: 0.75rem; }
+.account-page .account-nav-link { font-size: 0.8125rem; gap: var(--spacing-sm); padding: 12px; min-height: 44px; }
+.account-page .account-nav-link svg { flex-shrink: 0; margin: 0; }
+.account-page .account-nav[hidden] { display: none; }
+.account-page .account-sidebar.is-guest .account-user { border-bottom: 0; padding-bottom: 0; margin-bottom: 0; }
+.account-page .account-nav-link.active { background: var(--color-blush-light); color: var(--color-dark); font-weight: 600; box-shadow: inset 3px 0 var(--color-gold); }
+html[dir="rtl"] .account-page .account-nav-link.active { box-shadow: inset -3px 0 var(--color-gold); }
+.account-support { border-top: 1px solid var(--color-cream-dark); margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); font-size: 0.8125rem; }
+.account-support p { color: var(--color-gray); margin-bottom: var(--spacing-xs); }
+.account-support a { color: var(--color-dark); text-decoration: underline; text-underline-offset: 4px; }
+.account-page .account-content { display: flex; flex-direction: column; min-width: 0; gap: var(--spacing-lg); padding: 0; background: transparent; }
+.account-card, .account-page .auth-panel { padding: var(--spacing-lg); border: 1px solid var(--color-cream-dark); border-radius: var(--radius-lg); background: var(--account-surface); box-shadow: var(--shadow-sm); min-width: 0; scroll-margin-top: 120px; }
+.account-page .auth-panel { margin-bottom: 0; }
+.account-page .account-content-header { gap: var(--spacing-md); margin-bottom: var(--spacing-lg); padding-bottom: 0; border-bottom: 0; align-items: flex-start; }
+.account-page .account-content-title { font: 600 1.125rem/1.4 var(--font-body); color: var(--color-dark); }
+.account-card-description { color: var(--color-gray); font-size: 0.8125rem; margin-top: var(--spacing-xs); }
+.account-section-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--radius-md); flex-shrink: 0; background: var(--color-off-white); color: var(--color-dark); }
+.account-section-icon svg { width: 22px; height: 22px; }
+.account-welcome { background: linear-gradient(120deg, var(--account-surface), var(--color-off-white)); }
+.account-welcome-inner { display: flex; justify-content: space-between; gap: var(--spacing-lg); align-items: center; }
+.account-eyebrow { color: var(--color-gray); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: var(--spacing-sm); }
+.account-welcome-title { font: 500 clamp(1.375rem, 3vw, 1.875rem)/1.35 var(--font-display); color: var(--color-dark); overflow-wrap: anywhere; }
+.account-page .btn { min-height: 44px; padding: 10px 16px; border-radius: var(--radius-md); font-size: 0.8125rem; line-height: 1.4; letter-spacing: 0; text-transform: none; white-space: normal; }
+.account-page .btn:disabled { opacity: 0.6; cursor: wait; }
+.account-page .form-input { min-width: 0; width: 100%; min-height: 44px; border: 1px solid var(--color-sage-light); border-radius: var(--radius-sm); font-size: 0.875rem; padding: 12px; }
+.account-page :is(a, button, input, textarea):focus-visible { outline: 2px solid var(--color-gold); outline-offset: 3px; }
+.account-order-filter { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto auto; align-items: end; gap: var(--spacing-sm); background: var(--color-off-white); border: 1px solid var(--color-cream-dark); border-radius: var(--radius-md); padding: var(--spacing-md); margin-bottom: var(--spacing-lg); }
+.account-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 0.75rem; color: var(--color-gray); font-weight: 500; }
+.account-services { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing-lg); align-items: start; }
+.account-services[hidden] { display: none; }
+.account-services > .account-feedback { grid-column: 1 / -1; }
+.account-service-description { color: var(--color-gray); font-size: 0.8125rem; margin-bottom: var(--spacing-md); }
+.account-claim-form { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); align-items: end; margin-top: var(--spacing-lg); }
+.account-claim-form .account-field { flex: 1 1 140px; }
+.account-claim-form input { letter-spacing: 0.15em; }
+.account-feedback { font-size: 0.8125rem; color: var(--color-dark); background: var(--color-off-white); border: 1px solid var(--color-sage-light); padding: var(--spacing-md); border-radius: var(--radius-sm); overflow-wrap: anywhere; }
+.account-feedback:empty { display: none; }
+.account-feedback.is-error { border-color: var(--color-gray); }
+.account-service-message { margin-top: var(--spacing-md); }
+.account-empty { display: flex; flex-direction: column; align-items: center; gap: var(--spacing-md); text-align: center; padding: var(--spacing-xl) var(--spacing-md); border: 1px dashed var(--color-sage-light); border-radius: var(--radius-md); background: var(--color-off-white); color: var(--color-gray); font-size: 0.875rem; }
+.account-empty svg { width: 32px; height: 32px; color: var(--color-dark); }
+.account-count { padding: 6px 10px; border-radius: 999px; color: var(--color-gray); background: var(--color-off-white); font-size: 0.75rem; white-space: nowrap; }
+.account-page #wishlistGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.account-page #wishlistGrid > .account-empty { grid-column: 1 / -1; }
+.account-page .account-return-order { padding: var(--spacing-md); border: 1px solid var(--color-cream-dark); border-radius: var(--radius-md); margin-top: var(--spacing-md); }
+.account-return-order h3 { font: 600 0.875rem/1.4 var(--font-body); margin-bottom: var(--spacing-sm); }
+.account-return-form { display: grid; gap: var(--spacing-sm); border-top: 1px solid var(--color-cream-dark); margin-top: var(--spacing-md); padding-top: var(--spacing-md); }
+.account-return-form .form-input { resize: vertical; }
+.account-return-form input[type="file"] { width: 100%; min-width: 0; font: inherit; font-size: 0.75rem; }
+.account-return-form p, .account-tracking-status, .account-return-request { font-size: 0.75rem; color: var(--color-gray); overflow-wrap: anywhere; }
+.account-tracking-status:not(:empty), .account-return-request { margin-top: var(--spacing-md); }
+.account-tracking-status a { display: block; text-decoration: underline; text-underline-offset: 3px; margin-top: var(--spacing-xs); }
+.account-return-request { padding: var(--spacing-md); background: var(--color-off-white); border-radius: var(--radius-sm); }
+html[data-theme="dark"] .account-page { --account-surface: #201C16; }
+html[data-theme="dark"] .account-page .account-content { background: transparent; }
+@media (max-width: 1024px) {
+  .account-page .account-layout { grid-template-columns: 1fr; }
+  .account-page .account-sidebar { position: static; }
+  .account-page .account-user { display: flex; align-items: center; gap: var(--spacing-md); }
+  .account-page .account-avatar { margin: 0; flex-shrink: 0; }
+  .account-page .account-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .account-support { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--spacing-sm); padding-top: var(--spacing-md); margin-top: var(--spacing-md); }
+}
+@media (max-width: 640px) {
+  .account-page .page-header { padding-top: var(--spacing-lg); }
+  .account-page .account-sidebar, .account-card, .account-page .auth-panel { padding: var(--spacing-md); border-radius: var(--radius-md); }
+  .account-page .account-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .account-services { grid-template-columns: 1fr; }
+  .account-welcome-inner { flex-direction: column; align-items: stretch; gap: var(--spacing-md); }
+  .account-order-filter { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: var(--spacing-sm); }
+  .account-order-filter .btn { width: 100%; }
+  .account-page #wishlistGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .account-page .order-header { flex-wrap: wrap; gap: var(--spacing-sm); }
+  .account-page .order-item-info { min-width: 0; overflow-wrap: anywhere; }
 }
 
 /* Order History */

@@ -7,6 +7,11 @@
   var HN = window.HN;
   if (!HN) return;
   var tr = HN.tr;
+  var orderRequest = 0;
+
+  function emptyState(message) {
+    return '<div class="account-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m3 7 9-4 9 4v10l-9 4-9-4Z"/><path d="m3 7 9 4 9-4M12 11v10"/></svg><p>' + esc(message) + '</p><a class="btn btn-secondary" href="shop.html">' + tr('accountDiscover') + '</a></div>';
+  }
 
   function statusText(status) {
     var key = {
@@ -26,7 +31,7 @@
     if (!box) return;
 
     if (!orders || !orders.length) {
-      box.innerHTML = '<p style="color: var(--color-gray); padding: var(--spacing-lg) 0;">' + tr('ordersEmpty') + '</p>';
+      box.innerHTML = emptyState(tr('ordersEmpty'));
       return;
     }
 
@@ -86,9 +91,11 @@
 
   function loadAccountOrders() {
     if (!window.HN_AUTH) return;
+    var requestId = ++orderRequest;
     var box = document.getElementById('accountOrders');
     if (box) {
-      box.innerHTML = '<p style="color: var(--color-gray); padding: var(--spacing-lg) 0;">' + tr('ordersLoading') + '</p>';
+      box.innerHTML = '<p class="account-feedback" role="status">' + tr('ordersLoading') + '</p>';
+      box.setAttribute('aria-busy', 'true');
     }
     var payload = { action: 'orders' };
     var from = dateVal('orderFilterFrom');
@@ -96,11 +103,17 @@
     if (from) payload.from = from;
     if (to) payload.to = to;
     HN_AUTH.call(payload, true)
-      .then(function (data) { renderOrders(data.orders || []); })
+      .then(function (data) {
+        if (requestId !== orderRequest) return;
+        if (box) box.setAttribute('aria-busy', 'false');
+        renderOrders(data.orders || []);
+      })
       .catch(function (err) {
+        if (requestId !== orderRequest) return;
         var msg = (err && err.message) || tr('ordersError');
         if (box) {
-          box.innerHTML = '<p style="color: var(--color-burgundy); padding: var(--spacing-lg) 0;">' + tr('ordersError') + '<span style="display:block; font-size:0.875rem;">' + esc(msg) + '</span></p>';
+          box.setAttribute('aria-busy', 'false');
+          box.innerHTML = '<p class="account-feedback is-error" role="alert">' + tr('ordersError') + '</p>';
         }
         window.hnToast && hnToast(tr('ordersError'), msg, 'error');
       });
@@ -141,28 +154,59 @@
     var accountPanel = document.getElementById('accountPanel');
     var box = document.getElementById('accountOrders');
     var wishSection = document.getElementById('wishlist');
-    var wishLink = document.querySelector('.account-nav-link[href="#wishlist"]');
+    var privateLinks = document.querySelectorAll('[data-account-private]');
+    var ordersSection = document.getElementById('orders');
+    var sidebarName = document.getElementById('accountSidebarName');
+    var avatar = document.getElementById('accountAvatar');
+    var navigation = document.querySelector('.account-nav');
+    var sidebar = document.querySelector('.account-sidebar');
     var orderFilter = document.getElementById('orderFilter');
-    if (wishLink) wishLink.style.display = user ? '' : 'none';
-    if (orderFilter) orderFilter.style.display = user ? 'flex' : 'none';
+    Array.prototype.forEach.call(privateLinks, function (link) { link.style.display = user ? '' : 'none'; });
+    if (navigation) navigation.hidden = !user;
+    if (sidebar) sidebar.classList.toggle('is-guest', !user);
+    if (ordersSection) ordersSection.style.display = user ? 'block' : 'none';
+    if (orderFilter) orderFilter.style.display = user ? 'grid' : 'none';
+    if (sidebarName) {
+      sidebarName.removeAttribute('data-i18n');
+      sidebarName.textContent = user ? (user.first_name || tr('accountMember')) : tr('accountSpace');
+    }
+    if (avatar) avatar.textContent = user && user.first_name ? user.first_name.trim().slice(0, 2).toUpperCase() : 'HN';
 
     if (user) {
       if (authPanel) authPanel.style.display = 'none';
       if (accountPanel) accountPanel.style.display = 'block';
       if (box) {
         var greet = document.getElementById('accountGreeting');
-        if (greet) greet.textContent = tr('authWelcome').replace('{n}', user.first_name || user.email || '');
+        if (greet) greet.textContent = tr('authWelcome').replace('{n}', user.first_name || tr('accountMember'));
       }
       if (wishSection) wishSection.style.display = 'block';
       loadAccountOrders();
     } else {
+      orderRequest++;
       if (authPanel) authPanel.style.display = 'block';
       if (accountPanel) accountPanel.style.display = 'none';
       if (box) {
-        box.innerHTML = '<p style="color: var(--color-gray); padding: var(--spacing-lg) 0;">' + tr('authLoginIntro') + '</p>';
+        box.innerHTML = '';
+        box.setAttribute('aria-busy', 'false');
       }
       if (wishSection) wishSection.style.display = 'none';
     }
+  }
+
+  function wireAccountNavigation() {
+    var links = document.querySelectorAll('.account-nav-link');
+    function update() {
+      var target = window.location.hash || '#orders';
+      Array.prototype.forEach.call(links, function (link) {
+        var href = link.getAttribute('href');
+        var active = href.slice(href.indexOf('#')) === target;
+        link.classList.toggle('active', active);
+        if (active) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
+    }
+    window.addEventListener('hashchange', update);
+    update();
   }
 
   function wireAuth() {
@@ -178,6 +222,8 @@
     function showTab(isSignup) {
       if (tabLogin) tabLogin.classList.toggle('is-active', !isSignup);
       if (tabSignup) tabSignup.classList.toggle('is-active', isSignup);
+      if (tabLogin) tabLogin.setAttribute('aria-pressed', String(!isSignup));
+      if (tabSignup) tabSignup.setAttribute('aria-pressed', String(isSignup));
       if (loginForm) loginForm.style.display = isSignup ? 'none' : 'flex';
       if (signupForm) signupForm.style.display = isSignup ? 'flex' : 'none';
       if (forgotToggle) forgotToggle.style.display = isSignup ? 'none' : '';
@@ -304,6 +350,7 @@
   }
 
   function init() {
+    wireAccountNavigation();
     wireWishlistGrid();
     wireOrderFilter();
     wireAuth();
@@ -384,7 +431,7 @@
     });
 
     if (!products.length) {
-      grid.innerHTML = '<p style="color: var(--color-gray); grid-column: 1/-1;">' + tr('wishlistEmpty') + '</p>';
+      grid.innerHTML = emptyState(tr('wishlistEmpty'));
       return;
     }
     grid.innerHTML = products.map(wishlistCard).join('');

@@ -220,3 +220,106 @@ test('la confirmation normale continue à restaurer la session et nettoyer le fr
   assert.equal(mock.state.requests.length, 1);
   assert.equal(mock.state.requests[0].request.headers.Authorization, 'Bearer confirmed-test-token');
 });
+
+function services(options = {}) {
+  function node(tag) {
+    return {
+      tag, children: [], attributes: {}, listeners: {}, hidden: false, value: '',
+      set textContent(value) { this.text = value; this.children = []; },
+      get textContent() { return this.text || ''; },
+      appendChild(child) { this.children.push(child); },
+      setAttribute(key, value) { this.attributes[key] = value; },
+      addEventListener(key, callback) { this.listeners[key] = callback; },
+      focus() {}, classList: { toggle() {} }
+    };
+  }
+  const nodes = {};
+  for (const id of ['accountServices', 'accountClaimContent', 'accountReturnsContent', 'accountServicesMessage']) nodes[id] = node('div');
+  const state = { user: options.guest ? null : { id: 'fixture-user' }, calls: [], requests: [], resolveOrders: null };
+  const listeners = {};
+  const document = {
+    createElement: node, getElementById: id => nodes[id],
+    addEventListener: (name, callback) => { listeners[name] = callback; },
+    dispatchEvent: event => { if (listeners[event.type]) listeners[event.type](); }
+  };
+  const auth = {
+    currentUser: () => state.user, isAuthed: () => !!state.user, token: () => 'fixture-token', ready: Promise.resolve(),
+    call: async (payload, needsAuth) => {
+      state.calls.push({ payload, needsAuth });
+      if (payload.action === 'orders') {
+        if (options.pending) return new Promise(resolve => { state.resolveOrders = resolve; });
+        return { orders: options.orders || [] };
+      }
+      return { ok: true };
+    }
+  };
+  vm.runInNewContext(fs.readFileSync('public/js/account-services.js', 'utf8'), {
+    window: { HN: { tr: key => key, api: endpoint => '/api/' + endpoint }, HN_AUTH: auth },
+    document, CustomEvent: function (type) { this.type = type; },
+    fetch: async (url, request) => { state.requests.push({ url, request }); return { ok: true, json: async () => ({ requests: [] }) }; }
+  });
+  function find(parent, tag) {
+    for (const child of parent.children) {
+      if (child.tag === tag) return child;
+      const nested = find(child, tag);
+      if (nested) return nested;
+    }
+    return null;
+  }
+  return { state, nodes, document, find };
+}
+
+const settle = () => new Promise(resolve => setImmediate(resolve));
+
+test('les services privés restent masqués et sans requête pour une personne déconnectée', async () => {
+  const mock = services({ guest: true });
+  await settle();
+  assert.equal(mock.nodes.accountServices.hidden, true);
+  assert.equal(mock.state.calls.length, 0);
+  assert.equal(mock.state.requests.length, 0);
+});
+
+test('les services ne déclenchent aucun email au chargement et valident le code avant envoi', async () => {
+  const mock = services();
+  await settle();
+  assert.deepEqual(mock.state.calls.map(call => call.payload.action), ['orders']);
+  const form = mock.find(mock.nodes.accountClaimContent, 'form');
+  const input = mock.find(form, 'input');
+  input.value = '12';
+  form.listeners.submit({ preventDefault() {} });
+  assert.equal(mock.state.calls.length, 1);
+  input.value = '123456';
+  form.listeners.submit({ preventDefault() {} });
+  await settle();
+  const confirmation = mock.state.calls.find(call => call.payload.action === 'confirmOrderClaim');
+  assert.equal(confirmation.payload.code, '123456');
+  assert.equal(confirmation.needsAuth, true);
+  assert.equal(mock.state.calls.filter(call => call.payload.action === 'requestOrderClaim').length, 0);
+  assert.equal(mock.state.requests[0].request.headers.Authorization, 'Bearer fixture-token');
+  assert.doesNotMatch(mock.state.requests[0].url, /token/);
+});
+
+test('une réponse de commandes arrivée après déconnexion ne restaure aucune donnée privée', async () => {
+  const mock = services({ pending: true });
+  await settle();
+  mock.state.user = null;
+  mock.document.dispatchEvent({ type: 'hn:auth' });
+  mock.state.resolveOrders({ orders: [{ id: 'old-user-order', status: 'paid', order_number: 'PRIVATE' }] });
+  await settle();
+  assert.equal(mock.nodes.accountServices.hidden, true);
+  assert.equal(mock.nodes.accountClaimContent.children.length, 0);
+  assert.equal(mock.nodes.accountReturnsContent.children.length, 0);
+});
+
+test('la présentation conserve les formulaires de retour réservés aux commandes livrées', async () => {
+  for (const shipping of ['shipped', 'delivered']) {
+    const mock = services({ orders: [{ id: 'fixture-order', status: 'paid', shipping_status: shipping, order_number: 'HN-TEST', order_items: [{ id: 'fixture-item', quantity: 2, product_name: 'Test' }] }] });
+    await settle();
+    const form = mock.find(mock.nodes.accountReturnsContent, 'form');
+    assert.equal(!!form, shipping === 'delivered');
+    if (form) {
+      assert.equal(mock.find(form, 'input').max, 2);
+      assert.equal(mock.find(form, 'textarea').required, true);
+    }
+  }
+});

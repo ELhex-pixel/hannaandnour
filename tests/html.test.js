@@ -20,6 +20,32 @@ test('les scripts locaux existent et les dépendances admin sont ordonnées', ()
   assert(scripts.indexOf('js/admin-api.js') < scripts.indexOf('js/admin.js'));
   assert(scripts.indexOf('js/admin.js') < scripts.indexOf('js/admin-features.js'));
 });
+test('le compte sépare les services et conserve les ancres, labels et identifiants uniques', () => {
+  const $ = cheerio.load(fs.readFileSync('public/account.html', 'utf8'));
+  const ids = new Set();
+  $('[id]').each((_, node) => { const id = $(node).attr('id'); assert(!ids.has(id), id); ids.add(id); });
+  $('.account-nav-link').each((_, node) => {
+    const href = $(node).attr('href');
+    assert(href.startsWith('account.html#'));
+    const target = href.slice(href.indexOf('#'));
+    assert.equal($(target).length, 1);
+    assert($(node).is('[data-account-private]'));
+  });
+  assert.equal($('#accountServices').parents('#accountPanel').length, 0);
+  assert.equal($('#accountServices > section.account-card').length, 2);
+  assert($('#accountServices').is('[hidden]'));
+  for (const id of ['loginEmail', 'loginPassword', 'signupName', 'signupEmail', 'signupPassword', 'forgotEmail', 'orderFilterFrom', 'orderFilterTo']) {
+    assert.equal($('#' + id).parents('label').length, 1, id);
+  }
+  for (const id of ['orders', 'guest-orders', 'returns', 'wishlist']) {
+    assert.equal($('#' + $('#' + id).attr('aria-labelledby')).length, 1, id);
+  }
+  const dict = require('../public/js/i18n');
+  $('[data-i18n], [data-i18n-aria-label]').each((_, node) => {
+    const key = $(node).attr('data-i18n') || $(node).attr('data-i18n-aria-label');
+    for (const lang of ['fr', 'en', 'ar']) assert(dict[lang][key], lang + ': ' + key);
+  });
+});
 test('le domaine et l’email de la boutique sont cohérents dans les sources publiées', () => {
   function files(dir) {
     return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
