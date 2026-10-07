@@ -3,18 +3,18 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 
-function uploader(response) {
+function uploader(response, browser = {}) {
   const calls = [];
   const window = {};
   vm.runInNewContext(fs.readFileSync('public/js/admin-api.js', 'utf8'), {
-    window, sessionStorage: { getItem: () => 'fixture-not-a-real-token' },
+    window, setTimeout, clearTimeout, ...browser, sessionStorage: { getItem: () => 'fixture-not-a-real-token' },
     fetch: async (url, options) => {
       const payload = JSON.parse(options.body);
       calls.push({ url, headers: options.headers, payload });
       return { ok: payload.name !== 'fail.png', json: async () => response ? response(payload) : payload.name === 'fail.png' ? { error: 'Upload refusé' } : { url: 'images/' + payload.name } };
     }
   });
-  return { upload: window.HN_ADMIN.uploadImages, calls };
+  return { upload: window.HN_ADMIN.uploadImages, prepare: window.HN_ADMIN.prepareImage, calls };
 }
 const photo = name => ({ name, type: 'image/png', size: 42 });
 test('les photos sont envoyées en série et dans l’ordre, par Authorization', async () => {
@@ -33,7 +33,7 @@ test('les photos sont envoyées en série et dans l’ordre, par Authorization',
 });
 test('tout le lot est validé avant la première lecture ou le premier envoi', async () => {
   const mock = uploader();
-  for (const files of [[], Array(21).fill(photo('photo.png')), [photo('ok.png'), { ...photo('large.png'), size: 4 * 1024 * 1024 + 1 }], [{ ...photo('invalid.svg'), type: 'image/svg+xml' }], [{ ...photo('empty.png'), size: 0 }]]) {
+  for (const files of [[], Array(21).fill(photo('photo.png')), [photo('ok.png'), { ...photo('large.png'), size: 40 * 1024 * 1024 + 1 }], [{ ...photo('invalid.svg'), type: 'image/svg+xml' }], [{ ...photo('empty.png'), size: 0 }]]) {
     await assert.rejects(mock.upload(files, { read: () => { throw new Error('Must not read'); } }));
   }
   assert.equal(mock.calls.length, 0);
@@ -78,6 +78,140 @@ test('une erreur de lecture ou une URL manquante sont des échecs identifiés', 
   const missing = await missingUrl.upload([photo('one.png')], { read: async () => 'ZmFrZQ==' });
   assert.equal(missing.uploaded, 0);
   assert.equal(missing.failed.length, 1);
+});
+
+function compressionBrowser({ width = 4000, height = 2000, blobs = [{ size: 1024, type: 'image/webp' }], broken = false, unavailable = false } = {}) {
+  const state = { sources: [], revoked: [], encodings: [], canvas: null };
+  const context = { drawImage() {}, imageSmoothingEnabled: false, imageSmoothingQuality: '' };
+  const browser = {
+    Image: class {
+      constructor() { this.naturalWidth = width; this.naturalHeight = height; }
+      set src(value) { if (value) Promise.resolve().then(() => { if (broken) this.onerror(); else this.onload(); }); }
+    },
+    URL: { createObjectURL(file) { state.sources.push(file); return 'blob:local'; }, revokeObjectURL(url) { state.revoked.push(url); } },
+    document: { createElement(tag) {
+      assert.equal(tag, 'canvas');
+      return state.canvas = { width: 0, height: 0, getContext: () => unavailable ? null : context, toBlob(callback, mime, quality) {
+        state.encodings.push({ width: this.width, height: this.height, mime, quality });
+        callback(blobs[Math.min(state.encodings.length - 1, blobs.length - 1)]);
+      } };
+    } },
+    File: class {
+      constructor(parts, name, options) { this.size = parts.reduce((sum, blob) => sum + blob.size, 0); this.name = name; this.type = options.type; this.lastModified = options.lastModified; }
+    }
+  };
+  return { browser, state };
+}
+const largePhoto = name => ({ ...photo(name || 'grande.png'), size: 8 * 1024 * 1024, lastModified: 123 });
+
+test('une photo de 4 Mo ou moins est envoyée sans conversion ni modification', async () => {
+  const mock = uploader();
+  const source = Object.freeze({ ...photo('petite.png'), size: 4 * 1024 * 1024 });
+  const prepared = await mock.prepare(source);
+  assert.equal(prepared.file, source);
+  assert.equal(prepared.compressed, false);
+  const result = await mock.upload([source], { read: async file => { assert.equal(file, source); return 'ZmFrZQ=='; } });
+  assert.equal(result.compressed, 0);
+  assert.equal(mock.calls[0].payload.mime, 'image/png');
+});
+test('une grande photo devient une copie WebP proportionnelle, sans modifier son original', async () => {
+  const { browser, state } = compressionBrowser();
+  const mock = uploader(null, browser);
+  const source = Object.freeze(largePhoto('photo.PNG'));
+  const result = await mock.prepare(source);
+  assert.equal(result.compressed, true);
+  assert.equal(result.file.name, 'photo-optimisee.webp');
+  assert.equal(result.file.type, 'image/webp');
+  assert.equal(result.file.lastModified, 123);
+  assert.equal(result.width, 2560);
+  assert.equal(result.height, 1280);
+  assert.equal(source.size, 8 * 1024 * 1024);
+  assert.equal(source.name, 'photo.PNG');
+  assert.deepEqual(state.sources, [source]);
+  assert.deepEqual(state.revoked, ['blob:local']);
+  assert.equal(state.canvas.width, 0);
+  assert.equal(state.canvas.height, 0);
+});
+test('compression et envoi restent séquentiels avec le bon nom, MIME et fichier lu', async () => {
+  const { browser } = compressionBrowser();
+  const mock = uploader(null, browser);
+  const originals = [largePhoto('une.png'), largePhoto('deux.png')];
+  const phases = [], notifications = [];
+  const result = await mock.upload(originals, {
+    read: async file => { assert.equal(file.type, 'image/webp'); assert(file.size <= 4 * 1024 * 1024); return 'ZmFrZQ=='; },
+    progress: (file, index, res, phase) => phases.push(phase),
+    compressed: (original, copy) => notifications.push([original.name, copy.name]),
+    success: (url, original, prepared) => { assert.equal(original, originals[mock.calls.length - 1]); assert.equal(prepared.compressed, true); }
+  });
+  assert.equal(result.uploaded, 2);
+  assert.equal(result.compressed, 2);
+  assert.deepEqual(phases, ['compression', 'compression']);
+  assert.deepEqual(notifications, [['une.png', 'une-optimisee.webp'], ['deux.png', 'deux-optimisee.webp']]);
+  assert.deepEqual(mock.calls.map(call => call.payload.name), ['une-optimisee.webp', 'deux-optimisee.webp']);
+  assert(mock.calls.every(call => call.payload.mime === 'image/webp' && call.headers.Authorization === 'Bearer fixture-not-a-real-token'));
+});
+test('une copie encore trop lourde est réduite progressivement avec un nombre borné de tentatives', async () => {
+  const { browser, state } = compressionBrowser({ blobs: Array(3).fill({ size: 5 * 1024 * 1024, type: 'image/webp' }).concat({ size: 1024, type: 'image/webp' }) });
+  const prepared = await uploader(null, browser).prepare(largePhoto());
+  assert.equal(state.encodings.length, 4);
+  assert.equal(prepared.width, 1920);
+  assert.equal(prepared.height, 960);
+  assert.deepEqual(state.encodings.slice(0,3).map(call => call.quality), [0.9, 0.82, 0.74]);
+  const failed = compressionBrowser({ blobs: [{ size: 5 * 1024 * 1024, type: 'image/webp' }] });
+  await assert.rejects(uploader(null, failed.browser).prepare(largePhoto()), /reste trop lourde/);
+  assert(failed.state.encodings.length <= 9);
+  assert.equal(failed.state.canvas.width, 0);
+  assert.deepEqual(failed.state.revoked, ['blob:local']);
+});
+test('le repli PNG conserve un nom et un MIME cohérents sans conversion JPEG imposée', async () => {
+  const { browser } = compressionBrowser({ blobs: [{ size: 1024, type: 'image/png' }] });
+  const prepared = await uploader(null, browser).prepare(largePhoto('transparente.png'));
+  assert.equal(prepared.file.name, 'transparente-optimisee.png');
+  assert.equal(prepared.file.type, 'image/png');
+});
+test('photo illisible, dimensions excessives et échec de canvas restent des erreurs identifiées, sans envoi', async () => {
+  for (const config of [{ broken: true }, { width: 10000, height: 10000 }, { unavailable: true }, { blobs: [null] }]) {
+    const { browser, state } = compressionBrowser(config);
+    const mock = uploader(null, browser);
+    const result = await mock.upload([largePhoto()], { read: () => assert.fail('No read expected') });
+    assert.equal(result.failed.length, 1);
+    assert.equal(result.failed[0].name, 'grande.png');
+    assert.equal(mock.calls.length, 0);
+    assert.deepEqual(state.revoked, ['blob:local']);
+  }
+});
+test('un échec de compression ne perd pas les réussites suivantes et ne compte pas une copie comme ajoutée', async () => {
+  const mock = uploader();
+  const result = await mock.upload([largePhoto(), photo('petite.png')], {
+    prepare: async file => { if (file.size > 4 * 1024 * 1024) throw new Error('Compression refusée'); return { file, compressed: false }; },
+    read: async () => 'ZmFrZQ=='
+  });
+  assert.equal(result.uploaded, 1);
+  assert.equal(result.compressed, 0);
+  assert.equal(result.failed[0].name, 'grande.png');
+  assert.equal(mock.calls[0].payload.name, 'petite.png');
+});
+test('une préparation invalide ou dépassant 4 Mo ne peut pas être transmise au serveur', async () => {
+  for (const prepared of [null, { file: largePhoto(), compressed: true }, { file: { ...photo('x.svg'), type: 'image/svg+xml' }, compressed: true }]) {
+    const mock = uploader();
+    const result = await mock.upload([largePhoto()], { prepare: async () => prepared, read: () => assert.fail('No read') });
+    assert.equal(result.failed.length, 1);
+    assert.equal(mock.calls.length, 0);
+  }
+});
+test('déconnexion, fermeture ou arrêt pendant la compression empêchent lecture et envoi tardifs', async () => {
+  for (const reason of ['inactive', 'stop']) {
+    const mock = uploader();
+    let active = true, stopped = false;
+    const result = await mock.upload([largePhoto()], {
+      active: () => active, stop: () => stopped,
+      prepare: async () => { if (reason === 'inactive') active = false; else stopped = true; return { file: photo('copie.webp'), compressed: true }; },
+      read: () => assert.fail('No late reading')
+    });
+    assert.equal(result.stopped, true);
+    assert.equal(result.failed.length, 0);
+    assert.equal(mock.calls.length, 0);
+  }
 });
 
 function bulkProducts(response) {

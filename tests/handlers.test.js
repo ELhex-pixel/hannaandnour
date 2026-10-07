@@ -246,6 +246,20 @@ test('l’upload de photos exige une session et respecte le débit avant tout ac
   assert.equal((await limited.handler(event({ action: 'uploadImage' }))).statusCode, 429);
   assert.equal(limited.state.tables.length, 0);
 });
+test('la limite serveur reste de 4 Mo et le MIME déclaré ne remplace jamais la signature de la photo', async () => {
+  const oversized = Buffer.alloc(4 * 1024 * 1024 + 1);
+  Buffer.from('89504e470d0a1a0a', 'hex').copy(oversized);
+  for (const body of [
+    { mime: 'image/png', data_base64: oversized.toString('base64') },
+    { mime: 'image/webp', data_base64: Buffer.from('<svg>not an image</svg>').toString('base64') },
+    { mime: 'image/jpeg', data_base64: Buffer.from('89504e470d0a1a0a00000000', 'hex').toString('base64') }
+  ]) {
+    const mock = archiveAdmin();
+    assert.equal((await mock.handler(event({ action: 'uploadImage', name: 'copie.webp', ...body }))).statusCode, 400);
+    assert.equal(mock.state.tables.length, 0);
+    assert.equal(mock.state.writes.length, 0);
+  }
+});
 test('toutes les actions stock/préparation exigent la session et le débit avant le module', async () => {
   for (const action of ['adjustInventory', 'listInventoryAdjustments', 'scanSetStock', 'setPreparationQuantity', 'completePreparation']) {
     const denied = archiveAdmin({ requireAdmin: async () => ({ ok: false }) });

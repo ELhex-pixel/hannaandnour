@@ -918,7 +918,9 @@
         btn.textContent = 'Envoi…';
         window.HN_ADMIN.uploadImages([file], {
           active: active,
-          success: function (url) { onUrl(url); toast('Photo ajoutée — enregistrez la fiche pour la conserver.', 'ok'); }
+          progress: function (photo, index, res, phase) { if (active()) btn.textContent = phase === 'compression' ? 'Compression…' : 'Envoi…'; },
+          compressed: function () { if (active()) btn.textContent = 'Envoi de la copie…'; },
+          success: function (url, photo, prepared) { onUrl(url); toast((prepared.compressed ? 'Copie compressée ajoutée, original inchangé' : 'Photo ajoutée') + ' — enregistrez la fiche pour la conserver.', 'ok'); }
         }).then(function (res) { if (active() && res.failed.length) toast(res.failed[0].error, 'err'); })
           .catch(function (e) { if (active()) toast(e.message, 'err'); })
           .finally(function () {
@@ -960,7 +962,8 @@
       window.HN_ADMIN.uploadImages(files, {
         active: active,
         stop: function () { return galleryStop; },
-        progress: function (file, index, res) { status.textContent = 'Photo ' + index + '/' + res.total + ' : ' + file.name; },
+        progress: function (file, index, res, phase) { status.textContent = (phase === 'compression' ? 'Compression locale — photo ' : 'Envoi — photo ') + index + '/' + res.total + ' : ' + file.name; },
+        compressed: function (file, copy, index, res) { status.textContent = 'Envoi de la copie compressée — photo ' + index + '/' + res.total + ' : ' + file.name + ' (' + (copy.size / 1024 / 1024).toFixed(2) + ' Mo). Original inchangé.'; },
         success: function (url) {
           var lines = galleryLines();
           if (lines.indexOf(url) < 0) lines.push(url);
@@ -968,7 +971,7 @@
         }
       }).then(function (res) {
         if (!active()) return;
-        status.textContent = res.uploaded + ' photo(s) ajoutée(s)' + (res.stopped ? ' — envoi arrêté' : '') + '. Enregistrez la fiche pour conserver la galerie.';
+        status.textContent = res.uploaded + ' photo(s) ajoutée(s)' + (res.compressed ? ', dont ' + res.compressed + ' copie(s) compressée(s), originaux inchangés' : '') + (res.stopped ? ' — envoi arrêté' : '') + '. Enregistrez la fiche pour conserver la galerie.';
         res.failed.forEach(function (failure) {
           var line = document.createElement('p');
           line.textContent = failure.name + ' : ' + failure.error + '. Vous pouvez sélectionner à nouveau cette photo.';
