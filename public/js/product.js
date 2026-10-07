@@ -195,7 +195,7 @@
         url: window.location.origin + '/' + HN.lang() + '/product.html?slug=' + encodeURIComponent(p.slug),
         priceCurrency: ((typeof HN.currency === 'function' ? HN.currency() : '') || 'USD').toUpperCase(),
         price: ((parseInt(p.price_cents, 10) || 0) / 100).toFixed(2),
-        availability: (p.variants || []).length && !(p.variants || []).some(function (v) { return v.active && v.stock > 0; }) ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock'
+        availability: productVariants(p).length && !productVariants(p).some(function (v) { return variantStock(v) > 0; }) ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock'
       }
     };
     var canonical = document.querySelector('link[rel="canonical"]');
@@ -308,11 +308,16 @@
     return null;
   }
 
+  function variantStock(v) {
+    if (!v || v.active !== true) return 0;
+    var stock = Number(v.stock);
+    return Number.isInteger(stock) && stock > 0 ? stock : 0;
+  }
+
   // Returns an integer stock, or null when the product has no managed variants.
   function stockFor(p, color, size) {
-    var v = variantFor(p, color, size);
-    if (!v) return null;
-    return Math.max(0, parseInt(v.stock, 10) || 0);
+    if (!productVariants(p).length) return null;
+    return variantStock(variantFor(p, color, size));
   }
 
   var stockEl = null;
@@ -372,8 +377,9 @@
     if (!managed) { label.style.display = 'none'; return; }
     label.style.display = '';
     label.style.color = 'var(--color-gray)';
+    var selectedVariant = variantFor(p, color, size);
     if (stock === 0) {
-      label.textContent = tr('stockOut');
+      label.textContent = tr(selectedVariant && selectedVariant.active === true ? 'stockOut' : 'notAvailable');
       label.style.color = 'var(--color-burgundy)';
     } else if (stock <= 5) {
       label.textContent = tr('stockLow', { n: stock });

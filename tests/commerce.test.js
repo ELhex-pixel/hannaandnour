@@ -6,6 +6,8 @@ const { trackingLink } = require('../netlify/functions/lib/tracking');
 const { signToken, verifyToken, getBearer, json, readBody } = require('../netlify/functions/shared');
 const { isConfigured } = require('../netlify/functions/shared');
 const { execFileSync } = require('node:child_process');
+const fs = require('node:fs');
+const vm = require('node:vm');
 
 test('les doublons sont regroupés et la quantité totale est plafonnée', () => {
   assert.deepEqual(normalize([{ slug: 'pull', qty: 8, color: 'Beige' }, { slug: 'pull', qty: 8, color: 'beige' }]), [{ slug: 'pull', color: 'Beige', size: '', qty: 10 }]);
@@ -83,5 +85,135 @@ test('les liens serveur et CORS utilisent le domaine officiel sans écraser les 
     assert.deepEqual(config({ CONTEXT: context, SITE_URL: 'https://hannanour.com', DEPLOY_PRIME_URL: 'https://preview.example.test/' }), {
       siteUrl: 'https://preview.example.test', origin: 'https://preview.example.test'
     });
+  }
+});
+
+function productStockUI(product, language = 'fr') {
+  const dict = require('../public/js/i18n');
+  const state = { color: 'Noir', adds: [], toasts: [] };
+  const button = size => ({ textContent: size, disabled: false, classes: {}, classList: { toggle(name, enabled) { this[name] = enabled; } }, addEventListener(name, handler) { this[name] = handler; } });
+  const nodes = { selectedSize: { textContent: 'S' }, selectedColor: {}, quantity: { value: '1' }, addToCartBtn: button(''), buyNowBtn: button('') };
+  const sizes = ['S', 'M', 'L'].map(button);
+  const head = { appendChild(node) { state.schema = JSON.parse(node.textContent); } };
+  const context = {
+    current: product,
+    stockEl: { style: {}, textContent: '' },
+    document: {
+      getElementById: id => nodes[id] || null,
+      querySelector: selector => selector === '.color-option.active' ? { getAttribute: () => state.color } : null,
+      querySelectorAll: selector => selector === '.size-option' ? sizes : [],
+      getElementsByTagName: () => [head],
+      createElement: () => ({})
+    },
+    window: { location: { origin: 'https://example.test' }, hnToast: (...args) => state.toasts.push(args) },
+    HN: { productName: () => 'Produit fictif', lang: () => language, currency: () => 'eur', cart: { add: (...args) => state.adds.push(args) } },
+    COLORS: { label: color => color },
+    tr: (key, values) => (dict[language][key] || key).replace('{n}', values ? values.n : ''),
+    localized: () => '', URL
+  };
+  const source = fs.readFileSync('public/js/product.js', 'utf8');
+  const stock = source.slice(source.indexOf('  function productVariants('), source.indexOf('  /* ---- Reviews'));
+  const actions = source.slice(source.indexOf('  function selectedOptions('), source.indexOf('  /* ---- Init'));
+  const schema = source.slice(source.indexOf('  function injectProductSchema('), source.indexOf('  function renderDetails('));
+  vm.createContext(context);
+  vm.runInContext(stock + actions + schema, context);
+  context.stockEl = { style: {}, textContent: '' };
+  return { context, state, nodes, sizes, update: () => context.updateStockUI() };
+}
+const stockVariant = (size, stock, active = true, color = 'Noir') => ({ id: size + '-' + color, size, color, stock, active });
+
+test('les variantes désactivées et les combinaisons inexistantes sont indisponibles, pas en stock faible', () => {
+  const mock = productStockUI({ variants: [stockVariant('S', 10, false), stockVariant('M', 4)] });
+  mock.update();
+  assert.equal(mock.context.stockFor(mock.context.current, 'Noir', 'S'), 0);
+  assert.equal(mock.context.stockFor(mock.context.current, 'Noir', 'L'), 0);
+  assert.deepEqual(mock.sizes.map(button => button.disabled), [true, false, true]);
+  assert.equal(mock.nodes.addToCartBtn.disabled, true);
+  assert.equal(mock.nodes.buyNowBtn.disabled, true);
+  assert.equal(mock.context.stockEl.textContent, 'Indisponible');
+  mock.nodes.selectedSize.textContent = 'L';
+  mock.update();
+  assert.equal(mock.context.stockEl.textContent, 'Indisponible');
+});
+test('zéro affiche Épuisé ; une variante active conserve son stock et borne la quantité', () => {
+  const mock = productStockUI({ variants: [stockVariant('S', 0), stockVariant('M', 3)] });
+  mock.update();
+  assert.equal(mock.context.stockEl.textContent, 'Épuisé');
+  mock.nodes.selectedSize.textContent = 'M';
+  mock.nodes.quantity.value = '9';
+  mock.update();
+  assert.equal(mock.context.stockEl.textContent, 'Plus que 3 disponibles');
+  assert.equal(mock.nodes.addToCartBtn.disabled, false);
+  assert.equal(mock.nodes.buyNowBtn.disabled, false);
+  assert.equal(mock.nodes.quantity.max, 3);
+  assert.equal(mock.nodes.quantity.value, 3);
+});
+test('changer de coloris ne rend pas vendable une variante désactivée ou absente', () => {
+  const mock = productStockUI({ variants: [stockVariant('S', 8), stockVariant('S', 8, false, 'Beige')] });
+  mock.update();
+  assert.equal(mock.nodes.addToCartBtn.disabled, false);
+  mock.state.color = 'Beige';
+  mock.update();
+  assert.equal(mock.nodes.addToCartBtn.disabled, true);
+  assert.equal(mock.context.stockEl.textContent, 'Indisponible');
+  mock.state.color = 'Bleu';
+  mock.update();
+  assert.equal(mock.nodes.buyNowBtn.disabled, true);
+  assert.equal(mock.context.stockEl.textContent, 'Indisponible');
+});
+test('aucune variante configurée ne devient artificiellement Épuisé, même avec la forme product_variants', () => {
+  const unmanaged = productStockUI({ variants: [] });
+  unmanaged.update();
+  assert.equal(unmanaged.context.stockFor(unmanaged.context.current, 'Noir', 'S'), null);
+  assert.equal(unmanaged.context.stockEl.style.display, 'none');
+  assert.equal(unmanaged.nodes.addToCartBtn.disabled, false);
+  const inactive = productStockUI({ product_variants: [stockVariant('S', 20, false)] });
+  inactive.update();
+  assert.equal(inactive.context.stockFor(inactive.context.current, 'Noir', 'S'), 0);
+  assert.equal(inactive.context.stockEl.textContent, 'Indisponible');
+  assert.equal(inactive.nodes.addToCartBtn.disabled, true);
+});
+test('le stock invalide ne produit jamais une disponibilité ou une quantité inventée', () => {
+  for (const stock of [-1, 2.5, '4abc', Infinity, undefined]) {
+    const mock = productStockUI({ variants: [stockVariant('S', stock)] });
+    mock.update();
+    assert.equal(mock.nodes.addToCartBtn.disabled, true);
+    assert.equal(mock.context.stockFor(mock.context.current, 'Noir', 'S'), 0);
+    assert(!mock.context.stockEl.textContent.includes('disponibles'));
+  }
+});
+test('même un clic forcé ne peut ajouter au panier une variante désactivée, absente ou épuisée', () => {
+  for (const variants of [[stockVariant('S', 5, false)], [stockVariant('M', 5)], [stockVariant('S', 0)]]) {
+    const product = { slug: 'fixture', variants };
+    const mock = productStockUI(product);
+    mock.context.wireActions(product);
+    mock.nodes.addToCartBtn.click();
+    mock.nodes.buyNowBtn.click();
+    assert.equal(mock.state.adds.length, 0);
+    assert.equal(mock.state.toasts.length, 2);
+    assert.equal(mock.context.selectedOptions().qty, 0);
+  }
+});
+test('la disponibilité SEO ignore aussi les stocks des variantes désactivées', () => {
+  for (const [product, expected] of [
+    [{ variants: [stockVariant('S', 9, false), stockVariant('M', 0)] }, 'OutOfStock'],
+    [{ product_variants: [stockVariant('S', 9, false)] }, 'OutOfStock'],
+    [{ variants: [stockVariant('S', 0), stockVariant('M', 6)] }, 'InStock'],
+    [{ variants: [] }, 'InStock']
+  ]) {
+    const mock = productStockUI(product);
+    mock.context.injectProductSchema(product);
+    assert.equal(mock.state.schema.offers.availability, 'https://schema.org/' + expected);
+  }
+});
+test('les messages de disponibilité restent cohérents en français, anglais et arabe', () => {
+  const dict = require('../public/js/i18n');
+  for (const language of ['fr', 'en', 'ar']) {
+    const mock = productStockUI({ variants: [stockVariant('S', 6, false), stockVariant('M', 0)] }, language);
+    mock.update();
+    assert.equal(mock.context.stockEl.textContent, dict[language].notAvailable);
+    mock.nodes.selectedSize.textContent = 'M';
+    mock.update();
+    assert.equal(mock.context.stockEl.textContent, dict[language].stockOut);
   }
 });
