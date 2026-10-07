@@ -36,6 +36,13 @@ test('l’admin modernisé conserve les rubriques et isole les opérations sensi
   for (const id of ['filterProducts', 'filterCategory', 'filterProductVisibility']) assert($('#' + id).attr('aria-label'));
   for (const id of ['f-price', 'f-compare', 'f-image']) assert.equal($('label[for="' + id + '"]').length, 1);
 });
+test('l’admin occupe la largeur disponible sans marge extérieure', () => {
+  const css = fs.readFileSync('public/css/styles.css', 'utf8');
+  const shell = css.match(/\.admin-page \.admin-shell\s*\{([^}]+)\}/);
+  assert(shell);
+  assert.match(shell[1], /max-width:\s*none\s*;/);
+  assert.match(shell[1], /margin:\s*0\s*;/);
+});
 test('le compte sépare les services et conserve les ancres, labels et identifiants uniques', () => {
   const $ = cheerio.load(fs.readFileSync('public/account.html', 'utf8'));
   const ids = new Set();
