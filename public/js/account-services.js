@@ -77,12 +77,13 @@
     var returnMessage = el('p', '', returns);
     returnMessage.className = 'account-feedback account-service-message';
     returnMessage.setAttribute('role', 'status');
-    var paid = orders.filter(function (order) { return order.status === 'paid'; });
+    var paid = orders.filter(function (order) { return order.status === 'paid' || order.status === 'refunded'; });
     if (!paid.length && !requests.length) el('p', tr('accountReturnsEmpty'), returns).className = 'account-empty';
     paid.forEach(function (order) {
       var card = el('div', '', returns);
       card.className = 'account-return-order';
       el('h3', order.order_number, card);
+      if (order.return_policy) el('p', tr('returnPolicyWindow').replace('{days}', order.return_policy.days) + ' ' + tr(order.return_policy.withdrawal_payer === 'store' ? 'returnPolicyStore' : 'returnPolicyCustomer') + ' ' + tr('returnPolicyFault'), card);
       var track = el('button', tr('trackOrder'), card);
       track.className = 'btn btn-secondary btn-sm';
       var status = el('p', '', card);
@@ -107,6 +108,8 @@
         form.className = 'account-return-form';
         var label = el('p', item.product_name, form);
         label.className = 'order-item-name';
+        var category = el('select', '', form); category.className = 'form-input'; category.setAttribute('aria-label', tr('returnCategory'));
+        [['withdrawal','returnWithdrawal'],['seller_error','returnSellerError'],['nonconforming','returnNonconforming']].forEach(function (entry) { var option = el('option', tr(entry[1]), category); option.value = entry[0]; });
         var qty = el('input', '', form);
         qty.type = 'number'; qty.min = 1; qty.max = item.quantity; qty.value = 1;
         qty.className = 'form-input'; qty.setAttribute('aria-label', tr('a11yQty'));
@@ -123,7 +126,7 @@
           var file = photo.files && photo.files[0];
           if (file && file.size > 2 * 1024 * 1024) { notify(returnMessage, 'returnPhoto', true); button.disabled = false; return; }
           var image = file ? new Promise(function (resolve, reject) { var reader = new FileReader(); reader.onload = function () { resolve(String(reader.result).split(',')[1]); }; reader.onerror = reject; reader.readAsDataURL(file); }) : Promise.resolve(null);
-          image.then(function (base64) { return request('returns', { order_id: order.id, order_item_id: item.id, quantity: Number(qty.value), reason: reason.value, photo_base64: base64 }); }).then(function (data) {
+          image.then(function (base64) { return request('returns', { order_id: order.id, order_item_id: item.id, quantity: Number(qty.value), category: category.value, reason: reason.value, photo_base64: base64 }); }).then(function (data) {
             notify(message, data.evidence_saved ? 'returnSent' : 'returnPhotoFailed'); load();
           }).catch(function () { notify(returnMessage, 'accountServiceError', true); button.disabled = false; });
         });

@@ -23,7 +23,7 @@ exports.handler = async function (event) {
     }
     const shipping = await getSetting(sb, 'shipping', {});
     const days = Number.isInteger(shipping.returns_days) ? Math.min(365, Math.max(0, shipping.returns_days)) : 30;
-    const { data, error } = await sb.rpc('request_return', { p_user_id: auth.user.id, p_order_id: body.order_id, p_item_id: body.order_item_id, p_quantity: Number(body.quantity), p_reason: String(body.reason || '').slice(0, 1000), p_days: days });
+    const { data, error } = await sb.rpc('request_return', { p_user_id: auth.user.id, p_order_id: body.order_id, p_item_id: body.order_item_id, p_quantity: Number(body.quantity), p_reason: String(body.reason || '').slice(0, 1000), p_days: days, p_category: body.category || 'withdrawal' });
     if (error) return json(409, { error: 'Return unavailable or already requested' });
     let evidenceSaved = !photo;
     if (photo) {

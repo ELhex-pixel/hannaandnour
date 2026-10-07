@@ -218,6 +218,12 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     // ---- Everything below requires a valid admin session ----
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (['scanSale','resetAll','resetStock'].includes(action)) return json(409, { error: 'Parcours suspendu pour préserver le stock et l’historique. Utilisez les ajustements justifiés dans Stock ; la caisse manuelle doit être remplacée par une transaction idempotente avant réactivation.' });
+    if (['listInventoryAdjustments', 'adjustInventory', 'scanSetStock', 'setPreparationQuantity', 'completePreparation'].includes(action)) {
+      const limited = await rateLimit(sb, event, 'admin-inventory', 120, 600, 'admin');
+      if (limited) return limited;
+      return await require('./lib/admin-inventory').adminInventory(sb, action, body);
+    }
     if (['sendcloudDiagnostics', 'searchSendcloudServicePoints'].includes(action)) {
       const limited = await rateLimit(sb, event, 'admin-sendcloud', 30, 600, 'admin');
       if (limited) return limited;
@@ -228,7 +234,21 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
       if (limited) return limited;
       return await require('./lib/tiktok').adminTiktok(sb, action, body);
     }
-    if (['recordReturn', 'listReturnRequests', 'updateReturnRequest'].includes(action)) return require('./lib/returns').adminReturns(sb, action, body);
+    if (['recordReturn', 'listReturnRequests', 'updateReturnRequest'].includes(action)) {
+      const limited = await rateLimit(sb, event, 'admin-returns', 120, 600, 'admin');
+      if (limited) return limited;
+      return await require('./lib/returns').adminReturns(sb, action, body);
+    }
+    if (['getReturnPolicy','saveReturnPolicy','listVariantCosts','saveVariantCost'].includes(action)) {
+      const limited = await rateLimit(sb, event, 'admin-operations', 120, 600, 'admin');
+      if (limited) return limited;
+      return await require('./lib/admin-operations').adminOperations(sb, action, body);
+    }
+    if (action === 'saleStats') {
+      const limited = await rateLimit(sb, event, 'admin-sales', 60, 600, 'admin');
+      if (limited) return limited;
+      return await require('./lib/admin-sales').adminSales(sb, body);
+    }
     if (action === 'describeProduct') {
       const limited = await rateLimit(sb, event, 'product-vision', 30, 3600, 'admin');
       if (limited) return limited;
@@ -326,7 +346,21 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
         return json(200, { ok: true });
       }
 
+      case 'archiveProducts': {
+        if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100 || body.ids.some(id => typeof id !== 'string' || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))) {
+          return json(400, { error: 'Sélection invalide : 1 à 100 identifiants de produits requis.' });
+        }
+        const limited = await rateLimit(sb, event, 'admin-archive', 30, 600, 'admin');
+        if (limited) return limited;
+        const ids = [...new Set(body.ids)];
+        const { data, error } = await sb.from('products').update({ active: false }).in('id', ids).select('id');
+        if (error) throw error;
+        return json(200, { archived_ids: (data || []).map(product => product.id) });
+      }
+
       case 'uploadImage': {
+        const limited = await rateLimit(sb, event, 'admin-product-images', 60, 600, 'admin');
+        if (limited) return limited;
         const mime = String(body.mime || '');
         const allowed = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
         const ext = allowed[mime];
@@ -540,7 +574,7 @@ case 'getSettings': {
           free_threshold_cents: Math.max(0, parseInt(shipping.free_threshold_cents, 10) || 0),
           tax_rate: Math.max(0, Math.min(1, parseFloat(shipping.tax_rate) || 0)),
           pickup_enabled: shipping.pickup_enabled !== false,
-          returns_days: Math.max(7, Math.min(90, parseInt(shipping.returns_days, 10) || 30))
+          returns_days: (await loadSettings(sb)).returns_days || 30
         };
         const { error } = await sb.from('settings').upsert({ key: 'shipping', value, updated_at: new Date().toISOString() });
         if (error) throw error;
@@ -1210,23 +1244,6 @@ case 'deleteMessage': {
           pending,
           currency
         });
-      }
-
-      case 'scanSetStock': {
-        // Comptage réel : remplace le stock d'une variante.
-        const vid = String(body.variant_id || '').trim();
-        const qty = parseInt(body.qty, 10);
-        if (!vid) return json(400, { error: 'variant_id requis' });
-        if (!(qty >= 0)) return json(400, { error: 'Quantit\u00e9 invalide' });
-        const { data, error } = await sb
-          .from('product_variants')
-          .update({ stock: qty })
-          .eq('id', vid)
-          .select('id, stock')
-          .maybeSingle();
-        if (error) throw error;
-        if (!data) return json(404, { error: 'Variante introuvable' });
-        return json(200, { ok: true, stock: data.stock });
       }
 
       case 'scanSale': {

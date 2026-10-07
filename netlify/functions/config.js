@@ -86,7 +86,7 @@ exports.handler = async function (event) {
     } catch (e) { /* keep default */ }
 
     const authoritative = await commerceSettings(sb);
-    return json(200, { settings: { ...settings, ...authoritative.shipping }, catalog, currency: authoritative.currency, reviews, home, story });
+    return json(200, { settings: { ...settings, ...authoritative.shipping, returns_days: authoritative.return_policy.days }, return_policy: authoritative.return_policy, catalog, currency: authoritative.currency, reviews, home, story });
   } catch (err) {
     console.error('config.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

@@ -20,7 +20,7 @@ exports.handler = async function (event) {
     const value = await quote(sb, body);
     if (body.action === 'quote') return json(200, publicQuote(value));
     if (!process.env.STRIPE_SECRET_KEY) return json(503, { error: 'Stripe is not configured' });
-    if (body.expected_total_cents !== value.totals.total || body.expected_currency !== value.currency.code) {
+    if (body.expected_total_cents !== value.totals.total || body.expected_currency !== value.currency.code || body.expected_policy_version !== value.return_policy.version) {
       return json(409, { error: 'quote_changed', ...publicQuote(value) });
     }
     const fields = {};
@@ -47,7 +47,7 @@ exports.handler = async function (event) {
       ...fields, id: orderId, order_number: orderNumber, cart_restore_token: randomBytes(24).toString('hex'),
       shipping_method: value.method, delivery_type: value.method === 'pickup' ? 'pickup' : 'home',
       subtotal_cents: t.subtotal, shipping_cents: t.shipping, tax_cents: t.tax, discount_cents: t.discount,
-      total_cents: t.total, currency: value.currency.code, status: 'pending', promo_code: value.promo ? value.promo.code : null, user_id: userId
+      total_cents: t.total, currency: value.currency.code, status: 'pending', promo_code: value.promo ? value.promo.code : null, user_id: userId, return_policy: value.return_policy
     });
     if (orderError) throw orderError;
     const { error: itemsError } = await sb.from('order_items').insert(value.items.map(i => ({
@@ -85,6 +85,11 @@ exports.handler = async function (event) {
     if (bindError) throw bindError;
     return json(200, { url: session.url, orderId, total_cents: t.total });
   } catch (err) {
+    if (!stripeAttempted && /policy_changed/.test(err.message || '')) {
+      orderId = null;
+      try { return json(409, { error: 'quote_changed', ...publicQuote(await quote(sb, body)) }); }
+      catch (error) { return json(503, { error: 'Checkout temporarily unavailable' }); }
+    }
     if (orderId) {
       try {
         if (stripeAttempted && !session) {

@@ -51,7 +51,9 @@
   }
 
   function acceptQuote(data) {
+    if (!data.return_policy || typeof data.return_policy.version !== 'string' || !Number.isInteger(data.return_policy.days) || !['customer','store'].includes(data.return_policy.withdrawal_payer)) throw new Error(tr('quoteUnavailable'));
     state.quote = data;
+    renderReturnPolicy();
     HN.rememberProducts(data.items);
     HN.cart.replace(data.items.map(function (item) { return Object.assign({}, item, { priceCents: item.price_cents }); }));
     renderItems();
@@ -63,6 +65,11 @@
 
   function formatMoney(cents) {
     return state.quote ? state.quote.currency.symbol + (cents / 100).toFixed(2) : HN.money(cents);
+  }
+
+  function renderReturnPolicy() {
+    var policy = state.quote && state.quote.return_policy, box = document.getElementById('checkoutReturnPolicy');
+    if (box && policy) box.textContent = tr('returnPolicyWindow').replace('{days}', policy.days) + ' ' + tr(policy.withdrawal_payer === 'store' ? 'returnPolicyStore' : 'returnPolicyCustomer') + ' ' + tr('returnPolicyFault');
   }
 
   function refreshQuote() {
@@ -295,7 +302,8 @@
         delivery_type: isPickup ? 'pickup' : 'home',
         promo: getPromo(),
         expected_total_cents: state.quote.totals.total,
-        expected_currency: state.quote.currency.code
+        expected_currency: state.quote.currency.code,
+        expected_policy_version: state.quote.return_policy.version
       };
 
       if (!email || !name) {
@@ -375,7 +383,7 @@
         refreshQuote();
       });
 
-    document.addEventListener('langchange', function () { renderShippingMethodPrices(); renderSummary(); });
+    document.addEventListener('langchange', function () { renderShippingMethodPrices(); renderSummary(); renderReturnPolicy(); });
   }
 
   init();

@@ -1,8 +1,9 @@
 const rules = require('../../../public/js/commerce');
 const { intEnv, floatEnv } = require('../shared');
+const { returnPolicy } = require('./return-policy');
 
 async function settings(sb) {
-  const { data, error } = await sb.from('settings').select('key, value').in('key', ['shipping', 'currency']);
+  const { data, error } = await sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy']);
   if (error) throw error;
   const shipping = (data || []).find(row => row.key === 'shipping')?.value || {};
   const currency = (data || []).find(row => row.key === 'currency')?.value || {};
@@ -12,7 +13,8 @@ async function settings(sb) {
       standard_cents: intEnv('SHIPPING_STANDARD_CENTS', 699), express_cents: intEnv('SHIPPING_EXPRESS_CENTS', 1200),
       nextday_cents: intEnv('SHIPPING_NEXTDAY_CENTS', 2500), free_threshold_cents: intEnv('FREE_SHIPPING_THRESHOLD_CENTS', 7500), tax_rate: floatEnv('TAX_RATE', 0.07)
     }, shipping),
-    currency: { code, symbol: code === 'eur' ? '€' : '$' }
+    currency: { code, symbol: code === 'eur' ? '€' : '$' },
+    return_policy: returnPolicy((data || []).find(row => row.key === 'return_policy')?.value, shipping)
   };
 }
 
@@ -40,11 +42,11 @@ async function quote(sb, body) {
   }
   const method = body.shipping_method || 'standard';
   const totals = rules.calculate(resolved, config.shipping, method, promo ? promo.percent_off : 0);
-  return { items: resolved, totals, currency: config.currency, promo, method };
+  return { items: resolved, totals, currency: config.currency, return_policy: config.return_policy, promo, method };
 }
 
 function publicQuote(value) {
-  return { totals: value.totals, currency: value.currency, items: value.items.map(i => ({ slug: i.slug, color: i.color, size: i.size, qty: i.qty, price_cents: i.price_cents, image: i.product.image, name: i.product.name_en, name_en: i.product.name_en, name_fr: i.product.name_fr, name_ar: i.product.name_ar, variantId: i.variantId })) };
+  return { totals: value.totals, currency: value.currency, return_policy: value.return_policy, items: value.items.map(i => ({ slug: i.slug, color: i.color, size: i.size, qty: i.qty, price_cents: i.price_cents, image: i.product.image, name: i.product.name_en, name_en: i.product.name_en, name_fr: i.product.name_fr, name_ar: i.product.name_ar, variantId: i.variantId })) };
 }
 
 module.exports = { ...rules, settings, quote, publicQuote };

@@ -20,6 +20,22 @@ test('les scripts locaux existent et les dépendances admin sont ordonnées', ()
   assert(scripts.indexOf('js/admin-api.js') < scripts.indexOf('js/admin.js'));
   assert(scripts.indexOf('js/admin.js') < scripts.indexOf('js/admin-features.js'));
 });
+test('l’admin modernisé conserve les rubriques et isole les opérations sensibles', () => {
+  const $ = cheerio.load(fs.readFileSync('public/admin.html', 'utf8'));
+  assert.equal($('body.admin-page').length, 1);
+  assert.equal($('.admin-sidebar nav[aria-label] .admin-tab').length, 14);
+  assert.equal($('.admin-workspace > .admin-panel').length, 14);
+  assert.equal($('#scanPrepare').parents('#panel-preparation').length, 1);
+  assert.equal($('#inventoryForm').parents('#panel-inventory').length, 1);
+  for (const id of ['resetStockBtn', 'resetAllBtn']) assert.equal($('#' + id).parents('details.admin-danger-zone').length, 1);
+  assert($('#fileGallery').is('[multiple]'));
+  assert.equal($('#autoDescribePhoto').is('[checked]'), false);
+  assert.equal($('#productEditor').attr('role'), 'dialog');
+  $('[data-editor-section]').each((_, node) => assert.equal($('#' + $(node).attr('data-editor-section')).parents('#productEditor').length, 1));
+  assert($('#deleteProductBtn').text().includes('Archiver'));
+  for (const id of ['filterProducts', 'filterCategory', 'filterProductVisibility']) assert($('#' + id).attr('aria-label'));
+  for (const id of ['f-price', 'f-compare', 'f-image']) assert.equal($('label[for="' + id + '"]').length, 1);
+});
 test('le compte sépare les services et conserve les ancres, labels et identifiants uniques', () => {
   const $ = cheerio.load(fs.readFileSync('public/account.html', 'utf8'));
   const ids = new Set();

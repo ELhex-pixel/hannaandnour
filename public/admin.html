@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Admin &middot; Hanna &amp; Nour</title>
 <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+<link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="css/styles.css">
 <script src="js/theme.js"></script>
 <style>
@@ -334,7 +335,7 @@
   <meta property="og:image:height" content="800">
   <meta name="twitter:card" content="summary_large_image">
 </head>
-<body>
+<body class="admin-page">
   <!-- LOGIN -->
   <div id="loginView" class="login-box">
     <h1>Espace administrateur</h1>
@@ -342,7 +343,7 @@
 
     <div id="loginForm">
       <div class="pass-wrap">
-        <input type="password" id="loginPassword" placeholder="Mot de passe" style="width:100%; padding:10px 12px; border:1px solid #ddd5c4; border-radius:8px; font:inherit;">
+        <input type="password" id="loginPassword" aria-label="Mot de passe administrateur" autocomplete="current-password" placeholder="Mot de passe" style="width:100%; padding:10px 12px; border:1px solid #ddd5c4; border-radius:8px; font:inherit;">
         <button type="button" id="togglePassword" class="pass-eye" aria-label="Afficher le mot de passe" title="Afficher / masquer">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
@@ -375,22 +376,31 @@
   </div>
 
   <!-- APP -->
-  <div id="appView" class="admin-container" style="display:none;">
+  <div id="appView" class="admin-container admin-shell" style="display:none;">
     <div class="admin-header">
-      <div class="admin-logo">Hanna &amp; Nour<small>Administration</small></div>
       <div>
+        <p class="admin-eyebrow">Gestion de la boutique</p>
+        <h1 id="adminSectionTitle">Produits</h1>
+        <p id="adminSectionDescription" class="admin-muted">Gérez vos fiches, vos photos et leur visibilité.</p>
+      </div>
+      <div class="admin-header-actions">
         <button type="button" class="theme-toggle" id="themeToggleBtn" title="Mode sombre" aria-label="Basculer le thème clair/sombre"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
         <a href="index.html" class="btn btn-secondary btn-small">Voir le site</a>
         <button class="btn btn-secondary btn-small" id="logoutBtn">D&eacute;connexion</button>
       </div>
     </div>
 
-    <div class="admin-tabs">
+    <aside class="admin-sidebar">
+      <div class="admin-logo">Hanna <span>&amp;</span> Nour<small>Espace de gestion</small></div>
+      <p class="admin-nav-caption">Votre boutique</p>
+    <nav class="admin-tabs" aria-label="Rubriques de l’administration">
       <button class="admin-tab active" data-tab="products">Produits</button>
       <button class="admin-tab" data-tab="orders">Commandes</button>
       <button class="admin-tab" data-tab="returns">Retours clients</button>
       <button class="admin-tab" data-tab="tiktok">Export TikTok</button>
-      <button class="admin-tab" data-tab="sales">Ventes &amp; Stock</button>
+      <button class="admin-tab" data-tab="inventory">Stock</button>
+      <button class="admin-tab" data-tab="preparation">Préparation</button>
+      <button class="admin-tab" data-tab="sales">Ventes</button>
       <button class="admin-tab" data-tab="reviews">Avis</button>
       <button class="admin-tab" data-tab="home">Accueil</button>
       <button class="admin-tab" data-tab="blog">Blog</button>
@@ -398,13 +408,18 @@
       <button class="admin-tab" data-tab="stats">Stats</button>
       <button class="admin-tab" data-tab="messages">Messages</button>
       <button class="admin-tab" data-tab="settings">Param&egrave;tres</button>
-    </div>
+    </nav>
+      <div class="admin-sidebar-help"><strong>Besoin d’un repère ?</strong><p>Les explications sont affichées dans chaque rubrique. Aucune étiquette transporteur n’est achetée automatiquement.</p></div>
+    </aside>
+
+    <main class="admin-workspace">
 
     <!-- PRODUCTS -->
     <div class="admin-panel active" id="panel-products">
+      <div class="stat-cards admin-product-stats" id="productStats" aria-label="Résumé du catalogue"></div>
       <div class="toolbar">
-        <input type="text" id="filterProducts" placeholder="Rechercher..." style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
-        <select id="filterCategory" style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
+        <input type="text" id="filterProducts" aria-label="Rechercher un produit" placeholder="Nom, référence ou catégorie..." style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
+        <select id="filterCategory" aria-label="Filtrer par catégorie" style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
           <option value="">Toutes cat&eacute;gories</option>
           <option value="hijab">Hijab</option>
           <option value="abaya">Abaya</option>
@@ -413,8 +428,12 @@
           <option value="accessory">Accessory</option>
           <option value="knitwear">Pull / maille</option><option value="jacket">Veste</option><option value="skirt">Jupe</option><option value="top">Haut</option><option value="trousers">Pantalon</option>
         </select>
+        <select id="filterProductVisibility" aria-label="Filtrer la visibilité"><option value="">Toute visibilité</option><option value="active">En ligne</option><option value="inactive">Hors ligne / archivés</option></select>
         <button class="btn btn-primary" id="newProductBtn">+ Nouveau produit</button>
       </div>
+      <div class="admin-notice"><strong>Un produit archivé reste dans votre historique.</strong> Il n’est plus vendu sur le site. « Stock non configuré » ne signifie pas « épuisé » : renseignez chaque taille et coloris avant les ventes.</div>
+      <div class="admin-bulk-bar"><span id="productSelectionCount" role="status">Aucun produit sélectionné</span><button type="button" class="btn btn-danger btn-small" id="archiveSelectedProducts" disabled>Archiver la sélection</button><button type="button" class="btn btn-secondary btn-small" id="clearProductSelection" disabled>Effacer la sélection</button></div>
+      <p id="productBulkStatus" class="admin-operation-status" role="status" hidden></p>
       <div class="card" id="productsList"><p class="empty">Chargement...</p></div>
     </div>
 
@@ -440,7 +459,8 @@
       </div>
     </div>
     <div class="admin-panel" id="panel-returns">
-      <div class="card"><h2>Demandes de retour</h2><p>Accepter une demande ne déclenche aucun remboursement. Confirmez la réception physique pour remettre en stock ; gérez le remboursement depuis la commande.</p><button type="button" class="btn btn-secondary" id="refreshReturnRequests">Actualiser</button><div id="returnRequestsList"></div></div>
+      <div class="admin-notice"><strong>Parcours actuel :</strong> demande depuis le compte client → décision dans cet admin → réception physique → remboursement séparé. Ne remettez en stock que des articles contrôlés et revendables. Les étiquettes retour ne sont pas encore générées par le site.</div>
+      <div class="card"><h2>Demandes de retour</h2><p>1. Examiner et autoriser avec un motif. 2. Recevoir et contrôler les articles. 3. Remettre uniquement les unités revendables en stock. 4. Traiter séparément le remboursement dans la commande. Les décisions ne déclenchent aucun email automatique.</p><button type="button" class="btn btn-secondary" id="refreshReturnRequests">Actualiser</button><div id="returnRequestsList"></div></div>
     </div>
     <div class="admin-panel" id="panel-orders">
       <div class="toolbar">
@@ -463,10 +483,35 @@
       <div class="card" id="ordersList"><p class="empty">Chargement...</p></div>
     </div>
 
+    <div class="admin-panel" id="panel-inventory">
+      <div class="admin-notice"><strong>Disponible ≠ quantité totale chez vous.</strong> Les unités réservées pour un paiement ou déjà vendues sont exclues du disponible. Pour un comptage, ne les comptez pas à nouveau. Un arrivage ajoute des unités ; une correction remplace uniquement le disponible.</div>
+      <div class="toolbar"><input id="inventorySearch" type="search" aria-label="Rechercher une variante" placeholder="Produit, taille, coloris ou code-barres"><select id="inventoryFilter" aria-label="Filtrer les stocks"><option value="active">Variantes en vente</option><option value="low">Stock faible (1 à 5)</option><option value="empty">Épuisées</option><option value="all">Toutes, y compris hors ligne</option></select><button type="button" class="btn btn-secondary" id="refreshInventory">Actualiser</button></div>
+      <div class="stat-cards admin-product-stats" id="inventorySummary"></div>
+      <div class="card" id="inventoryList"><p class="empty">Ouvrez la rubrique pour charger le stock.</p></div>
+      <div class="card"><h3>Ajuster une variante</h3><p class="admin-muted">Chaque opération ci-dessous est enregistrée avec son motif. Un double envoi de la même opération ne la compte pas deux fois.</p>
+        <form id="inventoryForm" class="form-grid">
+          <div class="field full"><label for="inventoryVariant">Produit, coloris et taille</label><select id="inventoryVariant" required><option value="">Choisir une variante</option></select><p id="inventoryCurrent" class="admin-muted"></p></div>
+          <div class="field"><label for="inventoryMode">Opération</label><select id="inventoryMode"><option value="restock">Arrivage — ajouter des unités</option><option value="remove">Perte / défaut — retirer des unités disponibles</option><option value="count">Comptage — corriger le disponible</option></select></div>
+          <div class="field"><label for="inventoryQuantity" id="inventoryQuantityLabel">Nombre d’unités à ajouter</label><input id="inventoryQuantity" type="number" min="1" max="1000000" step="1" required></div>
+          <div class="field full"><label for="inventoryReason">Motif obligatoire</label><textarea id="inventoryReason" minlength="3" maxlength="300" required placeholder="Exemple : arrivage fournisseur, référence du bon…"></textarea></div>
+          <div class="field full"><button type="submit" class="btn btn-primary" id="saveInventory">Confirmer l’ajustement</button></div>
+        </form><p id="inventoryStatus" class="admin-operation-status" role="status" hidden></p>
+      </div>
+      <div class="card"><h3>Journal des ajustements manuels</h3><p class="admin-muted">Les 100 dernières opérations de cette rubrique. Ce journal ne reconstruit pas les anciennes ventes ni le stock initial saisi dans les fiches produit.</p><div id="inventoryHistory"></div></div>
+    </div>
+
+    <div class="admin-panel" id="panel-preparation">
+      <div class="admin-notice"><strong>Préparer n’est pas expédier.</strong> Les unités payées sont déjà retirées du stock disponible. Vérifiez physiquement chaque unité puis confirmez le colis prêt. Cela n’achète aucune étiquette, ne marque pas l’expédition et n’envoie aucun email.</div>
+      <div class="toolbar"><button type="button" class="btn btn-secondary" id="refreshPreparation">Actualiser les commandes</button></div>
+      <div class="card"><form id="prepScanForm" class="toolbar"><input id="prepScanInput" aria-label="Code-barres de l’article à vérifier" placeholder="Scanner un code-barres puis Entrée" autocomplete="off"><button type="submit" class="btn btn-secondary" id="prepScanBtn">Vérifier une unité</button></form><p id="prepStatus" role="status" class="admin-muted"></p><div id="scanPrepare"></div></div>
+    </div>
+
     <!-- VENTES & STOCK -->
     <div class="admin-panel" id="panel-sales">
+      <div class="admin-notice"><strong>Comprendre votre stock :</strong> une commande réserve les articles ; le paiement confirme la vente. Préparer ou expédier ne doit pas les retirer une deuxième fois. Les chiffres affichés ne représentent pas votre bénéfice.</div>
       <div class="toolbar">
-        <span style="color:#8a7d66;">Ventes &amp; stock &ndash; unit&eacute;s vendues (commandes pay&eacute;es non annul&eacute;es, retours d&eacute;duits), chiffre d&rsquo;affaires, stock disponible. Graphique : 12 derniers mois.</span>
+        <span>Commandes payées pendant la période : encaissements et remboursements confirmés à ce jour. Un retour reçu n’est pas un remboursement.</span>
+        <select id="salesCurrency" aria-label="Devise du rapport"><option value="">Devise actuelle</option><option value="eur">EUR</option><option value="usd">USD</option></select>
         <select id="salesPeriod" style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
           <option value="d30" selected>30 derniers jours</option>
           <option value="d90">90 derniers jours</option>
@@ -475,12 +520,12 @@
         </select>
         <input type="number" id="salesThreshold" value="5" min="0" style="width:70px; padding:8px; border:1px solid #ddd5c4; border-radius:8px;" title="Seuil stock faible">
         <button class="btn btn-secondary" id="refreshSalesBtn">Actualiser</button>
-        <button class="btn btn-danger btn-small" id="resetStockBtn" title="Remet le stock de toutes les variantes à 0 (les commandes existantes ne sont pas modifiées)">Remettre le stock &agrave; 0</button>
-        <button class="btn btn-danger btn-small" id="resetAllBtn" title="Supprime TOUTES les commandes et remet le stock à 0. Une sauvegarde CSV des commandes est téléchargée automatiquement avant l'effacement. Action irr&eacute;versible.">Tout remettre &agrave; z&eacute;ro</button>
         <button class="btn btn-secondary btn-small" id="genBarcodesBtn" title="Attribue un code-barres &agrave; toute variante qui n&rsquo;en a pas encore">G&eacute;n&eacute;rer les codes manquants</button>
-        <button class="btn btn-secondary btn-small" id="printLabelsBtn" title="Ouvre la feuille d&rsquo;&eacute;tiquettes code-barres &agrave; imprimer">Imprimer les &eacute;tiquettes</button>
+        <button class="btn btn-secondary btn-small" id="printLabelsBtn" title="Codes-barres internes, pas des étiquettes de transport">Imprimer les codes-barres internes</button>
       </div>
+      <details class="admin-danger-zone"><summary>Anciennes opérations sensibles — suspendues</summary><p>La remise à zéro et l’effacement global sont bloqués pour préserver l’historique. Utilisez les comptages justifiés dans Stock et l’archivage des commandes.</p><div class="toolbar"><button class="btn btn-danger btn-small" id="resetStockBtn" disabled>Remettre le stock à 0 — suspendu</button><button class="btn btn-danger btn-small" id="resetAllBtn" disabled>Tout effacer — suspendu</button></div></details>
       <div class="card" id="scanArea">
+        <p class="admin-notice">Scanner : recherche de variantes et consultation. L’ancienne caisse manuelle est suspendue jusqu’à son remplacement transactionnel ; aucun encaissement n’est réalisé ici.</p>
         <div class="toolbar scan-bar">
           <input type="text" id="scanInput" placeholder="Scannez une &eacute;tiquette..." autocomplete="off" title="Scanner USB : branchez-le, ce champ reste actif, scannez.">
           <button class="btn btn-secondary btn-small" id="scanClearBtn">Effacer</button>
@@ -489,9 +534,21 @@
         <div id="scanResult"></div>
         <div id="scanReceipt"></div>
         <div id="scanCart"></div>
-        <div id="scanPrepare"></div>
       </div>
       <div class="card" id="salesList"><p class="empty">Chargement...</p></div>
+      <div class="card">
+        <h3>Coûts d’achat privés — par taille et coloris</h3>
+        <p>Renseignez votre coût réel par unité dans la même base fiscale que le prix article. Vide = inconnu, zéro = coût réellement nul. Il sera figé pour les futures commandes ; les anciennes ventes ne seront pas recalculées avec un nouveau coût.</p>
+        <form id="variantCostForm" class="form-grid">
+          <div class="field"><label for="costVariant">Variante</label><select id="costVariant" required><option value="">Choisir</option></select></div>
+          <div class="field"><label for="costAmount">Coût d’achat par unité</label><input id="costAmount" type="number" min="0" max="1000000" step="0.01" placeholder="Inconnu"></div>
+          <div class="field"><label for="costCurrency">Devise du coût (pas de conversion)</label><select id="costCurrency"><option value="eur">EUR</option><option value="usd">USD</option></select></div>
+          <div class="field"><label for="costReason">Motif du changement</label><input id="costReason" minlength="3" maxlength="300" required></div>
+          <button type="submit" class="btn btn-primary" id="saveVariantCost">Enregistrer pour les futures ventes</button>
+          <button type="button" class="btn btn-secondary" id="refreshVariantCosts">Actualiser les coûts</button>
+        </form>
+        <p id="variantCostStatus" role="status" aria-live="polite"></p>
+      </div>
     </div>
 
     <!-- REVIEWS (moderation) -->
@@ -626,6 +683,17 @@
     <!-- SETTINGS -->
     <div class="admin-panel" id="panel-settings">
       <div class="card">
+        <h3>Politique de retours — futures commandes uniquement</h3>
+        <p>Les conditions sont affichées avant paiement et conservées avec la commande. Les changements ne réduisent pas les conditions déjà promises. Les droits de rétractation et de garantie légaux restent applicables ; les erreurs et non-conformités sont à la charge de la boutique.</p>
+        <form id="returnPolicyForm" class="form-grid">
+          <div class="field"><label for="returnPolicyDays">Délai de demande après livraison (jours)</label><input id="returnPolicyDays" type="number" min="30" max="365" step="1" required><small>Minimum de 30 jours conservé tant que les pages légales annoncent ce délai.</small></div>
+          <div class="field"><label for="returnPolicyPayer">Frais retour pour changement d’avis</label><select id="returnPolicyPayer"><option value="customer">Client, informé avant achat</option><option value="store">Offerts par la boutique</option></select></div>
+          <button type="submit" class="btn btn-primary" id="saveReturnPolicy">Enregistrer la nouvelle politique</button>
+          <button type="button" class="btn btn-secondary" id="refreshReturnPolicy">Actualiser</button>
+        </form>
+        <p id="returnPolicyStatus" role="status" aria-live="polite"></p>
+      </div>
+      <div class="card">
         <h3>Mondial Relay &mdash; connexion Sendcloud</h3>
         <p>V&eacute;rifications en lecture seule : aucun achat d&rsquo;&eacute;tiquette, aucun changement de commande et aucun email client.</p>
         <p>Colissimo reste s&eacute;par&eacute;. Ce diagnostic ne confirme ni la gratuit&eacute; de votre formule ni les tarifs de transport.</p>
@@ -656,7 +724,7 @@
           <div class="field"><label>Retrait / point relais ($)</label><input type="number" step="0.01" min="0" id="setPickup"></div>
           <div class="field"><label>Livraison gratuite &agrave; partir de</label><input type="number" step="0.01" min="0" id="setFree"></div>
           <div class="field"><label>Taxe (%)</label><input type="number" step="0.1" min="0" max="100" id="setTax"></div>
-          <div class="field"><label>Retours sous (jours)</label><input type="number" step="1" min="7" max="90" id="setReturns"></div>
+          <div class="field"><label>Ancien délai de retours (lecture seule)</label><input type="number" id="setReturns" readonly><small>Utilisez la politique de retours ci-dessus pour les nouvelles commandes.</small></div>
           <div class="field">
             <label>Devise de la boutique</label>
             <select id="setCurrency" style="width:100%;">
@@ -672,6 +740,7 @@
         <div style="margin-top:16px;"><button class="btn btn-primary" id="saveSettingsBtn">Enregistrer</button></div>
       </div>
     </div>
+    </main>
   </div>
 
   <!-- PROMO EDITOR -->
@@ -794,14 +863,15 @@
   </div>
 
   <!-- PRODUCT EDITOR -->
-  <div class="editor-overlay" id="productEditor">
+  <div class="editor-overlay" id="productEditor" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
     <div class="editor">
       <div class="editor-head">
         <h2 id="editorTitle">Nouveau produit</h2>
         <button class="btn btn-secondary btn-small" id="closeEditorBtn">Fermer</button>
       </div>
+      <nav class="admin-editor-nav" aria-label="Sections de la fiche produit"><button type="button" class="btn btn-secondary btn-small" data-editor-section="productDetailsSection">1. Fiche produit</button><button type="button" class="btn btn-secondary btn-small" data-editor-section="productPhotosSection">2. Photos</button><button type="button" class="btn btn-secondary btn-small" data-editor-section="productStockSection">3. Tailles et stock</button></nav>
       <input type="hidden" id="f-id">
-      <div class="form-grid">
+      <div class="form-grid" id="productDetailsSection">
         <div class="field"><label>Nom (EN) *</label><input id="f-name_en"></div>
         <div class="field"><label>Nom (FR)</label><input id="f-name_fr"></div>
         <div class="field full"><label>Nom (AR)</label><input id="f-name_ar"></div>
@@ -810,8 +880,8 @@
         <div class="field full"><label>Description (AR)</label><textarea id="f-desc_ar"></textarea></div>
         <div class="field"><label>Slug</label><input id="f-slug" placeholder="auto si vide"></div>
         <div class="field"><label>SKU</label><input id="f-sku" placeholder="auto si vide"></div>
-        <div class="field"><label>Prix ($) *</label><input type="number" step="0.01" min="0.01" id="f-price"></div>
-        <div class="field"><label>Ancien prix ($, promo)</label><input type="number" step="0.01" min="0" id="f-compare"></div>
+        <div class="field"><label id="productPriceLabel" for="f-price">Prix (devise de la boutique) *</label><input type="number" step="0.01" min="0.01" id="f-price"></div>
+        <div class="field"><label id="productCompareLabel" for="f-compare">Ancien prix (devise de la boutique)</label><input type="number" step="0.01" min="0" id="f-compare"></div>
         <div class="field">
           <label>Cat&eacute;gorie</label>
           <select id="f-category">
@@ -859,23 +929,25 @@
         <div class="field"><label>Mesures vérifiées (AR)</label><textarea id="f-measurements_ar"></textarea></div>
         <div class="field"><label>Transparence vérifiée</label><select id="f-opacity"><option value="unspecified">Non renseignée</option><option value="opaque">Opaque</option><option value="semi-sheer">Semi-transparente</option><option value="sheer">Transparente</option></select></div>
         <div class="field"><label>Vidéo produit (URL HTTPS)</label><input id="f-video_url" type="url"></div>
-        <div class="field"><label>Image principale (URL)</label><input id="f-image" placeholder="images/... ou URL Supabase"></div>
+        <div class="field full" id="productPhotosSection"><h3>Photos du produit</h3><p class="admin-muted">La photo principale apparaît dans le catalogue. La galerie regroupe les autres vues. Enregistrez la fiche après vos modifications.</p></div>
+        <div class="field full"><label for="f-image">Image principale (URL)</label><input id="f-image" placeholder="images/... ou URL Supabase"><img id="previewMain" class="admin-main-preview" alt="Aperçu de l’image principale" style="display:none;"></div>
         <div class="field full"><label>&nbsp;</label>
           <div>
             <button class="btn btn-secondary btn-small" id="uploadMainBtn">Uploader une photo</button>
             <input type="file" id="fileMain" accept="image/jpeg,image/png,image/webp" style="display:none;">
             <button type="button" class="btn btn-secondary btn-small" id="describePhotoBtn">Reconnaître le vêtement et proposer une description</button>
-            <label><input type="checkbox" id="autoDescribePhoto" checked> Proposer automatiquement après l’upload (service IA payant)</label>
+            <label><input type="checkbox" id="autoDescribePhoto"> Proposer automatiquement après l’upload (service IA payant, facultatif)</label>
             <div id="photoDraft" hidden><p>Proposition IA : vérifier avant publication. Matière, entretien et mesures restent à renseigner.</p><pre id="photoDraftText" style="white-space:pre-wrap;"></pre><button type="button" class="btn btn-secondary" id="applyPhotoDraft" disabled>Remplir la fiche avec cette proposition</button></div>
           </div>
         </div>
         <div class="field full"><label>Galerie (images du produit)</label>
+          <div id="galleryDropZone" class="admin-upload-zone"><strong>Ajoutez plusieurs photos en une fois</strong><p>Glissez vos fichiers ici ou sélectionnez-les. JPG, PNG ou WebP, 4 Mo par photo, 20 photos maximum par sélection. Les fichiers originaux ne sont pas modifiés.</p><button type="button" class="btn btn-secondary" id="uploadGalleryBtn">Choisir des photos</button><input type="file" id="fileGallery" multiple accept="image/jpeg,image/png,image/webp" style="display:none;"></div>
+          <div id="galleryUploadStatus" class="admin-operation-status" role="status" hidden></div>
+          <button type="button" class="btn btn-secondary btn-small" id="stopGalleryUpload" hidden>Arrêter après la photo en cours</button>
           <div id="galleryGrid"></div>
           <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
             <input type="text" id="galleryUrl" placeholder="Collez une URL d'image puis Entr&eacute;e&hellip;" style="flex:1; min-width:180px; padding:6px 8px; border:1px solid #E2D8C5; border-radius:8px;">
             <button class="btn btn-secondary btn-small" id="galleryUrlAdd">Ajouter l'URL</button>
-            <button class="btn btn-secondary btn-small" id="uploadGalleryBtn">Uploader une image</button>
-            <input type="file" id="fileGallery" accept="image/jpeg,image/png,image/webp" style="display:none;">
           </div>
           <textarea id="f-gallery" style="display:none;" placeholder="une URL par ligne"></textarea>
         </div>
@@ -888,13 +960,13 @@
         </div>
       </div>
 
-      <div class="card" style="margin-top:16px;">
-        <h3>Stock par variante <small style="font-weight:400; color:#8a7d66;">(laissez vide si le produit n&rsquo;a pas de stock g&eacute;r&eacute;)</small></h3>
+      <div class="card" style="margin-top:16px;" id="productStockSection">
+        <h3>Quantités par taille et coloris</h3><p class="admin-muted">Pour une nouvelle variante, saisissez le disponible initial : 0 = épuisé, vide = stock non configuré. Le stock des variantes déjà enregistrées est en lecture seule ici : utilisez la rubrique Stock pour les arrivages et corrections avec motif.</p><button type="button" class="btn btn-secondary btn-small" id="editInventoryBtn">Gérer les arrivages et corrections</button>
         <div id="variantGrid" class="variant-grid"></div>
       </div>
 
       <div class="editor-actions">
-        <button class="btn btn-danger" id="deleteProductBtn" style="display:none;">Supprimer</button>
+        <button class="btn btn-danger" id="deleteProductBtn" style="display:none;">Archiver le produit</button>
         <button class="btn btn-primary" id="saveProductBtn">Enregistrer le produit</button>
       </div>
     </div>

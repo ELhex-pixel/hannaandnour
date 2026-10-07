@@ -28,13 +28,13 @@
   }
 
   function money(cents, currency) {
-    var sym = '$';
+    var sym = ADMIN_CURRENCY_SYMBOL;
     if (currency === 'eur') sym = '\u20AC';
     else if (currency === 'usd') sym = '$';
     else if (ADMIN_CURRENCY_SYMBOL) sym = ADMIN_CURRENCY_SYMBOL;
     return sym + ((parseInt(cents, 10) || 0) / 100).toFixed(2);
   }
-  var ADMIN_CURRENCY_SYMBOL = '$';
+  var ADMIN_CURRENCY_SYMBOL = '';
   function dollars(cents) {
     return ((parseInt(cents, 10) || 0) / 100).toFixed(2);
   }
@@ -60,7 +60,21 @@
   }
 
   function logout() {
+    closeProductEditor();
+    productSelection = {};
+    productsAll = [];
+    productRequest++;
+    document.getElementById('productsList').textContent = '';
+    document.getElementById('productStats').textContent = '';
+    prepRevision++;
+    prepListRequest++;
+    prepBusy = false;
+    prepCurrent = null;
+    prepOrders = [];
+    document.getElementById('scanPrepare').textContent = '';
+    document.getElementById('prepStatus').textContent = '';
     try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    document.dispatchEvent(new CustomEvent('hn:admin-logout'));
     showApp(false);
   }
 
@@ -199,17 +213,40 @@
   /* ---------------- Tabs ---------------- */
 
   function wireTabs() {
-    document.querySelectorAll('.admin-tab').forEach(function (btn) {
+    var descriptions = {
+      products: 'Gérez vos fiches, vos photos et leur visibilité.',
+      orders: 'Retrouvez les achats et suivez les étapes de chaque commande.',
+      returns: 'Consultez les demandes liées aux comptes clients et décidez de leur traitement.',
+      tiktok: 'Préparez un fichier officiel sans modifier le stock du site.',
+      sales: 'Comprenez les ventes, le stock disponible et la préparation.',
+      inventory: 'Suivez les quantités disponibles par taille et coloris, les arrivages et les ajustements.',
+      preparation: 'Vérifiez les articles payés et préparez les colis sans modifier le stock.',
+      reviews: 'Consultez et modérez les avis de la boutique.',
+      home: 'Organisez les contenus et les visuels de la page d’accueil.',
+      blog: 'Gérez les articles du journal de la boutique.',
+      promos: 'Gérez vos codes et leurs conditions d’utilisation.',
+      stats: 'Consultez les visites et les étapes du parcours d’achat.',
+      messages: 'Retrouvez les messages reçus depuis le site.',
+      settings: 'Vérifiez vos paramètres de livraison, devise et services.'
+    };
+    document.querySelectorAll('.admin-tab').forEach(function (btn, index) {
+      btn.setAttribute('data-index', ('0' + (index + 1)).slice(-2));
+      btn.setAttribute('aria-controls', 'panel-' + btn.getAttribute('data-tab'));
+      btn.setAttribute('aria-current', btn.classList.contains('active') ? 'page' : 'false');
       btn.addEventListener('click', function () {
-        document.querySelectorAll('.admin-tab').forEach(function (b) { b.classList.remove('active'); });
+        document.querySelectorAll('.admin-tab').forEach(function (b) { b.classList.remove('active'); b.setAttribute('aria-current', 'false'); });
         document.querySelectorAll('.admin-panel').forEach(function (p) { p.classList.remove('active'); });
         btn.classList.add('active');
+        btn.setAttribute('aria-current', 'page');
+        document.getElementById('adminSectionTitle').textContent = btn.textContent;
+        document.getElementById('adminSectionDescription').textContent = descriptions[btn.getAttribute('data-tab')] || '';
         var id = 'panel-' + btn.getAttribute('data-tab');
         var panel = document.getElementById(id);
         panel.classList.add('active');
         if (id === 'panel-products') loadProducts();
         if (id === 'panel-orders') loadOrders();
-        if (id === 'panel-sales') { loadSales(); focusScan(); prepLoadOrders(); }
+        if (id === 'panel-sales') { loadSales(); focusScan(); }
+        if (id === 'panel-preparation') prepLoadOrders();
         if (id === 'panel-reviews') loadReviews();
         if (id === 'panel-home') loadHome();
         if (id === 'panel-blog') loadBlog();
@@ -224,29 +261,45 @@
   /* ---------------- Products ---------------- */
 
   var productsAll = [];
+  var productSelection = {};
+  var productRequest = 0;
+  var archiveBusy = false;
+
+  function updateProductSelection() {
+    var count = Object.keys(productSelection).length;
+    document.getElementById('productSelectionCount').textContent = count ? count + ' produit(s) sélectionné(s), y compris hors filtre' : 'Aucun produit sélectionné';
+    document.getElementById('archiveSelectedProducts').disabled = !count || archiveBusy;
+    document.getElementById('clearProductSelection').disabled = !count || archiveBusy;
+  }
 
   function productRow(p) {
-    var cat = { hijab: 'Hijab', abaya: 'Abaya', prayer: 'Prayer', dress: 'Dress', accessory: 'Accessory' }[p.category] || p.category;
-    var totalStock = (p.variants || []).reduce(function (n, v) { return n + (parseInt(v.stock, 10) || 0); }, 0);
+    var cat = { hijab: 'Hijab', abaya: 'Abaya', prayer: 'Tenue de prière', dress: 'Robe', accessory: 'Accessoire', knitwear: 'Pull / maille', jacket: 'Veste', skirt: 'Jupe', top: 'Haut', trousers: 'Pantalon' }[p.category] || p.category;
+    var totalStock = (p.variants || []).reduce(function (n, v) { return n + (v.active === false ? 0 : (parseInt(v.stock, 10) || 0)); }, 0);
     var managed = (p.variants || []).length > 0;
     return '<tr>' +
+      '<td data-label="Sélection"><input type="checkbox" class="select-product" data-id="' + esc(p.id) + '" aria-label="Sélectionner ' + esc(p.name_fr || p.name_en) + '"' + (productSelection[p.id] ? ' checked' : '') + (archiveBusy ? ' disabled' : '') + '></td>' +
       '<td data-label=""><img class="thumb" src="' + esc(p.image || 'images/hero.jpg') + '" alt=""></td>' +
-      '<td data-label="Produit"><strong>' + esc(p.name_en) + '</strong><br><small style="color:#8a7d66;">' + esc(p.slug) + '</small></td>' +
+      '<td data-label="Produit"><strong>' + esc(p.name_fr || p.name_en) + '</strong><br><small>' + esc(p.sku || p.slug) + '</small></td>' +
       '<td data-label="Prix">' + money(p.price_cents) + '</td>' +
       '<td data-label="Cat\u00e9gorie">' + esc(cat) + '</td>' +
-      '<td data-label="Stock">' + (managed ? '<span class="badge badge-green">' + totalStock + ' en stock</span>' : '<span class="badge badge-gray">sans stock</span>') + '</td>' +
-      (p.active ? '' : '<td data-label="Statut"><span class="badge badge-red">Inactif</span></td>') +
+      '<td data-label="Stock">' + (managed ? '<span class="badge ' + (totalStock ? 'badge-green' : 'badge-red') + '">' + (totalStock ? totalStock + ' disponibles' : 'Épuisé') + '</span>' : '<span class="badge badge-warn">Stock non configuré</span>') + '</td>' +
+      '<td data-label="Visibilité"><span class="badge ' + (p.active ? 'badge-green' : 'badge-gray') + '">' + (p.active ? 'En ligne' : 'Hors ligne / archivé') + '</span></td>' +
       '<td data-label=""><span style="white-space:nowrap;">' +
-      '<button class="btn btn-secondary btn-small edit-product" data-id="' + p.id + '">Modifier</button> ' +
-      '<button class="btn btn-secondary btn-small dup-product" title="Dupliquer" data-id="' + p.id + '">Dupliquer</button>' +
+      '<button class="btn btn-secondary btn-small edit-product" data-id="' + esc(p.id) + '">Modifier</button> ' +
+      '<button class="btn btn-secondary btn-small dup-product" title="Dupliquer en brouillon avec un stock à zéro" data-id="' + esc(p.id) + '">Dupliquer</button>' +
       '</span></td></tr>';
   }
 
   function loadProducts() {
+    var request = ++productRequest;
+    var owner = token();
     return call('listProducts').then(function (res) {
+      if (request !== productRequest || owner !== token()) return;
       productsAll = res.products || [];
+      Object.keys(productSelection).forEach(function (id) { if (!productsAll.some(function (p) { return p.id === id; })) delete productSelection[id]; });
       renderProducts();
     }).catch(function (e) {
+      if (request !== productRequest || owner !== token()) return;
       document.getElementById('productsList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
     });
   }
@@ -255,13 +308,22 @@
     var box = document.getElementById('productsList');
     var q = (document.getElementById('filterProducts').value || '').toLowerCase();
     var cat = document.getElementById('filterCategory').value;
+    var visibility = document.getElementById('filterProductVisibility').value;
+    var active = productsAll.filter(function (p) { return p.active; }).length;
+    var missing = productsAll.filter(function (p) { return p.active && !(p.variants || []).length; }).length;
+    document.getElementById('productStats').innerHTML = [
+      [productsAll.length, 'Fiches catalogue'], [active, 'Produits en ligne'], [productsAll.length - active, 'Hors ligne / archivés'], [missing, 'En ligne sans stock configuré']
+    ].map(function (item) { return '<div class="stat-card"><strong>' + item[0] + '</strong><span>' + item[1] + '</span></div>'; }).join('');
     var list = productsAll.filter(function (p) {
+      if (visibility === 'active' && !p.active) return false;
+      if (visibility === 'inactive' && p.active) return false;
       if (cat && p.category !== cat) return false;
       if (!q) return true;
-      return (p.name_en + ' ' + p.slug + ' ' + (p.name_fr || '') + ' ' + (p.name_ar || '')).toLowerCase().indexOf(q) >= 0;
+      return (p.name_en + ' ' + p.slug + ' ' + (p.sku || '') + ' ' + (p.category || '') + ' ' + (p.name_fr || '') + ' ' + (p.name_ar || '')).toLowerCase().indexOf(q) >= 0;
     });
-    if (!list.length) { box.innerHTML = '<p class="empty">Aucun produit.</p>'; return; }
-    box.innerHTML = '<table class="admin-table"><thead><tr><th></th><th>Produit</th><th>Prix</th><th>Cat&eacute;gorie</th><th>Stock</th><th></th><th></th></tr></thead><tbody>' +
+    updateProductSelection();
+    if (!list.length) { box.innerHTML = '<p class="empty">Aucun produit pour ces filtres. Changez la recherche ou créez une fiche.</p>'; return; }
+    box.innerHTML = '<table class="admin-table"><thead><tr><th><input type="checkbox" id="selectVisibleProducts" aria-label="Sélectionner les produits affichés"' + (list.every(function (p) { return productSelection[p.id]; }) ? ' checked' : '') + (archiveBusy ? ' disabled' : '') + '></th><th>Photo</th><th>Produit</th><th>Prix</th><th>Catégorie</th><th>Stock</th><th>Visibilité</th><th>Actions</th></tr></thead><tbody>' +
       list.map(productRow).join('') + '</tbody></table>';
   }
 
@@ -309,7 +371,7 @@
       is_bestseller: !!src.is_bestseller,
       active: false,
       variants: (src.variants || []).map(function (v) {
-        return { color: v.color || '', size: v.size || '', stock: parseInt(v.stock, 10) || 0 };
+        return { color: v.color || '', size: v.size || '', stock: 0 };
       })
     };
     call('saveProduct', payload)
@@ -323,8 +385,36 @@
   /* ---- Product editor ---- */
 
   var editing = null;
+  var editorRevision = 0;
+  var imageBusy = false;
+  var galleryStop = false;
+  var editorReturnFocus = null;
+
+  function closeProductEditor() {
+    editorRevision++;
+    imageBusy = false;
+    galleryStop = true;
+    document.getElementById('productEditor').classList.remove('open');
+    document.body.style.overflow = '';
+    document.getElementById('saveProductBtn').disabled = false;
+    document.getElementById('uploadMainBtn').disabled = false;
+    document.getElementById('uploadGalleryBtn').disabled = false;
+    document.getElementById('uploadMainBtn').textContent = 'Uploader une photo';
+    document.getElementById('deleteProductBtn').disabled = false;
+    document.getElementById('stopGalleryUpload').hidden = true;
+    document.dispatchEvent(new CustomEvent('hn:product-editor'));
+    if (editorReturnFocus && document.contains(editorReturnFocus)) editorReturnFocus.focus();
+  }
 
   function openEditor(p) {
+    editorRevision++;
+    imageBusy = false;
+    galleryStop = false;
+    editorReturnFocus = document.activeElement;
+    ['saveProductBtn', 'uploadMainBtn', 'uploadGalleryBtn', 'deleteProductBtn'].forEach(function (id) { document.getElementById(id).disabled = false; });
+    document.getElementById('uploadMainBtn').textContent = 'Uploader une photo';
+    document.getElementById('galleryUploadStatus').hidden = true;
+    document.getElementById('stopGalleryUpload').hidden = true;
     document.dispatchEvent(new CustomEvent('hn:product-editor'));
     editing = p || {
       name_en: '', name_fr: '', name_ar: '',
@@ -335,10 +425,10 @@
       fabric_comp_en: '', fabric_comp_fr: '', fabric_comp_ar: '',
       price_cents: '', compare_at_price_cents: '', category: 'hijab',
       badge: '', rating: 4.5, review_count: 0, image: 'images/hero.jpg', gallery: [],
-      is_featured: false, is_bestseller: false, active: true, variants: []
+      is_featured: false, is_bestseller: false, active: false, variants: []
     };
 
-    document.getElementById('editorTitle').textContent = p ? 'Modifier : ' + (p.name_en || p.slug) : 'Nouveau produit';
+    document.getElementById('editorTitle').textContent = p ? 'Modifier : ' + (p.name_fr || p.name_en || p.slug) : 'Nouveau produit';
     document.getElementById('f-id').value = p ? p.id : '';
     setVal('f-name_en', editing.name_en); setVal('f-name_fr', editing.name_fr); setVal('f-name_ar', editing.name_ar);
     setVal('f-desc_en', editing.description_en); setVal('f-desc_fr', editing.description_fr); setVal('f-desc_ar', editing.description_ar);
@@ -376,6 +466,9 @@
     buildVariantGrid();
     renderColorsPicker();
     document.getElementById('productEditor').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('productEditor').scrollTop = 0;
+    document.getElementById('closeEditorBtn').focus();
   }
 
   function setVal(id, v) {
@@ -433,10 +526,11 @@
     }
 
     var html = rows.map(function (r, i) {
+      var persisted = (editing.variants || []).some(function (v) { return v.id && v.color === r.color && v.size === r.size; });
       return '<div class="variant-row" data-i="' + i + '">' +
         (r.color ? colorCellHtml(r.color) : '<input type="text" class="v-color" value="" placeholder="Couleur">') +
         '<input type="text" class="v-size" value="' + esc(r.size) + '" placeholder="Taille" ' + (r.size ? 'readonly' : '') + '>' +
-        '<input type="number" class="v-stock" min="0" step="1" value="' + (stockFor(r.color, r.size) === '' ? '' : stockFor(r.color, r.size)) + '" placeholder="0">' +
+        '<input type="number" class="v-stock" min="0" step="1" value="' + (stockFor(r.color, r.size) === '' ? '' : stockFor(r.color, r.size)) + '" placeholder="0"' + (persisted ? ' readonly aria-label="Stock existant, à ajuster dans la rubrique Stock"' : ' aria-label="Stock initial de la nouvelle variante"') + '>' +
         '<span style="font-size:12px;color:#8a7d66;">stock</span>' +
         '<input type="text" class="v-barcode" value="' + esc(barcodeFor(r.color, r.size)) + '" placeholder="Code-barres (auto)">' +
         '</div>';
@@ -629,9 +723,10 @@
       html += '<div class="gallery-item" data-i="' + i + '">' +
         '<img src="' + esc(lines[i]) + '" alt="Image ' + (i + 1) + '">' +
         '<div class="g-actions">' +
-        '<button type="button" class="btn btn-secondary btn-small g-up" title="Monter"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
-        '<button type="button" class="btn btn-secondary btn-small g-down" title="Descendre"' + (i === lines.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
-        '<button type="button" class="btn btn-danger btn-small g-del" title="Supprimer">&times;</button>' +
+        '<button type="button" class="btn btn-secondary btn-small g-main" aria-label="Choisir la photo ' + (i + 1) + ' comme image principale">' + (lines[i] === getVal('f-image') ? 'Principale' : 'Choisir principale') + '</button>' +
+        '<button type="button" class="btn btn-secondary btn-small g-up" aria-label="Monter la photo ' + (i + 1) + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+        '<button type="button" class="btn btn-secondary btn-small g-down" aria-label="Descendre la photo ' + (i + 1) + '"' + (i === lines.length - 1 ? ' disabled' : '') + '>&darr;</button>' +
+        '<button type="button" class="btn btn-danger btn-small g-del" aria-label="Retirer la photo ' + (i + 1) + ' de la galerie">&times;</button>' +
         '</div></div>';
     }
     box.innerHTML = html;
@@ -665,12 +760,24 @@
   }
 
   function wireEditor() {
-    document.getElementById('closeEditorBtn').addEventListener('click', function () {
-      document.getElementById('productEditor').classList.remove('open');
+    document.getElementById('closeEditorBtn').addEventListener('click', closeProductEditor);
+    document.addEventListener('keydown', function (e) {
+      var dialog = document.getElementById('productEditor');
+      if (!dialog.classList.contains('open')) return;
+      if (e.key === 'Escape') { closeProductEditor(); return; }
+      if (e.key !== 'Tab') return;
+      var focusable = Array.prototype.filter.call(dialog.querySelectorAll('button, input, select, textarea, a[href]'), function (node) { return !node.disabled && node.getClientRects().length; });
+      var first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
     // Close by clicking the dark backdrop around the editor.
     document.getElementById('productEditor').addEventListener('click', function (e) {
-      if (e.target === this) this.classList.remove('open');
+      if (e.target === this) { closeProductEditor(); return; }
+      var section = e.target.closest('[data-editor-section]');
+      if (section) { document.getElementById(section.getAttribute('data-editor-section')).scrollIntoView({ block: 'start' }); return; }
+      var main = e.target.closest('.g-main');
+      if (main) { setVal('f-image', galleryLines()[parseInt(main.closest('.gallery-item').getAttribute('data-i'), 10)]); renderGalleryGrid(); return; }
       var up = e.target.closest('.g-up');
       if (up) { moveGallery(parseInt(up.closest('.gallery-item').getAttribute('data-i'), 10), -1); return; }
       var down = e.target.closest('.g-down');
@@ -680,9 +787,16 @@
       if (e.target.closest('#galleryUrlAdd')) { addGalleryUrl(); return; }
     });
     document.getElementById('newProductBtn').addEventListener('click', function () { openEditor(null); });
+    document.getElementById('editInventoryBtn').addEventListener('click', function () {
+      var variant = (editing.variants || [])[0];
+      closeProductEditor();
+      document.querySelector('[data-tab="inventory"]').click();
+      if (variant && variant.id) document.dispatchEvent(new CustomEvent('hn:inventory-variant', { detail: variant.id }));
+    });
     document.getElementById('f-colors').addEventListener('input', buildVariantGrid);
     document.getElementById('f-sizes').addEventListener('input', buildVariantGrid);
     wireColorsPicker();
+    document.getElementById('f-gallery').addEventListener('input', renderGalleryGrid);
     var galleryUrlInput = document.getElementById('galleryUrl');
     if (galleryUrlInput) galleryUrlInput.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') addGalleryUrl();
@@ -690,30 +804,39 @@
 
     document.getElementById('saveProductBtn').addEventListener('click', function () {
       var btn = this;
+      if (btn.disabled || imageBusy) return;
+      var revision = editorRevision;
+      var owner = token();
       var payload;
       try { payload = collectProduct(); } catch (e) { toast(e.message, 'err'); return; }
-      btn.disabled = true;
+      lockProductImages(true);
       call('saveProduct', payload)
         .then(function () {
+          if (revision !== editorRevision || owner !== token()) return;
           toast(payload.id ? 'Produit mis à jour' : 'Produit créé', 'ok');
-          document.getElementById('productEditor').classList.remove('open');
+          closeProductEditor();
           return loadProducts();
         })
-        .catch(function (e) { toast(e.message, 'err'); })
-        .finally(function () { btn.disabled = false; });
+        .catch(function (e) { if (revision === editorRevision && owner === token()) toast(e.message, 'err'); })
+        .finally(function () { if (revision === editorRevision) lockProductImages(false); });
     });
 
     document.getElementById('deleteProductBtn').addEventListener('click', function () {
+      if (this.disabled) return;
       var id = document.getElementById('f-id').value;
       if (!id) return;
       if (!confirm('Archiver ce produit ? Il ne sera plus vendu ; les variantes et l’historique seront conservés.')) return;
+      var btn = this, revision = editorRevision, owner = token();
+      lockProductImages(true);
       call('deleteProduct', { id: id })
         .then(function () {
+          if (revision !== editorRevision || owner !== token()) return;
           toast('Produit archivé', 'ok');
-          document.getElementById('productEditor').classList.remove('open');
+          closeProductEditor();
           return loadProducts();
         })
-        .catch(function (e) { toast(e.message, 'err'); });
+        .catch(function (e) { if (revision === editorRevision && owner === token()) toast(e.message, 'err'); })
+        .finally(function () { if (revision === editorRevision && owner === token()) lockProductImages(false); });
     });
 
     wireUploads();
@@ -728,20 +851,26 @@
       input.addEventListener('change', function () {
         var file = input.files && input.files[0];
         if (!file) return;
-        var reader = new FileReader();
-        reader.onload = function () {
-          btn.disabled = true; btn.textContent = 'Upload...';
-          call('uploadImage', {
-            name: file.name,
-            mime: file.type,
-            data_base64: String(reader.result).split(',')[1] || reader.result
-          })
-            .then(function (res) { onUrl(res.url); toast('Image upload\u00e9e', 'ok'); })
-            .catch(function (e) { toast(e.message, 'err'); })
-            .finally(function () { btn.disabled = false; btn.textContent = label; });
-        };
-        reader.readAsDataURL(file);
         input.value = '';
+        var revision = editorRevision, owner = token();
+        var productPhoto = btnId === 'uploadMainBtn';
+        if (productPhoto && imageBusy) return;
+        function active() { return owner === token() && (!productPhoto || revision === editorRevision); }
+        if (productPhoto) lockProductImages(true);
+        btn.disabled = true;
+        var originalLabel = btn.textContent;
+        btn.textContent = 'Envoi…';
+        window.HN_ADMIN.uploadImages([file], {
+          active: active,
+          success: function (url) { onUrl(url); toast('Photo ajoutée — enregistrez la fiche pour la conserver.', 'ok'); }
+        }).then(function (res) { if (active() && res.failed.length) toast(res.failed[0].error, 'err'); })
+          .catch(function (e) { if (active()) toast(e.message, 'err'); })
+          .finally(function () {
+            if (!active()) return;
+            btn.textContent = originalLabel;
+            btn.disabled = false;
+            if (productPhoto) lockProductImages(false);
+          });
       });
     }
     function wirePreview(inputId, imgId) {
@@ -757,10 +886,50 @@
       input.addEventListener('change', show);
     }
     bind('uploadMainBtn', 'fileMain', function (url) { setVal('f-image', url); document.dispatchEvent(new CustomEvent('hn:main-image-uploaded')); });
-    bind('uploadGalleryBtn', 'fileGallery', function (url) {
-      var lines = galleryLines();
-      if (lines.indexOf(url) < 0) lines.push(url);
-      saveGalleryLines(lines);
+    var galleryInput = document.getElementById('fileGallery');
+    var galleryButton = document.getElementById('uploadGalleryBtn');
+    var status = document.getElementById('galleryUploadStatus');
+    var stop = document.getElementById('stopGalleryUpload');
+    var drop = document.getElementById('galleryDropZone');
+    function uploadGallery(files) {
+      if (imageBusy || !files.length) return;
+      var revision = editorRevision, owner = token();
+      function active() { return revision === editorRevision && owner === token(); }
+      galleryStop = false;
+      lockProductImages(true);
+      stop.hidden = false;
+      stop.disabled = false;
+      status.hidden = false;
+      status.textContent = 'Préparation des photos…';
+      window.HN_ADMIN.uploadImages(files, {
+        active: active,
+        stop: function () { return galleryStop; },
+        progress: function (file, index, res) { status.textContent = 'Photo ' + index + '/' + res.total + ' : ' + file.name; },
+        success: function (url) {
+          var lines = galleryLines();
+          if (lines.indexOf(url) < 0) lines.push(url);
+          saveGalleryLines(lines);
+        }
+      }).then(function (res) {
+        if (!active()) return;
+        status.textContent = res.uploaded + ' photo(s) ajoutée(s)' + (res.stopped ? ' — envoi arrêté' : '') + '. Enregistrez la fiche pour conserver la galerie.';
+        res.failed.forEach(function (failure) {
+          var line = document.createElement('p');
+          line.textContent = failure.name + ' : ' + failure.error + '. Vous pouvez sélectionner à nouveau cette photo.';
+          status.appendChild(line);
+        });
+      }).catch(function (error) { if (active()) status.textContent = error.message; })
+        .finally(function () { if (active()) { lockProductImages(false); stop.hidden = true; } });
+    }
+    galleryButton.addEventListener('click', function () { galleryInput.click(); });
+    galleryInput.addEventListener('change', function () { var files = Array.prototype.slice.call(galleryInput.files || []); galleryInput.value = ''; uploadGallery(files); });
+    stop.addEventListener('click', function () { galleryStop = true; stop.disabled = true; });
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (name) {
+      drop.addEventListener(name, function (event) {
+        event.preventDefault();
+        drop.classList.toggle('is-dragging', name === 'dragenter' || name === 'dragover');
+        if (name === 'drop' && event.dataTransfer) uploadGallery(Array.prototype.slice.call(event.dataTransfer.files));
+      });
     });
     bind('uploadPostBtn', 'filePost', function (url) { setVal('b-image', url); }, 'Uploader une image');
     bind('uploadHeroBtn', 'fileHero', function (url) { setVal('s-hero-image', url); }, 'Uploader une image');
@@ -770,6 +939,12 @@
     wirePreview('s-hero-image', 'previewHero');
     wirePreview('s-craft-image', 'previewCraft');
     wirePreview('c-image', 'previewColl');
+    wirePreview('f-image', 'previewMain');
+  }
+
+  function lockProductImages(busy) {
+    imageBusy = busy;
+    ['saveProductBtn', 'uploadMainBtn', 'uploadGalleryBtn', 'deleteProductBtn'].forEach(function (id) { document.getElementById(id).disabled = busy; });
   }
 
   /* ---------------- Orders ---------------- */
@@ -835,7 +1010,7 @@
   }
 
   function itemRows(o, ret) {
-    var canReturn = o.status === 'paid';
+    var canReturn = ['paid','refunded'].includes(o.status) && ['shipped','delivered'].includes(o.shipping_status);
     return (o.order_items || []).map(function (it) {
       var qty = parseInt(it.quantity, 10) || 1;
       var returned = ret[it.id] || 0;
@@ -865,8 +1040,15 @@
       '<option value="defective">D\u00e9fectueux</option>' +
       '<option value="exchange">\u00c9change / taille</option>' +
       '<option value="other">Autre</option></select></div>' +
-      '<button class="btn btn-primary btn-small" id="confirmReturnBtn" style="margin-top:8px;">Confirmer le retour (restock auto)</button></div>';
+      '<label for="returnSellable">Unités contrôlées et revendables</label><input type="number" id="returnSellable" min="0" step="1" placeholder="0 si aucun">' +
+      '<label for="returnInspection">Note du contrôle physique</label><textarea id="returnInspection" minlength="3" maxlength="500"></textarea>' +
+      '<p>Aucun remboursement automatique. Les unités non revendables restent hors vente. Une demande client ouverte doit être traitée dans Retours clients.</p>' +
+      '<button class="btn btn-primary btn-small" id="confirmReturnBtn" style="margin-top:8px;">Confirmer la réception et le contrôle</button><p id="manualReturnStatus" role="status"></p></div>';
   }
+
+  var manualReturnPending = null, manualReturnBusy = false;
+  try { manualReturnPending = token() ? JSON.parse(sessionStorage.getItem('hn-admin-return-operation') || 'null') : null; } catch (e) {}
+  document.addEventListener('hn:admin-logout',function () { manualReturnPending = null; manualReturnBusy = false; sessionStorage.removeItem('hn-admin-return-operation'); document.getElementById('orderModal').classList.remove('open'); document.getElementById('orderModalBody').textContent = ''; });
 
   function openOrder(o) {
     document.getElementById('orderModalTitle').textContent = 'Commande ' + o.order_number;
@@ -875,7 +1057,7 @@
       : '<p>' + esc(o.address1) + (o.address2 ? ' ' + esc(o.address2) : '') + '<br>' +
         esc(o.city) + (o.state ? ' ' + esc(o.state) : '') + ' ' + esc(o.postal_code) + '<br>' + esc(o.country) + '</p>';
 
-    var canReturn = o.status === 'paid';
+    var canReturn = ['paid','refunded'].includes(o.status) && ['shipped','delivered'].includes(o.shipping_status);
     var ret = returnedByItem(o);
 
     document.getElementById('orderModalBody').innerHTML =
@@ -928,7 +1110,7 @@
       btn.addEventListener('click', function () {
         var act = btn.getAttribute('data-act');
         if (act === 'refund') {
-          if (!confirm('Rembourser intégralement cette commande ?\nLe stock sera ré-augmenté et le client notifié par email.')) return;
+          if (!confirm('Rembourser intégralement cette commande ?\nAprès expédition, aucun article ne revient automatiquement en stock : contrôlez son retour séparément. Le client sera notifié par email si l’envoi réussit.')) return;
           call('refundOrder', { id: o.id })
             .then(function () { return afterUpdate(o.id, 'Commande remboursée'); })
             .catch(function (e) { toast(e.message, 'err'); });
@@ -1000,26 +1182,56 @@
         q.max = remaining;
         q.value = remaining;
         document.getElementById('returnReason').value = 'retour_client';
+        document.getElementById('returnSellable').value = '';
+        document.getElementById('returnSellable').max = remaining;
+        document.getElementById('returnInspection').value = '';
         document.getElementById('returnRow').style.display = 'block';
       });
     });
     var confirmReturn = document.getElementById('confirmReturnBtn');
+    if (confirmReturn && manualReturnPending && manualReturnPending.order_id === o.id) {
+      document.getElementById('returnRow').style.display = 'block';
+      document.getElementById('returnItemId').value = manualReturnPending.order_item_id;
+      document.getElementById('returnQty').value = manualReturnPending.quantity;
+      document.getElementById('returnReason').value = manualReturnPending.reason;
+      document.getElementById('returnSellable').value = manualReturnPending.sellable_quantity;
+      document.getElementById('returnInspection').value = manualReturnPending.note;
+      body.querySelectorAll('#returnRow input,#returnRow select,#returnRow textarea,.return-line').forEach(function (node) { node.disabled = true; });
+      confirmReturn.textContent = 'Vérifier / réessayer le même retour';
+      document.getElementById('manualReturnStatus').textContent = 'Retour non confirmé : identifiant conservé. Ne créez pas une nouvelle opération.';
+    }
     if (confirmReturn) confirmReturn.addEventListener('click', function () {
+      if (manualReturnBusy) return;
+      if (manualReturnPending && manualReturnPending.order_id !== o.id) { toast('Vérifiez d’abord le retour non confirmé de la commande précédente.', 'err'); return; }
       var itemId = document.getElementById('returnItemId').value;
-      var qty = parseInt(document.getElementById('returnQty').value, 10);
-      if (!itemId || !(qty >= 1)) { toast('S\u00e9lectionnez une ligne et une quantit\u00e9 valide', 'err'); return; }
-      call('recordReturn', {
-        order_id: o.id,
-        order_item_id: itemId,
-        quantity: qty,
-        reason: document.getElementById('returnReason').value,
-        return_ref: o.id + ':' + itemId + ':' + Date.now()
-      }).then(function (res) {
-        toast('Retour enregistr\u00e9' + (res && res.refundCents ? ' (' + money(res.refundCents, o.currency) + ')' : '') + ' \u2014 stock r\u00e9-augment\u00e9', 'ok');
-        call('getOrder', { id: o.id }).then(function (r2) {
-          if (r2.order) openOrder(r2.order);
-        }).catch(function (e) { toast(e.message, 'err'); });
-      }).catch(function (e) { toast(e.message, 'err'); });
+      var qty = Number(document.getElementById('returnQty').value);
+      var sellableInput = document.getElementById('returnSellable'), sellable = sellableInput.value === '' ? null : Number(sellableInput.value), note = document.getElementById('returnInspection').value.trim();
+      if (!manualReturnPending) {
+        if (!itemId || !Number.isInteger(qty) || qty < 1 || !Number.isInteger(sellable) || sellable < 0 || sellable > qty || note.length < 3) { toast('Renseignez quantité, unités revendables et contrôle physique.', 'err'); return; }
+        if (!confirm('Confirmer le retour reçu : '+qty+' unité(s), dont '+sellable+' revendables ? Aucun remboursement automatique.')) return;
+        if (!window.crypto || !window.crypto.randomUUID) { toast('Navigateur récent et connexion sécurisée requis.', 'err'); return; }
+        manualReturnPending = { order_id:o.id,order_item_id:itemId,quantity:qty,sellable_quantity:sellable,note:note,reason:document.getElementById('returnReason').value,return_ref:window.crypto.randomUUID() };
+        try { sessionStorage.setItem('hn-admin-return-operation',JSON.stringify(manualReturnPending)); } catch (error) { manualReturnPending = null; toast('Identifiant non conservé : aucun envoi.', 'err'); return; }
+      }
+      var owner = token(); manualReturnBusy = true; confirmReturn.disabled = true;
+      body.querySelectorAll('#returnRow input,#returnRow select,#returnRow textarea,.return-line').forEach(function (node) { node.disabled = true; });
+      call('recordReturn', manualReturnPending).then(function (res) {
+        if (owner !== token()) return;
+        if (!res || !res.ok) throw new Error('Réponse incomplète : retour non confirmé.');
+        manualReturnPending = null; sessionStorage.removeItem('hn-admin-return-operation');
+        toast('Retour contrôlé : '+res.sellable_quantity+' unité(s) revendables. Aucun remboursement effectué.', 'ok');
+        if (document.getElementById('orderModal').classList.contains('open') && confirmReturn.isConnected) return call('getOrder',{ id:o.id }).then(function (r2) { if (owner === token() && confirmReturn.isConnected && document.getElementById('orderModal').classList.contains('open') && r2.order) openOrder(r2.order); });
+      }).catch(function (error) {
+        if (owner !== token()) return;
+        var refused = error.status === 400 || ['return_invalid','return_order_unavailable','return_item_missing','return_quantity_unavailable','return_request_open','return_variant_unavailable'].includes(error.code);
+        if (refused) { manualReturnPending = null; sessionStorage.removeItem('hn-admin-return-operation'); }
+        if (confirmReturn.isConnected) {
+          document.getElementById('manualReturnStatus').textContent = error.message + (refused ? ' Aucun nouveau retour enregistré.' : ' Vérifiez ou réessayez le même retour avant toute nouvelle opération.');
+          confirmReturn.textContent = refused ? 'Confirmer la réception et le contrôle' : 'Vérifier / réessayer le même retour';
+          if (refused) body.querySelectorAll('#returnRow input,#returnRow select,#returnRow textarea,.return-line').forEach(function (node) { node.disabled = false; });
+        }
+      })
+        .finally(function () { if (owner === token()) { manualReturnBusy = false; confirmReturn.disabled = false; } });
     });
   }
 
@@ -1082,6 +1294,8 @@
 
   var salesAll = null;
   var salesThreshold = 5;
+  var salesRevision = 0;
+  document.addEventListener('hn:admin-logout',function () { salesRevision++; salesAll = null; document.getElementById('salesList').textContent = ''; });
 
   function periodLabel(p) {
     return { d30: '30 derniers jours', d90: '90 derniers jours', y1: '1 an', all: 'tout' }[p] || p;
@@ -1098,10 +1312,13 @@
     var period = document.getElementById('salesPeriod').value || 'd30';
     var th = parseInt(document.getElementById('salesThreshold').value, 10);
     salesThreshold = isNaN(th) ? 5 : th;
-    return call('saleStats', { period: period, threshold: salesThreshold }).then(function (res) {
+    var request = ++salesRevision, owner = token();
+    return call('saleStats', { period: period, threshold: salesThreshold, currency: document.getElementById('salesCurrency').value }).then(function (res) {
+      if (request !== salesRevision || owner !== token()) return;
       salesAll = res || null;
       renderSales();
     }).catch(function (e) {
+      if (request !== salesRevision || owner !== token()) return;
       document.getElementById('salesList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
     });
   }
@@ -1109,8 +1326,10 @@
   function salesKpis(t, cur) {
     var lowWarn = t.lowStock > 0 ? ' style="border-color:#E6B0A2;"' : '';
     return '<div class="stat-cards">' +
-      '<div class="stat-card"><strong>' + money(t.netRevenueCents, cur) + '</strong><span>CA net (p\u00e9riode)</span></div>' +
-      '<div class="stat-card"><strong>' + t.netUnits + '</strong><span>Unit\u00e9s vendues (net)</span></div>' +
+      '<div class="stat-card"><strong>' + money(t.netRevenueCents, cur) + '</strong><span>Encaissements moins remboursements</span></div>' +
+      '<div class="stat-card"><strong>' + money(t.refundedCents || 0, cur) + '</strong><span>Remboursements confirmés</span></div>' +
+      '<div class="stat-card"><strong>' + (t.marginCents == null ? 'À compléter' : money(t.marginCents, cur)) + '</strong><span>Marge articles estimée, avant frais</span></div>' +
+      '<div class="stat-card"><strong>' + t.netUnits + '</strong><span>Unités commandées hors retours physiques</span></div>' +
       '<div class="stat-card"><strong>' + t.returnedUnits + '</strong><span>Retours (unit\u00e9s)</span></div>' +
       '<div class="stat-card"><strong>' + t.stockTotal + '</strong><span>Stock disponible</span></div>' +
       '<div class="stat-card"><strong>' + t.orders + '</strong><span>Commandes pay\u00e9es</span></div>' +
@@ -1127,14 +1346,14 @@
       var hh = max > 0 ? Math.round(((m.revenueCents || 0) / max) * (H - padB - padT)) : 0;
       var x = i * bw + bw * 0.18;
       var tip = m.label + ' : ' + money(m.revenueCents, cur) +
-        (m.returnedCents > 0 ? ' (retours -' + money(m.returnedCents, cur) + ')' : '') +
+        (m.refundedCents > 0 ? ' (remboursements confirmés : ' + money(m.refundedCents, cur) + ')' : '') +
         ' \u00b7 ' + m.unitsSold + ' unit\u00e9s vendues' +
         (m.returnedUnits > 0 ? ', ' + m.returnedUnits + ' retourn\u00e9es' : '');
       return '<rect class="bar" x="' + x.toFixed(1) + '" y="' + (H - padB - hh).toFixed(1) + '" width="' + (bw * 0.64).toFixed(1) + '" height="' + hh + '" rx="3">' +
         '<title>' + esc(tip) + '</title></rect>' +
         '<text x="' + (i * bw + bw / 2).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle">' + esc(fmtMonth(m.key)) + '</text>';
     }).join('');
-    return '<svg class="sales-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Chiffre d\u2019affaires mensuel net">' +
+    return '<svg class="sales-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Encaissements bruts par mois de paiement">' +
       '<line x1="0" y1="' + (H - padB) + '" x2="' + W + '" y2="' + (H - padB) + '" stroke="currentColor" stroke-opacity="0.15"/>' +
       bars + '</svg>';
   }
@@ -1142,7 +1361,7 @@
   function salesProductsTable(rows, cur) {
     if (!rows || !rows.length) return '<p class="empty">Aucun produit.</p>';
     return '<table class="admin-table"><thead><tr>' +
-      '<th>Produit</th><th>Stock dispo</th><th>Vendu</th><th>Retourn\u00e9</th><th>Net vendu</th><th>CA net</th>' +
+      '<th>Produit</th><th>Stock dispo</th><th>Commandé</th><th>Retourné</th><th>Hors retours</th><th>Valeur articles hors retours</th><th>Marge articles estimée</th>' +
       '</tr></thead><tbody>' + rows.map(function (r) {
         var stock = r.stock == null ? '\u2014' :
           (r.low ? '<span class="badge badge-warn" title="Stock faible">' + r.stock + '</span>' : r.stock);
@@ -1153,7 +1372,8 @@
           '<td data-label="Vendu">' + r.sold + '</td>' +
           '<td data-label="Retourn\u00e9">' + (r.returned > 0 ? r.returned : '\u2014') + '</td>' +
           '<td data-label="Net vendu">' + (r.sold - r.returned) + '</td>' +
-          '<td data-label="CA net">' + money(r.revenueCents - r.returnedCents, cur) + '</td>' +
+          '<td data-label="Valeur articles">' + money(r.revenueCents - r.returnedCents, cur) + '</td>' +
+          '<td data-label="Marge avant frais">' + (r.marginCents == null ? 'Inconnue' : money(r.marginCents, cur)) + '</td>' +
           '</tr>';
       }).join('') + '</tbody></table>';
   }
@@ -1165,7 +1385,12 @@
     var t = salesAll.totals || {};
     var cur = (salesAll.currency && salesAll.currency.code) || 'usd';
     var html = salesKpis(t, cur);
-    html += '<h3 style="margin:16px 0 6px;">Chiffre d\u2019affaires net \u2014 12 derniers mois</h3>' +
+    html += '<p>Lecture par date de paiement : les retours et remboursements connus à ce jour sont rattachés aux commandes de cette période, même reçus plus tard. Les montants encaissés incluent livraison et taxes ; ils ne sont pas votre bénéfice.</p>';
+    html += '<p>Marge articles = valeur après remise et retours physiques − coût d’achat des unités non remises en stock. Hors transport, emballage, frais de paiement, charges et impôts. Une commande remboursée ou un coût historique absent rend sa marge inconnue ; aucun coût manquant n’est remplacé par zéro.</p>';
+    if (t.marginMissingUnits) html += '<p class="admin-notice">Marge incomplète : ' + t.marginMissingUnits + ' unité(s) non calculables. Sous-total des lignes calculables : ' + money(t.marginKnownCents || 0,cur) + ' — ne représente pas la marge totale.</p>';
+    if (salesAll.limited) html += '<p class="admin-notice">Résultat partiel : limite de lecture atteinte. Ces chiffres ne sont pas exhaustifs.</p>';
+    if ((salesAll.excluded_currencies || []).length) html += '<p class="admin-notice">Autres devises exclues, sans conversion : ' + esc(salesAll.excluded_currencies.join(', ')) + '. Sélectionnez leur devise pour les consulter.</p>';
+    html += '<h3 style="margin:16px 0 6px;">Encaissements bruts par mois de paiement — 12 derniers mois</h3>' +
       salesChart(salesAll.monthly || [], cur);
     html += '<h3 style="margin:20px 0 8px;">Produits (' + periodLabel(salesAll.period) + ')</h3>' +
       salesProductsTable(salesAll.products || [], cur);
@@ -1173,6 +1398,7 @@
   }
 
   function wireSales() {
+    document.getElementById('salesCurrency').addEventListener('change',loadSales);
     var btn = document.getElementById('refreshSalesBtn');
     if (btn) btn.addEventListener('click', loadSales);
     var period = document.getElementById('salesPeriod');
@@ -1328,6 +1554,9 @@
   var scanLast = null;
   var prepCurrent = null;
   var prepOrders = [];
+  var prepRevision = 0;
+  var prepListRequest = 0;
+  var prepBusy = false;
 
   function sMoney(cents) {
     return (scanCurrency.symbol || '$') + ((parseInt(cents, 10) || 0) / 100).toFixed(2);
@@ -1353,7 +1582,6 @@
     if (!code) return;
     var rcp = document.getElementById('scanReceipt');
     if (rcp) rcp.innerHTML = '';
-    if (prepCurrent) { prepScan(code); return; }
     call('scanLookup', { barcode: code }).then(function (res) {
       scanLast = res;
       scanCurrency = res.currency || scanCurrency;
@@ -1395,43 +1623,17 @@
         '</div>' +
         '<div class="scan-pills">' + pills + '</div>' +
         '<div class="scan-actions">' +
-          '<button class="btn btn-secondary btn-small" data-scan="inv">Inventaire</button>' +
+          '<button class="btn btn-secondary btn-small" data-scan="inv">Ajuster avec un motif</button>' +
           '<button class="btn btn-primary btn-small" data-scan="cartAdd" data-vid="' + esc(v.id) + '">Ajouter \u00e0 la caisse</button>' +
-        '</div>' +
-        '<div class="scan-inv" id="scanInv">' +
-          '<input type="number" id="scanInvQty" min="0" step="1" value="' + (v.stock || 0) + '">' +
-          '<button class="btn btn-primary btn-small" data-scan="invSave">Enregistrer le comptage</button>' +
-          '<span class="scan-hint">Remplace le stock par la quantit\u00e9 r\u00e9elle trouv\u00e9e.</span>' +
         '</div>' +
         pendingHtml +
       '</div>';
   }
 
   function toggleScanInv(open) {
-    var inv = document.getElementById('scanInv');
-    if (!inv) return;
-    var show = typeof open === 'boolean' ? open : !inv.classList.contains('open');
-    inv.classList.toggle('open', show);
-    var qty = document.getElementById('scanInvQty');
-    if (qty && scanLast) qty.value = scanLast.variant.stock || 0;
-  }
-
-  function invSave() {
     if (!scanLast) return;
-    var qty = parseInt(document.getElementById('scanInvQty').value, 10);
-    if (isNaN(qty) || qty < 0) { setScanStatus('Quantit\u00e9 invalide', 'err'); return; }
-    call('scanSetStock', { variant_id: scanLast.variant.id, qty: qty }).then(function () {
-      setScanStatus('Stock mis \u00e0 jour', 'ok');
-      return call('scanLookup', { barcode: scanLast.variant.barcode });
-    }).then(function (res) {
-      scanLast = res;
-      scanCurrency = res.currency || scanCurrency;
-      renderScanResult();
-      toggleScanInv(true);
-      focusScan();
-    }).catch(function (err) {
-      setScanStatus(err.message, 'err');
-    });
+    document.querySelector('[data-tab="inventory"]').click();
+    document.dispatchEvent(new CustomEvent('hn:inventory-variant', { detail: scanLast.variant.id }));
   }
 
   /* ---- Caisse ---- */
@@ -1518,7 +1720,7 @@
         '<div class="tot"><span>Total \u00e0 encaisser</span><b>' + sMoney(total) + '</b></div>' +
       '</div>' +
       '<input class="cart-cust" id="cartCustomer" placeholder="Nom du client (optionnel)" autocomplete="off">' +
-      '<button class="btn btn-primary" id="cartCashBtn">Encaisser &mdash; ' + sMoney(total) + '</button>';
+      '<button class="btn btn-primary" id="cartCashBtn" disabled>Caisse manuelle suspendue</button>';
     document.getElementById('cartCashBtn').addEventListener('click', cartCash);
   }
 
@@ -1555,118 +1757,163 @@
     var prev = '';
     var sel = document.getElementById('prepOrderSel');
     if (sel) prev = sel.value;
+    var owner = token(), request = ++prepListRequest;
     call('listOrders', { status: 'paid' }).then(function (res) {
+      if (owner !== token() || request !== prepListRequest) return;
       prepOrders = (res.orders || []).filter(function (o) {
-        return o.shipping_status !== 'shipped' && o.shipping_status !== 'delivered';
+        return o.status === 'paid' && o.shipping_status === 'new' && !o.admin_archived;
       });
+      if (prepCurrent && !prepOrders.some(function (o) { return o.id === prepCurrent.id; })) { prepRevision++; prepCurrent = null; prepBusy = false; }
       renderPrep(prev);
-    }).catch(function (err) { setScanStatus(err.message, 'err'); });
+    }).catch(function (err) { if (owner === token() && request === prepListRequest) document.getElementById('prepStatus').textContent = err.message; });
   }
 
   function renderPrep(selVal) {
     var box = document.getElementById('scanPrepare');
     if (!box) return;
     var opts = prepOrders.map(function (o) {
-      return '<option value="' + esc(o.id) + '">' + esc(o.order_number) + ' \u2014 ' + esc(o.customer_name) + '</option>';
+      var blocked = o.stock_issue || o.refunded_cents > 0;
+      return '<option value="' + esc(o.id) + '"' + (blocked ? ' disabled' : '') + '>' + esc(o.order_number) + ' — ' + esc(o.customer_name) + (blocked ? ' — à examiner (stock / remboursement)' : o.prepared_at ? ' — colis prêt' : '') + '</option>';
     }).join('');
     var head = '<div class="prep-head"><b>Pr\u00e9parer une commande</b>' +
-      '<select id="prepOrderSel">' + (opts || '<option value="">Aucune commande en attente</option>') + '</select>' +
-      '<button class="btn btn-secondary btn-small" data-scan="prepLoad">Charger</button></div>';
+      '<select id="prepOrderSel" aria-label="Commande à préparer"' + (prepBusy ? ' disabled' : '') + '><option value="">Choisir une commande</option>' + opts + '</select>' +
+      '<button class="btn btn-secondary btn-small" data-scan="prepLoad"' + (prepBusy ? ' disabled' : '') + '>Charger</button></div>';
     var body = '';
     if (prepCurrent) {
       var checked = 0;
-      prepCurrent.items.forEach(function (it) { if (it.checked) checked++; });
+      var total = 0;
+      prepCurrent.items.forEach(function (it) { checked += it.prepared; total += it.qty; });
       var rows = prepCurrent.items.map(function (it) {
-        return '<div class="prep-row' + (it.checked ? ' checked' : '') + '">' +
-          '<span class="p-check">' + (it.checked ? '\u2713' : '\u25A1') + '</span>' +
-          '<span class="p-name">' + esc(it.label) + '<small>x' + it.qty + '</small></span>' +
+        return '<div class="prep-row' + (it.prepared === it.qty ? ' checked' : '') + '">' +
+          '<span class="p-check">' + (it.prepared === it.qty ? '✓' : '□') + '</span>' +
+          '<span class="p-name">' + esc(it.label) + '<small>' + it.prepared + '/' + it.qty + ' unité(s) vérifiée(s)</small></span>' +
+          '<button type="button" class="btn btn-secondary btn-small" data-prep-item="' + esc(it.id) + '" data-prep-quantity="' + it.qty + '"' + (prepBusy || it.prepared === it.qty ? ' disabled' : '') + '>J’ai vérifié les ' + it.qty + ' unité(s)</button>' +
+          '<button type="button" class="btn btn-secondary btn-small" data-prep-item="' + esc(it.id) + '" data-prep-quantity="0"' + (prepBusy || !it.prepared ? ' disabled' : '') + '>Reprendre le contrôle</button>' +
           '</div>';
       }).join('');
-      var all = checked === prepCurrent.items.length && prepCurrent.items.length > 0;
-      body = rows +
+      var all = checked === total && total > 0;
+      body = '<h3>' + esc(prepCurrent.order_number) + '</h3>' + (prepCurrent.preparedAt ? '<p class="admin-notice">Colis prêt. L’expédition doit être confirmée séparément après le dépôt réel.</p>' : '') + rows +
         '<div class="prep-foot">' +
-          '<span id="prepProgress">' + checked + '/' + prepCurrent.items.length + ' v\u00e9rifi\u00e9(s)' + (all ? ' \u2014 complet \u2713' : '') + '</span>' +
-          '<button class="btn btn-primary" id="prepShipBtn"' + (all ? '' : ' disabled') + '>Marquer exp\u00e9di\u00e9e</button>' +
+          '<span id="prepProgress" role="status">' + checked + '/' + total + ' unité(s) vérifiée(s)' + (all ? ' — contrôle complet ✓' : '') + '</span>' +
+          '<button class="btn btn-primary" id="prepCompleteBtn"' + (all && !prepBusy && !prepCurrent.preparedAt ? '' : ' disabled') + '>Confirmer le colis prêt</button>' +
           '<button class="btn btn-secondary btn-small" data-scan="prepClose">Fermer la pr\u00e9paration</button>' +
         '</div>';
     } else {
-      body = '<div class="scan-hint" style="padding:4px 0;">Scannez chaque article pour le cocher, puis \u00ab Marquer exp\u00e9di\u00e9e \u00bb. Le stock doit \u00eatre suffisant pour l\u2019emballage.</div>';
+      body = '<p class="admin-muted">Chargez une commande. Scannez chaque unité ou vérifiez manuellement la quantité de chaque ligne. La progression est enregistrée, même si vous fermez la préparation. Liste limitée aux 200 dernières commandes payées renvoyées par l’API.</p>';
     }
     box.style.display = 'block';
     box.innerHTML = head + body;
     var sel2 = document.getElementById('prepOrderSel');
-    if (sel2 && selVal) sel2.value = selVal;
-    var shipBtn = document.getElementById('prepShipBtn');
-    if (shipBtn) shipBtn.addEventListener('click', prepShip);
+    if (sel2 && (selVal || prepCurrent)) sel2.value = selVal || prepCurrent.id;
+    document.getElementById('prepScanBtn').disabled = prepBusy;
+    var completeBtn = document.getElementById('prepCompleteBtn');
+    if (completeBtn) completeBtn.addEventListener('click', prepComplete);
   }
 
   function prepLoad() {
+    if (prepBusy) return;
     var sel = document.getElementById('prepOrderSel');
-    if (!sel || !sel.value) { setScanStatus('Choisissez une commande', 'err'); return; }
-    call('getOrder', { id: sel.value }).then(function (res) {
+    if (!sel || !sel.value) { document.getElementById('prepStatus').textContent = 'Choisissez une commande.'; return; }
+    var orderId = sel.value;
+    var revision = ++prepRevision, owner = token();
+    prepCurrent = null;
+    prepBusy = true;
+    renderPrep(orderId);
+    call('getOrder', { id: orderId }).then(function (res) {
+      if (revision !== prepRevision || owner !== token()) return;
       var o = res.order;
-      if (!o) { setScanStatus('Commande introuvable', 'err'); return; }
+      if (!o || o.status !== 'paid' || o.shipping_status !== 'new' || o.stock_issue || o.refunded_cents > 0 || o.admin_archived) { prepCurrent = null; renderPrep(); document.getElementById('prepStatus').textContent = 'Commande non disponible : actualisez et examinez son statut.'; return; }
       prepCurrent = {
         id: o.id,
         order_number: o.order_number,
+        preparedAt: o.prepared_at,
         items: (o.order_items || []).map(function (it) {
           return {
             variant_id: it.variant_id,
+            id: it.id,
             label: it.product_name + (it.variant ? ' (' + it.variant + ')' : ''),
             qty: it.quantity,
-            checked: false
+            prepared: it.prepared_quantity || 0
           };
         })
       };
-      renderPrep(sel.value);
-      setScanStatus('Mode pr\u00e9paration : scannez les articles de ' + o.order_number + '.', 'ok');
-    }).catch(function (err) { setScanStatus(err.message, 'err'); });
+      renderPrep(orderId);
+      document.getElementById('prepStatus').textContent = 'Commande chargée. Vérifiez chaque unité, sans nouveau retrait du stock.';
+    }).catch(function (err) { if (revision === prepRevision && owner === token()) document.getElementById('prepStatus').textContent = err.message; })
+      .finally(function () { if (revision === prepRevision && owner === token()) { prepBusy = false; renderPrep(orderId); } });
   }
 
   function prepScan(code) {
-    if (!prepCurrent) return;
+    if (!prepCurrent || prepBusy) return;
+    var revision = prepRevision, owner = token();
+    prepBusy = true;
+    renderPrep();
     call('scanLookup', { barcode: code }).then(function (res) {
+      if (revision !== prepRevision || owner !== token()) return;
       var vid = res.variant && res.variant.id;
-      var stock = res.variant ? res.variant.stock : 0;
-      var name = res.product ? (res.product.name_fr || res.product.name_en) : '';
-      var found = false;
-      prepCurrent.items.forEach(function (it) {
-        if (it.variant_id === vid) {
-          found = true;
-          if (stock >= it.qty) {
-            it.checked = true;
-            setScanStatus('\u2713 ' + (name || 'Article') + ' \u2014 v\u00e9rifi\u00e9', 'ok');
-          } else {
-            setScanStatus('Stock insuffisant pour ' + (name || 'Article') + ' (' + stock + ' en stock, ' + it.qty + ' command\u00e9).', 'err');
-          }
-        }
-      });
-      if (!found) setScanStatus('Cet article ne fait pas partie de la commande.', 'err');
-      renderPrep();
-      focusScan();
+      var item = prepCurrent.items.filter(function (it) { return it.variant_id === vid && it.prepared < it.qty; })[0];
+      prepBusy = false;
+      if (!item) { document.getElementById('prepStatus').textContent = 'Article absent de la commande ou quantité déjà entièrement vérifiée.'; return; }
+      return prepSetQuantity(item.id, item.prepared + 1);
     }).catch(function (err) {
-      setScanStatus(err.message === 'Article introuvable' ? 'Code inconnu.' : err.message, 'err');
-    });
+      if (revision === prepRevision && owner === token()) document.getElementById('prepStatus').textContent = err.message;
+    }).finally(function () { if (revision === prepRevision && owner === token()) { prepBusy = false; renderPrep(); } });
   }
 
-  function prepShip() {
-    if (!prepCurrent) return;
-    var done = prepCurrent.items.length > 0 && prepCurrent.items.every(function (it) { return it.checked; });
-    if (!done) { setScanStatus('Tous les articles ne sont pas v\u00e9rifi\u00e9s.', 'err'); return; }
-    call('updateOrder', { id: prepCurrent.id, shipping_status: 'shipped' }).then(function () {
-      setScanStatus('Commande ' + prepCurrent.order_number + ' marqu\u00e9e exp\u00e9di\u00e9e', 'ok');
-      prepCurrent = null;
-      renderPrep();
-      prepLoadOrders();
-      focusScan();
-    }).catch(function (err) { setScanStatus(err.message, 'err'); });
+  function prepSetQuantity(id, quantity) {
+    if (!prepCurrent || prepBusy) return Promise.resolve();
+    var item = prepCurrent.items.filter(function (it) { return it.id === id; })[0];
+    if (!item) return Promise.resolve();
+    var revision = prepRevision, owner = token();
+    prepBusy = true;
+    renderPrep();
+    return call('setPreparationQuantity', { order_id: prepCurrent.id, item_id: item.id, quantity: quantity, expected_quantity: item.prepared }).then(function (res) {
+      if (revision !== prepRevision || owner !== token()) return;
+      if (!res.result || !Number.isInteger(res.result.quantity) || res.result.quantity < 0 || res.result.quantity > item.qty) throw new Error('Réponse de préparation incomplète.');
+      if (!res.result.already) prepCurrent.preparedAt = null;
+      item.prepared = res.result.quantity;
+      document.getElementById('prepStatus').textContent = 'Contrôle enregistré. Le stock n’a pas été modifié.';
+    }).catch(function (err) { if (revision === prepRevision && owner === token()) document.getElementById('prepStatus').textContent = err.message + ' Rechargez la commande avant de continuer.'; })
+      .finally(function () { if (revision === prepRevision && owner === token()) { prepBusy = false; renderPrep(); } });
+  }
+
+  function prepComplete() {
+    if (!prepCurrent || prepBusy) return;
+    var all = prepCurrent.items.length && prepCurrent.items.every(function (it) { return it.prepared === it.qty; });
+    if (!all || !confirm('Confirmer que toutes les unités ont été vérifiées et que le colis est prêt ? Ceci ne marque pas l’expédition et n’envoie aucun email.')) return;
+    var revision = prepRevision, owner = token();
+    prepBusy = true;
+    renderPrep();
+    call('completePreparation', { order_id: prepCurrent.id }).then(function (res) {
+      if (revision !== prepRevision || owner !== token()) return;
+      prepCurrent.preparedAt = res.result.prepared_at;
+      document.getElementById('prepStatus').textContent = 'Colis prêt enregistré. Confirmez l’expédition séparément après le dépôt réel.';
+    }).catch(function (err) { if (revision === prepRevision && owner === token()) document.getElementById('prepStatus').textContent = err.message; })
+      .finally(function () { if (revision === prepRevision && owner === token()) { prepBusy = false; renderPrep(); } });
   }
 
   function prepClose() {
+    prepRevision++;
+    prepBusy = false;
     prepCurrent = null;
     renderPrep();
-    setScanStatus('');
-    focusScan();
+    document.getElementById('prepStatus').textContent = 'Préparation fermée. Les contrôles déjà enregistrés sont conservés.';
+  }
+
+  function wirePreparation() {
+    document.getElementById('refreshPreparation').addEventListener('click', function () { if (!prepBusy) prepLoadOrders(); });
+    document.getElementById('scanPrepare').addEventListener('click', function (event) {
+      var button = event.target.closest('[data-prep-item]');
+      if (button && !button.disabled) prepSetQuantity(button.getAttribute('data-prep-item'), Number(button.getAttribute('data-prep-quantity')));
+    });
+    document.getElementById('prepScanForm').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var input = document.getElementById('prepScanInput');
+      if (prepBusy) { document.getElementById('prepStatus').textContent = 'Validation en cours : attendez avant de scanner l’unité suivante.'; return; }
+      if (!prepCurrent) { document.getElementById('prepStatus').textContent = 'Chargez d’abord une commande.'; return; }
+      if (input.value.trim()) prepScan(input.value.trim());
+      input.value = '';
+    });
   }
 
   function wireScan() {
@@ -1699,7 +1946,6 @@
       var vid = btn.getAttribute('data-vid');
       if (act === 'cartAdd') cartAdd();
       else if (act === 'inv') toggleScanInv();
-      else if (act === 'invSave') invSave();
       else if (act === 'cartPlus') cartQty(vid, 1);
       else if (act === 'cartMinus') cartQty(vid, -1);
       else if (act === 'cartDel') cartDel(vid);
@@ -1728,6 +1974,9 @@
       document.getElementById('setPickupEnabled').checked = s.pickup_enabled !== false;
       var cur = res.currency || {};
       ADMIN_CURRENCY_SYMBOL = cur.symbol || (cur.code === 'eur' ? '\u20AC' : '$');
+      document.getElementById('productPriceLabel').textContent = 'Prix (' + ADMIN_CURRENCY_SYMBOL + ') *';
+      document.getElementById('productCompareLabel').textContent = 'Ancien prix (' + ADMIN_CURRENCY_SYMBOL + ', promotion)';
+      renderProducts();
       if (cur.code === 'usd' || cur.code === 'eur') {
         document.getElementById('setCurrency').value = cur.code;
       }
@@ -2536,12 +2785,53 @@
   function wireFilters() {
     document.getElementById('filterProducts').addEventListener('input', renderProducts);
     document.getElementById('filterCategory').addEventListener('change', renderProducts);
+    document.getElementById('filterProductVisibility').addEventListener('change', renderProducts);
+    document.getElementById('productsList').addEventListener('change', function (e) {
+      if (archiveBusy) return;
+      if (e.target.id === 'selectVisibleProducts') {
+        this.querySelectorAll('.select-product').forEach(function (checkbox) {
+          var id = checkbox.getAttribute('data-id');
+          if (e.target.checked) productSelection[id] = true;
+          else delete productSelection[id];
+        });
+      } else if (e.target.classList.contains('select-product')) {
+        var id = e.target.getAttribute('data-id');
+        if (e.target.checked) productSelection[id] = true;
+        else delete productSelection[id];
+      }
+      renderProducts();
+    });
+    document.getElementById('clearProductSelection').addEventListener('click', function () { if (!archiveBusy) { productSelection = {}; renderProducts(); } });
+    document.getElementById('archiveSelectedProducts').addEventListener('click', function () {
+      if (archiveBusy) return;
+      var ids = Object.keys(productSelection);
+      if (!ids.length) return;
+      if (ids.length > 100) { toast('Sélectionnez au maximum 100 produits par opération.', 'err'); return; }
+      if (!confirm('Archiver ces ' + ids.length + ' produits, y compris ceux masqués par vos filtres ?\n\n' + productsAll.filter(function (p) { return productSelection[p.id]; }).map(function (p) { return p.name_fr || p.name_en || p.slug; }).join('\n') + '\n\nIls ne seront plus vendus. Les commandes, photos et stocks restent conservés.')) return;
+      var owner = token();
+      var status = document.getElementById('productBulkStatus');
+      archiveBusy = true;
+      status.hidden = false;
+      status.textContent = 'Archivage en cours…';
+      renderProducts();
+      call('archiveProducts', { ids: ids }).then(function (res) {
+        if (owner !== token()) return;
+        var archived = res.archived_ids || [];
+        archived.forEach(function (id) { delete productSelection[id]; });
+        status.textContent = archived.length + ' produit(s) archivé(s). Historique et stock conservés.' + (archived.length < ids.length ? ' Certains produits n’ont pas été trouvés : vérifiez la liste actualisée.' : '');
+        return loadProducts();
+      }).catch(function (error) {
+        if (owner !== token()) return;
+        status.textContent = 'Archivage non confirmé : ' + error.message + '. Actualisez la liste pour vérifier avant de recommencer.';
+      }).finally(function () { archiveBusy = false; if (owner === token()) renderProducts(); });
+    });
   }
 
   /* ---------------- Boot ---------------- */
 
   function boot() {
     loadProducts();
+    loadSettings();
   }
 
   wireLogin();
@@ -2551,6 +2841,7 @@
   wireOrders();
   wireSales();
   wireScan();
+  wirePreparation();
   wireReviews();
   wireDemoReviews();
   wireHome();
