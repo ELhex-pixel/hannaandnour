@@ -42,6 +42,7 @@
   }
 
   var params = parseHash();
+  if (window.location.hash) window.history.replaceState(null, '', window.location.pathname + window.location.search);
   var token = params.access_token || '';
   var type = params.type || '';
 
@@ -64,6 +65,7 @@
       if (submitBtn) submitBtn.disabled = true;
       window.HN_AUTH.updatePassword(token, password)
         .then(function () {
+          token = '';
           show(form, 'none');
           show(doneEl, 'block');
         })

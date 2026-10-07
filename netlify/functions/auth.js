@@ -98,19 +98,36 @@ exports.handler = async function (event) {
 
       case 'forgotPassword': {
         const email = String(body.email || '').toLowerCase().trim();
-        if (!isValidEmail(email)) return json(400, { error: 'Invalid email' });
-        const base = siteUrl;
-        const { error } = await sb.auth.resetPasswordForEmail(email, {
-          redirectTo: base + '/reset.html'
-        });
-        if (error) {
-          const msg = String(error.message || '');
-          const tooFast = error.status === 429 || /rate|frequency|only request this/i.test(msg);
-          if (tooFast) return json(429, { error: 'rate_limited' });
-          return json(400, { error: 'reset_send_failed' });
+        if (!isValidEmail(email) || email.length > 254) return json(400, { error: 'Invalid email' });
+        try {
+          const redirectTo = siteUrl + '/reset.html';
+          if (process.env.RESEND_API_KEY) {
+            const { data, error } = await sb.auth.admin.generateLink({
+              type: 'recovery', email, options: { redirectTo }
+            });
+            if (error && error.code === 'user_not_found') return json(200, { ok: true });
+            if (error) throw error;
+            const link = new URL(data.properties.action_link);
+            if (link.origin !== new URL(process.env.SUPABASE_URL).origin || link.pathname !== '/auth/v1/verify' || link.username || link.password || link.searchParams.get('type') !== 'recovery' || link.searchParams.get('redirect_to') !== redirectTo || !link.searchParams.get('token') || String(data.user.email || '').trim().toLowerCase() !== email) {
+              throw new Error('Invalid recovery link');
+            }
+            const href = link.href.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+            const sent = await sendEmail({
+              to: email,
+              subject: 'Hanna & Nour — Réinitialisation de votre mot de passe',
+              html: '<h1>Réinitialiser votre mot de passe</h1><p>Vous avez demandé un nouveau mot de passe pour votre compte Hanna &amp; Nour.</p><p><a href="' + href + '">Choisir un nouveau mot de passe</a></p><p>Ce lien est temporaire et à usage unique. Si vous n’êtes pas à l’origine de cette demande, ignorez cet email : votre mot de passe reste inchangé.</p>'
+            });
+            if (!sent || !sent.ok) throw new Error('Recovery email not accepted');
+          } else {
+            const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+            if (error) throw error;
+          }
+          return json(200, { ok: true });
+        } catch (error) {
+          if (error.status === 429 || ['over_email_send_rate_limit', 'over_request_rate_limit'].includes(error.code)) return json(429, { error: 'rate_limited' });
+          console.error('Password recovery email failed');
+          return json(503, { error: 'reset_send_failed' });
         }
-        // Always succeed — never leak whether the email exists.
-        return json(200, { ok: true });
       }
 
       case 'updatePassword': {

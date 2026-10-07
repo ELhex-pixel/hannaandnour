@@ -200,6 +200,7 @@
   // Restore a stored session on page load (me -> refresh -> clear).
   function boot() {
     var params = new URLSearchParams(window.location.hash.slice(1));
+    if (params.get('type') === 'recovery' && document.getElementById('resetForm')) return Promise.resolve(null);
     if (params.get('access_token') && params.get('refresh_token')) {
       saveSession({ access_token: params.get('access_token'), refresh_token: params.get('refresh_token') });
       window.history.replaceState(null, '', window.location.pathname + window.location.search);

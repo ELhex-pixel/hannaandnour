@@ -114,6 +114,7 @@ Envoie automatiquement un récap de commande à l'acheteur quand le webhook Stri
 3. Le domaine n'est pas obligatoire pour tester : en **sandbox** (`onboarding@resend.dev`),
    Resend n'envoie qu'à votre propre email d'inscription. Pour un vrai domaine :
    **Domains > Add** → vérifiez les DNS → utilisez `no-reply@votre-domaine.com` dans `MAIL_FROM`.
+   Pour **Mot de passe oublié**, si `RESEND_API_KEY` est configurée, le serveur génère un lien de récupération à usage unique via Supabase Auth puis envoie l’email directement avec Resend et `MAIL_FROM`. Il n’utilise pas le SMTP Supabase dans ce cas et ne tente pas un deuxième envoi en cas d’erreur. Sans clé Resend, le SMTP Supabase reste utilisé. Autoriser exactement `SITE_URL/reset.html` dans les redirections Supabase Auth. Les inscriptions restent dépendantes du SMTP Supabase : cette correction ne valide pas leur envoi. Aucun lien, token ou destinataire n’est journalisé ni renvoyé dans la réponse de récupération.
 4. En mode test, payez avec la carte `4242 4242 4242 4242` en saisissant **votre email** dans le
    formulaire → vous recevez l'email de confirmation.
 
