@@ -90,6 +90,7 @@
         return res.json();
       })
       .then(function (data) {
+        if (window.HN_COLORS && window.HN_COLORS.setSwatches) window.HN_COLORS.setSwatches(data.color_swatches || []);
         try {
           writeLS(CONFIG_CACHE_KEY, data);
           if (data && data.currency && data.currency.symbol) {
@@ -104,6 +105,7 @@
       })
       .catch(function () {
         configPromise = null;
+        if (window.HN_COLORS && window.HN_COLORS.setSwatches) window.HN_COLORS.setSwatches(cachedCfg.color_swatches || []);
         applyConfigCopy(cachedCfg || {});
         return cachedCfg || {};
       });

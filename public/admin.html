@@ -100,8 +100,12 @@
   .colors-list label { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 8px; cursor: pointer; font-size: 13.5px; }
   .colors-list label:hover { background: #F6F1E7; }
   .colors-list .dot { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); flex: none; }
-  .colors-add { display: flex; gap: 6px; margin-top: 10px; border-top: 1px solid #EEE3CD; padding-top: 10px; }
+  .colors-add { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; border-top: 1px solid #EEE3CD; padding-top: 10px; }
   .colors-add input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid #E2D8C5; border-radius: 8px; }
+  .colors-add .check { flex-basis: 100%; }
+  .colors-add .check input { flex: none; }
+  .colors-add input[type="color"] { flex: none; width: 64px; height: 38px; padding: 3px; }
+  .colors-add p { flex-basis: 100%; margin: 0; font-size: 12px; }
   .v-color-cell { display: flex; align-items: center; gap: 6px; }
   .v-color-cell .swatch { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); flex: none; }
   .v-color-cell input.v-color { border: none; background: transparent; padding: 6px 0; width: 130px; font-size: 13px; }
@@ -901,8 +905,11 @@
             <div class="colors-panel" id="colorsPanel">
               <div class="colors-list" id="colorsList"></div>
               <div class="colors-add">
-                <input type="text" id="colorsAddInput" placeholder="Ajouter une couleur (ex. Bleu ciel)">
+                <input type="text" id="colorsAddInput" aria-label="Nom de la couleur" maxlength="80" placeholder="Ajouter une couleur (ex. Gris clair)">
                 <button type="button" class="btn btn-secondary btn-small" id="colorsAddBtn">Ajouter</button>
+                <label class="check"><input type="checkbox" id="colorsCustomToggle">Choisir la teinte exacte</label>
+                <input type="color" id="colorsAddHex" value="#D3D3D3" aria-label="Teinte exacte de la couleur" hidden>
+                <p>Nom reconnu : teinte automatique. Sinon, choisissez la teinte exacte. Une teinte enregistrée s’applique à ce nom sur toute la boutique ; les fiches restent à enregistrer séparément.</p>
               </div>
             </div>
           </div>

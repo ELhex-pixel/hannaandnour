@@ -140,7 +140,7 @@
       var colorsHtml = '';
       var lang = HN.lang();
       p.colors.forEach(function (c, i) {
-        colorsHtml += '<span class="color-option' + (i === 0 ? ' active' : '') + '" style="background-color: ' + colorHex(c) + ';' + (String(c).toLowerCase() === 'white' ? ' border: 1px solid #ccc;' : '') + '" data-color="' + esc(c) + '" title="' + esc(COLORS.label(c, lang)) + '"></span>';
+        colorsHtml += '<span class="color-option' + (i === 0 ? ' active' : '') + '" style="background: ' + colorHex(c) + ';' + (String(c).toLowerCase() === 'white' ? ' border: 1px solid #ccc;' : '') + '" data-color="' + esc(c) + '" title="' + esc(COLORS.label(c, lang)) + '"></span>';
       });
       colorWrap.innerHTML = colorsHtml;
       var colorLabel = document.getElementById('selectedColor');

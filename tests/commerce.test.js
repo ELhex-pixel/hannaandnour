@@ -217,3 +217,58 @@ test('les messages de disponibilité restent cohérents en français, anglais et
     assert.equal(mock.context.stockEl.textContent, dict[language].stockOut);
   }
 });
+
+function colorLibrary() {
+  const window = {};
+  vm.runInNewContext(fs.readFileSync('public/js/colors.js', 'utf8'), { window });
+  return window.HN_COLORS;
+}
+test('gris clair et gris foncé ont leurs teintes partagées FR/EN/AR, indépendantes du thème', () => {
+  const colors = colorLibrary();
+  for (const name of ['Gris clair', ' light GREY ', 'Light gray', 'رمادي فاتح']) {
+    assert.equal(colors.hex(name), '#D3D3D3');
+    assert.equal(colors.has(name), true);
+  }
+  assert.equal(colors.hex('  GRIS   FONCÉ '), '#606060');
+  for (const name of ['Charcoal', 'Espresso', 'Navy']) assert.notEqual(colors.hex(name), '#A67C00');
+  assert.equal(colors.hex('Gold'), '#A67C00');
+});
+test('une couleur inconnue ne prend plus le doré et les noms réservés ne polluent pas la palette', () => {
+  const colors = colorLibrary();
+  for (const name of ['Une couleur inconnue', '__proto__', 'constructor', 'toString']) {
+    assert.equal(colors.has(name), false);
+    assert.match(colors.hex(name), /^repeating-linear-gradient/);
+    assert.equal(colors.label(name, 'fr'), name);
+  }
+  assert.equal(colors.has('#123456'), true);
+  assert.equal(colors.hex('#123456'), '#123456');
+});
+test('les teintes personnalisées acceptent uniquement des noms bornés et une couleur hexadécimale sûre', () => {
+  const colors = colorLibrary();
+  assert.equal(colors.setSwatch('Gris maison', '#abcd12'), true);
+  assert.equal(colors.hex(' GRIS  MAISON '), '#ABCD12');
+  assert.equal(colors.label('Gris maison', 'fr'), 'Gris maison');
+  for (const [name, value] of [['Gris', 'red'], ['Gris', '#112233;display:none'], ['<script>', '#112233'], ['__proto__', '#112233'], ['constructor', '#112233'], ['a'.repeat(81), '#112233']]) assert.equal(colors.setSwatch(name, value), false);
+  colors.setSwatches([{ name: 'Gris maison', hex: '#112233' }, { name: 'Gris', hex: 'url(x)' }, null]);
+  assert.equal(colors.hex('Gris maison'), '#112233');
+  assert.equal(colors.hex('Gris'), '#808080');
+  colors.setSwatches([]);
+  assert.equal(colors.has('Gris maison'), false);
+});
+test('seules les teintes validées sont exposées depuis settings, jamais les réglages privés', async () => {
+  const { loadColorSwatches } = require('../netlify/functions/shared');
+  const state = [];
+  const query = {
+    select(fields) { state.push(fields); return this; },
+    like(field, pattern) { state.push([field, pattern]); return this; },
+    order() { return this; },
+    limit(value) { assert.equal(value, 1001); return Promise.resolve({ data: [
+      { key: 'product-color:gris maison', value: { name: 'Gris maison', hex: '#ABCDEF', secret: 'must-not-return' } },
+      { key: 'admin_auth', value: { name: 'admin', hex: '#112233', secret: 'must-not-return' } },
+      { key: 'product-color:rouge', value: { name: 'Rouge', hex: 'url(x)' } }
+    ] }); }
+  };
+  const result = await loadColorSwatches({ from(table) { assert.equal(table, 'settings'); return query; } });
+  assert.deepEqual(result, [{ name: 'gris maison', hex: '#ABCDEF' }]);
+  assert.deepEqual(state, ['key,value', ['key', 'product-color:%']]);
+});

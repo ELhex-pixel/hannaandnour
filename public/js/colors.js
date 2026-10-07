@@ -8,7 +8,8 @@
 (function () {
   'use strict';
 
-  var DEFAULT_HEX = '#A67C00';
+  var DEFAULT_HEX = 'repeating-linear-gradient(45deg, #ddd, #ddd 3px, #fff 3px, #fff 6px)';
+  var swatches = Object.create(null);
 
   function norm(s) {
     return String(s == null ? '' : s).trim().toLowerCase()
@@ -29,6 +30,8 @@
     { en: 'Copper',       fr: 'Cuivre',         ar: 'نحاسي',         hex: '#B87333' },
     { en: 'Black',        fr: 'Noir',           ar: 'أسود',          hex: '#1A1A1A' },
     { en: 'Gray',         fr: 'Gris',           ar: 'رمادي',         hex: '#808080', aliases: ['grey'] },
+    { en: 'Light gray',   fr: 'Gris clair',     ar: 'رمادي فاتح',    hex: '#D3D3D3', aliases: ['light grey', 'lightgray', 'lightgrey'] },
+    { en: 'Dark gray',    fr: 'Gris foncé',     ar: 'رمادي داكن',    hex: '#606060', aliases: ['dark grey', 'darkgray', 'darkgrey'] },
     { en: 'Charcoal',     fr: 'Anthracite',     ar: 'فحمي',          hex: '#404040' },
     { en: 'Espresso',     fr: 'Espresso',       ar: 'بني داكن',      hex: '#3B362E', aliases: ['café', 'cafe'] },
     { en: 'Brown',        fr: 'Marron',         ar: 'بني',           hex: '#6E5A1C', aliases: ['brun', 'camel'] },
@@ -116,21 +119,42 @@
   });
 
   function entry(name) {
-    return index[norm(name)] || null;
+    return Object.prototype.hasOwnProperty.call(index, norm(name)) ? index[norm(name)] : null;
+  }
+
+  function cleanSwatch(name, value) {
+    if (typeof name !== 'string' || typeof value !== 'string') return null;
+    var n = norm(name);
+    if (!n || n.length > 80 || /[\u0000-\u001f\u007f<>{};,#]/.test(n) || ['__proto__', 'prototype', 'constructor'].indexOf(n) >= 0 || !/^#[0-9a-f]{6}$/i.test(value)) return null;
+    return { name: n, hex: value.toUpperCase() };
+  }
+
+  function setSwatch(name, value) {
+    var s = cleanSwatch(name, value);
+    if (!s) return false;
+    swatches[s.name] = s.hex;
+    return true;
+  }
+
+  function setSwatches(values) {
+    swatches = Object.create(null);
+    if (!Array.isArray(values)) return;
+    values.forEach(function (s) { if (s) setSwatch(s.name, s.hex); });
   }
 
   function hex(name) {
     var s = String(name == null ? '' : name).trim();
     if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(s)) return s;
     var n = norm(s);
-    if (palette[n]) return palette[n];
-    var e = index[n];
+    if (swatches[n]) return swatches[n];
+    if (Object.prototype.hasOwnProperty.call(palette, n)) return palette[n];
+    var e = entry(n);
     return (e && e.hex) || DEFAULT_HEX;
   }
 
   function has(name) {
     var n = norm(name);
-    return !!palette[n] || !!index[n];
+    return /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(String(name || '').trim()) || !!swatches[n] || Object.prototype.hasOwnProperty.call(palette, n) || !!entry(n);
   }
 
   function label(name, lang) {
@@ -141,13 +165,18 @@
     return e.en || e.fr || String(name == null ? '' : name);
   }
 
-  window.HN_COLORS = {
+  var colors = {
     list: list,
     palette: palette,
     hex: hex,
     has: has,
     label: label,
     entry: entry,
-    norm: norm
+    norm: norm,
+    cleanSwatch: cleanSwatch,
+    setSwatch: setSwatch,
+    setSwatches: setSwatches
   };
+  if (typeof window !== 'undefined') window.HN_COLORS = colors;
+  if (typeof module !== 'undefined' && module.exports) module.exports = colors;
 })();

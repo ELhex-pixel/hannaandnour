@@ -178,3 +178,95 @@ test('une réponse d’activation tardive ne termine pas une nouvelle opération
   assert.equal(mock.context.productBulkBusy, false);
   assert.equal(mock.state.loads, 1);
 });
+
+function colorPicker(response) {
+  const nodes = {}, events = {};
+  const state = { calls: [], toasts: [], confirmed: true, token: 'fixture-token' };
+  const node = id => nodes[id] || (nodes[id] = { value: '', disabled: false, hidden: false, checked: false, innerHTML: '', handlers: {}, classList: { toggle() {}, remove() {} }, addEventListener(name, handler) { this.handlers[name] = handler; } });
+  const window = {};
+  vm.runInNewContext(fs.readFileSync('public/js/colors.js', 'utf8'), { window });
+  const context = {
+    COLORS: window.HN_COLORS, editorRevision: 1,
+    document: { getElementById: node, querySelectorAll: () => [], addEventListener(name, handler) { events[name] = handler; } },
+    esc: s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
+    getVal: id => node(id).value,
+    setVal: (id, value) => { node(id).value = value; },
+    strToList: s => s.split(',').map(v => v.trim()).filter(Boolean),
+    token: () => state.token,
+    confirm: () => state.confirmed,
+    toast: (...args) => state.toasts.push(args),
+    call: (action, body) => { state.calls.push({ action, ...body }); return response ? response(body) : Promise.resolve({ swatch: { name: context.COLORS.norm(body.name), hex: body.hex } }); }
+  };
+  const source = fs.readFileSync('public/js/admin.js', 'utf8');
+  vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('  function normalizeColorName('), source.indexOf('  function collectProduct(')) + '\nwireColorsPicker();', context);
+  node('f-colors');
+  node('colorsAddHex').value = '#D3D3D3';
+  return { nodes, state, context, events, add: name => { node('colorsAddInput').value = name; node('colorsAddBtn').handlers.click(); } };
+}
+test('le sélecteur ajoute gris clair automatiquement et refuse une teinte inconnue sans choix explicite', () => {
+  const mock = colorPicker();
+  mock.add('gris clair');
+  assert.equal(mock.nodes['f-colors'].value, 'gris clair');
+  assert.match(mock.nodes.colorsTags.innerHTML, /#D3D3D3/);
+  assert.equal(mock.state.calls.length, 0);
+  mock.add('Bleu maison');
+  assert.equal(mock.nodes['f-colors'].value, 'gris clair');
+  assert.equal(mock.nodes.colorsAddInput.value, 'Bleu maison');
+  assert.match(mock.state.toasts[0][0], /Nom non reconnu/);
+});
+test('la teinte personnalisée reste liée au nom et nécessite confirmation avant sa sauvegarde', async () => {
+  const mock = colorPicker();
+  mock.nodes.colorsCustomToggle.checked = true;
+  mock.nodes.colorsAddHex.value = '#123456';
+  mock.state.confirmed = false;
+  mock.add('Bleu maison');
+  assert.equal(mock.state.calls.length, 0);
+  mock.state.confirmed = true;
+  mock.add('Bleu maison');
+  await settleBulk();
+  assert.deepEqual(mock.state.calls, [{ action: 'saveColorSwatch', name: 'Bleu maison', hex: '#123456' }]);
+  assert.equal(mock.nodes['f-colors'].value, 'Bleu maison');
+  assert.match(mock.nodes.colorsTags.innerHTML, /#123456/);
+  assert.equal(mock.context.COLORS.hex('Bleu maison'), '#123456');
+});
+test('modifier la teinte d’un nom existant ne duplique ni ne renomme sa couleur', async () => {
+  const mock = colorPicker();
+  mock.nodes['f-colors'].value = 'gris clair';
+  mock.nodes.colorsCustomToggle.checked = true;
+  mock.nodes.colorsAddHex.value = '#C7C7C7';
+  mock.add('GRIS CLAIR');
+  await settleBulk();
+  assert.equal(mock.nodes['f-colors'].value, 'gris clair');
+  assert.equal(mock.context.COLORS.hex('gris clair'), '#C7C7C7');
+});
+test('une erreur de sauvegarde de teinte ne produit pas de faux succès ni de changement local', async () => {
+  for (const response of [() => Promise.reject(new Error('Refus simulé')), () => Promise.resolve({}), () => Promise.resolve({ swatch: { name: 'autre', hex: '#D3D3D3' } })]) {
+    const mock = colorPicker(response);
+    mock.nodes.colorsCustomToggle.checked = true;
+    mock.add('Gris maison');
+    await settleBulk();
+    assert.equal(mock.nodes['f-colors'].value, '');
+    assert.equal(mock.context.COLORS.has('Gris maison'), false);
+    assert.equal(mock.nodes.colorsAddBtn.disabled, false);
+    assert.equal(mock.state.toasts[0][1], 'err');
+  }
+});
+test('le choix de teinte verrouille le double clic et ignore les réponses d’une fiche fermée ou déconnectée', async () => {
+  for (const disconnect of [false, true]) {
+    let resolve;
+    const mock = colorPicker(() => new Promise(done => { resolve = done; }));
+    mock.nodes.colorsCustomToggle.checked = true;
+    mock.add('Gris maison');
+    mock.add('Gris maison');
+    assert.equal(mock.state.calls.length, 1);
+    assert.equal(mock.nodes.colorsAddBtn.disabled, true);
+    if (disconnect) mock.state.token = '';
+    else { mock.context.editorRevision++; mock.events['hn:product-editor'](); }
+    resolve({ swatch: { name: 'gris maison', hex: '#D3D3D3' } });
+    await settleBulk();
+    assert.equal(mock.nodes['f-colors'].value, '');
+    assert.equal(mock.context.COLORS.has('Gris maison'), false);
+    assert.equal(mock.state.toasts.length, 0);
+  }
+});

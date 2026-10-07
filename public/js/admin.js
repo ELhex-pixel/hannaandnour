@@ -583,6 +583,16 @@
     renderColorsPicker();
   }
 
+  function refreshVariantSwatches() {
+    document.querySelectorAll('.v-color-cell').forEach(function (cell) {
+      var name = cell.querySelector('.v-color').value;
+      var swatch = cell.querySelector('.swatch');
+      swatch.style.background = COLORS.hex(name);
+      swatch.classList.toggle('unknown', !COLORS.has(name));
+      swatch.title = COLORS.has(name) ? '' : 'Teinte non renseignée';
+    });
+  }
+
   function renderColorsPicker() {
     var tagsEl = document.getElementById('colorsTags');
     var listEl = document.getElementById('colorsList');
@@ -601,7 +611,7 @@
     (COLORS.list || []).forEach(function (e) {
       var selected = normals.indexOf(normalizeColorName(e.fr)) >= 0;
       checks += '<label><input type="checkbox" class="c-cb" value="' + esc(e.fr) + '"' + (selected ? ' checked' : '') + '>' +
-        '<span class="dot" style="background:' + esc(e.hex) + ';"></span> ' + esc(e.fr) + '</label>';
+        '<span class="dot" style="background:' + esc(COLORS.hex(e.fr)) + ';"></span> ' + esc(e.fr) + '</label>';
     });
     listEl.innerHTML = checks || '<p style="color:#9a8c75;font-size:13px;">Liste vide</p>';
   }
@@ -613,7 +623,21 @@
     var listEl = document.getElementById('colorsList');
     var input = document.getElementById('colorsAddInput');
     var addBtn = document.getElementById('colorsAddBtn');
+    var custom = document.getElementById('colorsCustomToggle');
+    var hexInput = document.getElementById('colorsAddHex');
+    var pendingColor = 0;
     if (!btn || !panel || !tagsEl || !listEl) return;
+    custom.addEventListener('change', function () { hexInput.hidden = !custom.checked; });
+    document.addEventListener('hn:product-editor', function () {
+      pendingColor++;
+      addBtn.disabled = false;
+      input.disabled = false;
+      custom.disabled = false;
+      hexInput.disabled = false;
+      input.value = '';
+      custom.checked = false;
+      hexInput.hidden = true;
+    });
 
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -644,22 +668,47 @@
     });
 
     function addColor() {
+      if (addBtn.disabled) return;
       var v = (input.value || '').trim();
       if (!v) return;
       var norm = normalizeColorName(v);
       var colors = pickerColors();
-      if (colors.some(function (c) { return normalizeColorName(c) === norm; })) {
+      var exists = colors.some(function (c) { return normalizeColorName(c) === norm; });
+      if (!custom.checked && exists) {
         input.value = '';
         toast('Couleur d\u00e9j\u00e0 pr\u00e9sente', 'err');
         return;
       }
-      colors.push(v);
-      setPickerColors(colors);
-      input.value = '';
-      if (!COLORS.has(v)) toast('Couleur ajout\u00e9e (teinte par d\u00e9faut sur le site)', 'err');
+      if (!custom.checked) {
+        if (!COLORS.has(v)) { toast('Nom non reconnu : cochez « Choisir la teinte exacte » au lieu d’utiliser une couleur par défaut.', 'err'); return; }
+        colors.push(v);
+        setPickerColors(colors);
+        input.value = '';
+        return;
+      }
+      var chosen = COLORS.cleanSwatch(v, hexInput.value);
+      if (!chosen) { toast('Nom ou teinte invalide.', 'err'); return; }
+      if (!confirm('Enregistrer cette teinte pour « ' + v + ' » ? Elle sera utilisée pour ce nom sur toute la boutique. Aucun stock ni nom de variante ne sera modifié.')) return;
+      var owner = token(), revision = editorRevision, request = ++pendingColor;
+      function active() { return owner === token() && revision === editorRevision && request === pendingColor; }
+      [addBtn, input, custom, hexInput].forEach(function (el) { el.disabled = true; });
+      call('saveColorSwatch', { name: v, hex: chosen.hex }).then(function (res) {
+        if (!active()) return;
+        if (!res.swatch || res.swatch.name !== chosen.name || res.swatch.hex !== chosen.hex) throw new Error('Teinte non confirmée : vérifiez avant de réessayer.');
+        COLORS.setSwatch(res.swatch.name, res.swatch.hex);
+        var selected = pickerColors();
+        if (!selected.some(function (c) { return normalizeColorName(c) === norm; })) {
+          selected.push(v);
+          setPickerColors(selected);
+        } else renderColorsPicker();
+        refreshVariantSwatches();
+        input.value = '';
+        toast('Teinte enregistrée. Enregistrez aussi la fiche pour conserver sa sélection de couleurs.', 'ok');
+      }).catch(function (error) { if (active()) toast(error.message, 'err'); })
+        .finally(function () { if (active()) [addBtn, input, custom, hexInput].forEach(function (el) { el.disabled = false; }); });
     }
     if (addBtn) addBtn.addEventListener('click', addColor);
-    if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') addColor(); });
+    if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addColor(); } });
   }
 
   function collectProduct() {
@@ -1970,6 +2019,7 @@
 
   function loadSettings() {
     return call('getSettings').then(function (res) {
+      if (COLORS.setSwatches) COLORS.setSwatches(res.color_swatches || []);
       var s = res.settings || {};
       setVal('setStd', dollars(s.standard_cents));
       setVal('setExpr', dollars(s.express_cents));

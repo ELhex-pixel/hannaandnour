@@ -116,11 +116,15 @@ test('migration réelle : stock, paiements, retours, accès et recherche', async
     assert.equal((await db.query("select (value->>'token_version')::integer as version from settings where key='admin_auth'")).rows[0].version, 1);
     assert.deepEqual((await db.query("select relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity")).rows, []);
     await db.query("insert into settings(key,value) values($1,$2)", ['tiktok:' + product, JSON.stringify({ manufacturer_ids: 'private-test', rp_ids: 'private-test' })]);
+    await db.query("insert into settings(key,value) values('product-color:gris atelier',$1)", [JSON.stringify({ name: 'gris atelier', hex: '#BCC4CC' })]);
     await db.exec('grant select, insert, update on public.settings to anon, authenticated');
     for (const role of ['anon', 'authenticated']) {
       await db.exec('set role ' + role);
       try {
         assert.equal((await db.query("select value from settings where key=$1", ['tiktok:' + product])).rows.length, 0);
+        assert.equal((await db.query("select value from settings where key='product-color:gris atelier'")).rows.length, 0);
+        await assert.rejects(db.query("insert into settings(key,value) values('product-color:unauthorized','{}')"));
+        assert.equal((await db.query("update settings set value='{}' where key='product-color:gris atelier' returning key")).rows.length, 0);
         await assert.rejects(db.query("insert into settings(key,value) values('tiktok:unauthorized','{}')"));
         assert.equal((await db.query("update settings set value='{}' where key=$1 returning key", ['tiktok:' + product])).rows.length, 0);
       } finally { await db.exec('reset role'); }

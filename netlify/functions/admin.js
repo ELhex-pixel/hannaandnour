@@ -32,7 +32,7 @@
  */
 const { json, getSupabase, isConfigured, readBody, CORS_HEADERS, sendEmail,
   signToken, verifyToken, requireAdmin, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv,
-   hashAdminPassword, checkAdminCredentials, siteUrl, rateLimit } = require('./shared');
+   hashAdminPassword, checkAdminCredentials, siteUrl, rateLimit, loadColorSwatches } = require('./shared');
 
 const crypto = require('crypto');
 const Stripe = require('stripe');
@@ -257,6 +257,18 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     }
 
     switch (action) {
+      case 'saveColorSwatch': {
+        const swatch = require('../../public/js/colors').cleanSwatch(body.name, body.hex);
+        if (!swatch) return json(400, { error: 'Nom de couleur invalide ou teinte attendue au format #RRGGBB.' });
+        const limited = await rateLimit(sb, event, 'admin-color', 30, 600, 'admin');
+        if (limited) return limited;
+        try {
+          await saveSetting(sb, 'product-color:' + swatch.name, swatch);
+          return json(200, { swatch });
+        } catch (error) {
+          return json(503, { error: 'Enregistrement de la teinte non confirmé. Réessayez avec la même teinte.' });
+        }
+      }
       case 'listProducts': {
         const { data, error } = await sb
           .from('products')
@@ -563,7 +575,8 @@ case 'getSettings': {
         const reviews = (await getSetting(sb, 'reviews', null)) || { show_demo: false };
         const home = await getSetting(sb, 'home', null);
         const story = await getSetting(sb, 'story', null);
-        return json(200, { settings, catalog, currency, reviews, home, story });
+        const color_swatches = await loadColorSwatches(sb);
+        return json(200, { settings, catalog, currency, reviews, home, story, color_swatches });
       }
 
       case 'saveSettings': {

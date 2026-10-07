@@ -6,7 +6,7 @@
  * Values come from the `settings` table (admin-editable) and fall back to
  * Netlify env vars / defaults when unset.
  */
-const { json, getSupabase, isConfigured, getSetting, defaultCatalog, intEnv, floatEnv } = require('./shared');
+const { json, getSupabase, isConfigured, getSetting, loadColorSwatches, defaultCatalog, intEnv, floatEnv } = require('./shared');
 const { settings: commerceSettings } = require('./lib/commerce');
 
 exports.handler = async function (event) {
@@ -86,7 +86,8 @@ exports.handler = async function (event) {
     } catch (e) { /* keep default */ }
 
     const authoritative = await commerceSettings(sb);
-    return json(200, { settings: { ...settings, ...authoritative.shipping, returns_days: authoritative.return_policy.days }, return_policy: authoritative.return_policy, catalog, currency: authoritative.currency, reviews, home, story });
+    const color_swatches = await loadColorSwatches(sb);
+    return json(200, { settings: { ...settings, ...authoritative.shipping, returns_days: authoritative.return_policy.days }, return_policy: authoritative.return_policy, catalog, currency: authoritative.currency, reviews, home, story, color_swatches });
   } catch (err) {
     console.error('config.js error:', err);
     return json(500, { error: err.message || 'Internal error' });

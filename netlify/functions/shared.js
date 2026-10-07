@@ -222,6 +222,16 @@ async function saveSetting(sb, key, value) {
   return value;
 }
 
+async function loadColorSwatches(sb) {
+  const { data, error } = await sb.from('settings').select('key,value').like('key', 'product-color:%').order('key').limit(1001);
+  if (error || (data || []).length > 1000) throw new Error('Les teintes ne sont pas disponibles actuellement.');
+  const colors = require('../../public/js/colors');
+  return (data || []).map(row => {
+    const swatch = row.value && colors.cleanSwatch(row.value.name, row.value.hex);
+    return swatch && row.key === 'product-color:' + swatch.name ? swatch : null;
+  }).filter(Boolean);
+}
+
 // Falls back to a default catalog when the row is missing/malformed.
 function defaultCatalog() {
   return { colors: [] };
@@ -256,5 +266,5 @@ async function rateLimit(sb, event, scope, limit, seconds, identifier) {
 }
 
 module.exports = { json, getSupabase, isConfigured, readBody, sendEmail, CORS_HEADERS, rateLimit,
-  signToken, verifyToken, getBearer, requireAdmin, requireUser, getSetting, saveSetting, defaultCatalog, intEnv, floatEnv, siteUrl,
+  signToken, verifyToken, getBearer, requireAdmin, requireUser, getSetting, saveSetting, loadColorSwatches, defaultCatalog, intEnv, floatEnv, siteUrl,
   hashAdminPassword, verifyAdminHash, checkAdminCredentials };

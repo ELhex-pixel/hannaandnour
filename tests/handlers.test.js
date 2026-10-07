@@ -113,6 +113,7 @@ function archiveAdmin(overrides = {}, databaseError = false, returnedIds = null)
   const exports = {};
   const state = { writes: [], ids: [], tables: [], limits: 0, inventory: [] };
   const query = {
+    upsert(row) { assert(state.tables.includes('settings')); state.writes.push(row); return Promise.resolve({ error: databaseError ? new Error('Database unavailable') : null }); },
     update(fields) { state.writes.push(fields); return this; },
     in(field, ids) { assert.equal(field, 'id'); state.ids = Array.from(ids); return this; },
     select(fields) { assert.equal(fields, 'id'); return Promise.resolve({ data: (returnedIds || state.ids).map(id => ({ id })), error: databaseError ? new Error('Database unavailable') : null }); }
@@ -125,11 +126,43 @@ function archiveAdmin(overrides = {}, databaseError = false, returnedIds = null)
   };
   vm.runInNewContext(fs.readFileSync('netlify/functions/admin.js', 'utf8'), {
     exports, process: { env: {} }, Buffer, console: { error() {} },
-    require: name => name === './shared' ? shared : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
+    require: name => name === './shared' ? shared : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
   });
   return { handler: exports.handler, state };
 }
 const archiveId = '11111111-1111-4111-8111-111111111111';
+test('la teinte personnalisée exige une session admin et une limite avant toute écriture', async () => {
+  const denied = archiveAdmin({ requireAdmin: async () => ({ ok: false }) });
+  assert.equal((await denied.handler(event({ action: 'saveColorSwatch', name: 'Gris maison', hex: '#C0C0C0' }))).statusCode, 401);
+  assert.equal(denied.state.writes.length, 0);
+  assert.equal(denied.state.limits, 0);
+  const limited = archiveAdmin({ rateLimit: async () => ({ statusCode: 429 }) });
+  assert.equal((await limited.handler(event({ action: 'saveColorSwatch', name: 'Gris maison', hex: '#C0C0C0' }))).statusCode, 429);
+  assert.equal(limited.state.writes.length, 0);
+});
+test('une teinte est enregistrée atomiquement par nom sans modifier produit, variante, stock ou autres réglages', async () => {
+  const mock = archiveAdmin({ saveSetting: require('../netlify/functions/shared').saveSetting });
+  for (const name of ['Gris maison', 'Bleu maison', 'Gris maison']) {
+    const response = await mock.handler(event({ action: 'saveColorSwatch', name, hex: '#c0c0c0', stock: 999, active: true }));
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(JSON.parse(response.body), { swatch: { name: name.toLowerCase(), hex: '#C0C0C0' } });
+  }
+  assert.deepEqual(mock.state.tables, ['settings', 'settings', 'settings']);
+  assert.deepEqual(mock.state.writes.map(row => row.key), ['product-color:gris maison', 'product-color:bleu maison', 'product-color:gris maison']);
+  assert.deepEqual(mock.state.writes.map(row => Object.keys(row).sort()), Array(3).fill(['key', 'updated_at', 'value']));
+});
+test('nom et teinte invalides ou erreur SQL ne deviennent jamais un faux succès', async () => {
+  for (const [name, hex] of [['', '#112233'], ['x'.repeat(81), '#112233'], ['Deux,couleurs', '#112233'], ['__proto__', '#112233'], ['Gris', 'url(https://example.test)'], ['Gris', '#123'], ['Gris', '#112233; color:red']]) {
+    const mock = archiveAdmin();
+    assert.equal((await mock.handler(event({ action: 'saveColorSwatch', name, hex }))).statusCode, 400);
+    assert.equal(mock.state.writes.length, 0);
+    assert.equal(mock.state.limits, 0);
+  }
+  const failed = archiveAdmin({ saveSetting: async () => { throw new Error('private provider details'); } });
+  const result = await failed.handler(event({ action: 'saveColorSwatch', name: 'Gris', hex: '#112233' }));
+  assert.equal(result.statusCode, 503);
+  assert(!result.body.includes('private provider details'));
+});
 test('l’archivage en lot exige la session admin avant toute écriture', async () => {
   const mock = archiveAdmin({ requireAdmin: async () => ({ ok: false }) });
   assert.equal((await mock.handler(event({ action: 'archiveProducts', ids: [archiveId] }))).statusCode, 401);
