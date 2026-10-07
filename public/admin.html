@@ -626,6 +626,28 @@
     <!-- SETTINGS -->
     <div class="admin-panel" id="panel-settings">
       <div class="card">
+        <h3>Mondial Relay &mdash; connexion Sendcloud</h3>
+        <p>V&eacute;rifications en lecture seule : aucun achat d&rsquo;&eacute;tiquette, aucun changement de commande et aucun email client.</p>
+        <p>Colissimo reste s&eacute;par&eacute;. Ce diagnostic ne confirme ni la gratuit&eacute; de votre formule ni les tarifs de transport.</p>
+        <div class="toolbar">
+          <button type="button" class="btn btn-secondary" id="testSendcloudBtn">Tester la connexion sans achat</button>
+        </div>
+        <div id="sendcloudDiagnostics" role="status" aria-live="polite">Connexion non test&eacute;e. Les cl&eacute;s se configurent uniquement dans Netlify, jamais ici.</div>
+        <hr>
+        <form id="sendcloudPointsForm">
+          <div class="toolbar">
+            <div class="field">
+              <label for="sendcloudPostalCode">Code postal &mdash; France m&eacute;tropolitaine</label>
+              <input id="sendcloudPostalCode" name="postal_code" inputmode="numeric" pattern="(?:0[1-9]|[1-8][0-9]|9[0-5])[0-9]{3}" maxlength="5" placeholder="75001" required>
+            </div>
+            <button type="submit" class="btn btn-secondary" id="searchSendcloudPointsBtn">Tester la recherche de relais</button>
+          </div>
+        </form>
+        <div id="sendcloudPoints" role="status" aria-live="polite"></div>
+        <p>Cette liste est un aper&ccedil;u technique, pas encore un choix de relais au checkout. La disponibilit&eacute; pour le colis devra &ecirc;tre revalid&eacute;e.</p>
+        <p>Le suivi automatique et les notifications ne sont pas encore activ&eacute;s sur ce site. N&rsquo;activez pas le webhook dans Sendcloud pour l&rsquo;instant.</p>
+      </div>
+      <div class="card">
         <h3>Frais de livraison &amp; taxes</h3>
         <div class="form-grid">
           <div class="field"><label>Standard ($)</label><input type="number" step="0.01" min="0" id="setStd"></div>

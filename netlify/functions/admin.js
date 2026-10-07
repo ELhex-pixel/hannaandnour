@@ -218,6 +218,11 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     // ---- Everything below requires a valid admin session ----
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (['sendcloudDiagnostics', 'searchSendcloudServicePoints'].includes(action)) {
+      const limited = await rateLimit(sb, event, 'admin-sendcloud', 30, 600, 'admin');
+      if (limited) return limited;
+      return await require('./lib/sendcloud').adminSendcloud(action, body);
+    }
     if (['getTiktokMetadata', 'saveTiktokMetadata', 'exportTiktokProducts'].includes(action)) {
       const limited = await rateLimit(sb, event, 'admin-tiktok', 60, 3600, 'admin');
       if (limited) return limited;

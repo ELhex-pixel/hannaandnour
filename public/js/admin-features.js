@@ -68,4 +68,80 @@
   }
   document.getElementById('refreshReturnRequests').addEventListener('click', renderReturns);
   document.querySelector('[data-tab="returns"]').addEventListener('click', renderReturns);
+
+  var sendcloudBtn = document.getElementById('testSendcloudBtn');
+  var sendcloudBox = document.getElementById('sendcloudDiagnostics');
+  function sendcloudLine(message) {
+    var paragraph = document.createElement('p');
+    paragraph.textContent = message;
+    sendcloudBox.appendChild(paragraph);
+  }
+  sendcloudBtn.addEventListener('click', function () {
+    sendcloudBtn.disabled = true;
+    sendcloudBox.textContent = 'Vérification Sendcloud, sans achat…';
+    call('sendcloudDiagnostics').then(function (res) {
+      sendcloudBox.textContent = '';
+      var status = res.sendcloud;
+      if (!status.configured) {
+        sendcloudLine('Clés serveur absentes ou invalides. Vérifiez SENDCLOUD_PUBLIC_KEY et SENDCLOUD_SECRET_KEY dans Netlify (Functions, contexte Production), puis redéployez.');
+        return;
+      }
+      sendcloudLine(status.authenticated ? 'Authentification API v3 réussie.' : 'Authentification non confirmée.');
+      var integration = status.integration;
+      if (!integration.ok) {
+        sendcloudLine('Intégration : ' + integration.error);
+      } else {
+        sendcloudLine('Intégration n° ' + integration.id + '.');
+        sendcloudLine(integration.service_points_enabled && integration.mondial_relay_enabled
+          ? 'Points relais Mondial Relay activés dans Sendcloud.' : 'Activez Service Point delivery et cochez Mondial Relay dans Sendcloud → Integrations.');
+        if (integration.other_carriers_enabled) sendcloudLine('Attention : d’autres transporteurs sont cochés dans Sendcloud. Conservez uniquement Mondial Relay pour cette connexion.');
+        if (integration.webhook_active) sendcloudLine('Attention : webhook actif dans Sendcloud, mais sa réception n’est pas encore installée sur ce site.');
+        if (integration.feedback_type === 'eager') sendcloudLine('Attention : le mode eager peut annoncer une expédition dès la création de l’étiquette. Ce n’est pas une prise en charge réelle.');
+      }
+      var contracts = status.contracts;
+      if (!contracts.ok) {
+        sendcloudLine('Contrat Mondial Relay : ' + contracts.error);
+      } else {
+        sendcloudLine(contracts.active ? contracts.active + ' contrat(s) Mondial Relay actif(s) trouvé(s). Les tarifs restent à vérifier chez le transporteur.'
+          : contracts.pending ? 'Contrat Mondial Relay en cours de validation.' : 'Aucun contrat Mondial Relay actif trouvé dans ce résultat. Vérifiez le contrat dans Sendcloud.');
+        if (contracts.incomplete) sendcloudLine('La liste des contrats est partielle ; l’absence dans ce premier lot ne prouve pas l’absence de contrat.');
+      }
+      var addresses = status.sender_addresses;
+      if (!addresses.ok) {
+        sendcloudLine('Adresse expéditeur : ' + addresses.error);
+      } else {
+        sendcloudLine(addresses.france ? 'Adresse(s) expéditeur en France métropolitaine trouvée(s). Vérifiez leur exactitude directement dans Sendcloud → Addresses.'
+          : 'Aucune adresse expéditeur en France métropolitaine trouvée dans ce résultat. Vérifiez Sendcloud → Addresses.');
+        if (addresses.incomplete) sendcloudLine('La liste des adresses est partielle.');
+      }
+      sendcloudLine('Aucun achat effectué. Suivi automatique et emails de livraison non activés par ce test.');
+    }).catch(function (error) { sendcloudBox.textContent = error.message; })
+      .finally(function () { sendcloudBtn.disabled = false; });
+  });
+
+  document.getElementById('sendcloudPointsForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var button = document.getElementById('searchSendcloudPointsBtn');
+    if (button.disabled) return;
+    var list = document.getElementById('sendcloudPoints');
+    var postalCode = document.getElementById('sendcloudPostalCode').value.trim();
+    button.disabled = true;
+    list.textContent = 'Recherche des relais Mondial Relay…';
+    call('searchSendcloudServicePoints', { postal_code: postalCode }).then(function (res) {
+      list.textContent = '';
+      if (!res.points.length) {
+        list.textContent = res.geocoding_status === 'not_found' ? 'Code postal non localisé par Sendcloud.' : 'Aucun point Mondial Relay trouvé dans cette recherche.';
+        return;
+      }
+      res.points.forEach(function (point) {
+        var paragraph = document.createElement('p');
+        var address = point.address;
+        paragraph.textContent = point.name + (point.type === 'locker' ? ' — Locker' : ' — Point relais') + ' · '
+          + [address.house_number, address.street, address.postal_code, address.city].filter(Boolean).join(' ')
+          + (point.distance !== null ? ' · ' + (point.distance / 1000).toFixed(1) + ' km' : '');
+        list.appendChild(paragraph);
+      });
+    }).catch(function (error) { list.textContent = error.message; })
+      .finally(function () { button.disabled = false; });
+  });
 })();

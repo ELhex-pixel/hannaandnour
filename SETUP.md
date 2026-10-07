@@ -73,6 +73,8 @@ Copiez `.env.example` en `.env` pour `netlify dev`, et définissez les mêmes va
 | `RESEND_API_KEY` | clé API Resend (optionnel) pour l'email de confirmation de commande |
 | `MAIL_FROM` | expéditeur des emails (optionnel), ex. `Hanna & Nour <no-reply@votre-domaine.com>` |
 | `CONTACT_EMAIL` | destinataire des messages du formulaire de contact (optionnel, défaut `care@hannanour.com`) |
+| `SENDCLOUD_PUBLIC_KEY` | identifiant de l’intégration API Sendcloud dédiée à Mondial Relay, serveur uniquement |
+| `SENDCLOUD_SECRET_KEY` | clé secrète de cette intégration, serveur uniquement |
 | `ADMIN_PASSWORD` | mot de passe de l'espace admin (`/admin`) — le définir obligatoirement |
 
 ## 4ter. Espace administrateur (`/admin`)
@@ -192,6 +194,21 @@ Le générateur conserve le contenu de tous les autres composants ZIP du modèle
 **Ce n’est pas une synchronisation.** Ce modèle sert à créer des produits ; réimporter un fichier de création n’est pas une méthode fiable pour mettre à jour les annonces existantes. Une quantité 0 n’a aucun effet tant que TikTok n’a pas accepté l’opération appropriée. Pour les stocks déjà publiés, utiliser le modèle de modification du Seller Center ou une intégration API distincte. Un export ne réserve aucune pièce et ne protège pas contre les ventes concurrentes du même stock sur deux canaux ; séparer les quantités allouées ou synchroniser via API avant de partager un stock critique.
 
 Les actions `getTiktokMetadata`, `saveTiktokMetadata` et `exportTiktokProducts` exigent une session admin en en-tête et une limite persistante (60 appels/heure). Aucune donnée client/commande et aucun secret TikTok ne sont inclus. Invariants vérifiés : règles de prix communes, lecture serveur des montants/stocks, RLS des réglages, session admin et débit limité. Aucun paiement, webhook, décrément de stock ou effet externe n’est ajouté : les règles de reprise/idempotence et de réservation ne sont pas sollicitées. `@xmldom/xmldom` est une dépendance de **test** uniquement ; la génération dans le navigateur n’ajoute aucune dépendance de production.
+
+### Diagnostic Sendcloud / Mondial Relay, sans achat
+
+L’intégration utilise **l’API v3**, depuis le serveur uniquement. Dans Sendcloud → Integrations, créer une intégration API dédiée à Hanna & Nour, activer **Service Point delivery** et cocher uniquement **Mondial Relay**. Conserver les clés dans un gestionnaire de mots de passe, puis renseigner `SENDCLOUD_PUBLIC_KEY` et `SENDCLOUD_SECRET_KEY` dans les variables Netlify disponibles pour **Functions**, contexte **Production**. Même la clé appelée « Public Key » n’est pas transmise au navigateur. Ne pas activer le webhook tant que sa réception n’est pas développée.
+
+Après publication explicitement autorisée et redéploiement des variables, **Admin → Paramètres → Mondial Relay — connexion Sendcloud** permet :
+
+- **Tester la connexion sans achat** : vérifier l’authentification, les réglages de l’intégration, la présence de contrats Mondial Relay actifs et d’adresses expéditeur en France métropolitaine. Les adresses privées, numéros d’entreprise, identifiants du contrat, URL webhook et clés ne sont ni affichés ni journalisés. Les listes de contrats/adresses sont limitées au premier lot de 100 ; un résultat partiel est signalé, jamais interprété comme une preuve d’absence.
+- **Tester la recherche de relais** : code postal métropolitain, rayon de 15 km, au maximum 20 résultats frais, filtrés côté serveur sur Mondial Relay et France métropolitaine. Une fiche de relais fraîche ne garantit pas sa disponibilité pour un colis précis ; celle-ci devra être validée lors du futur checkout.
+
+Les actions `sendcloudDiagnostics` et `searchSendcloudServicePoints` exigent la session admin en en-tête, avec un débit persistant partagé de **30 appels / 10 minutes**. Les requêtes Sendcloud sont exclusivement des **GET**, sur une liste fermée d’URL officielles v3, sans redirection ni reprise automatique, bornées à cinq secondes par appel et 512 Kio par réponse. Les erreurs retournées sont prédéfinies : aucune réponse brute du fournisseur ou exception réseau contenant des secrets n’est exposée. Une erreur sur un contrôle secondaire est affichée séparément, sans invalider une authentification réussie.
+
+**Ce n’est pas encore l’automatisation des livraisons.** Aucun achat d’étiquette, import de commande, paiement, webhook, email ou changement de stock/statut n’est ajouté. Le sélecteur client, la revalidation du relais, la création officielle d’affranchissement et le suivi automatique restent à développer après validation des accès et des conditions. Colissimo reste séparé. Aucun test réel Sendcloud n’est exécuté pendant le développement : les tests utilisent des réponses simulées. Le diagnostic ne prouve pas l’absence d’abonnement ni les tarifs/quota contractuels.
+
+Invariants vérifiés pour cette étape : clés côté serveur, session admin en en-tête, débit persistant et validation serveur des recherches. Aucun nouveau stockage/table/RPC métier n’est nécessaire : pas de migration ni de seed. Les montants, remises, taxes, réservations et stocks restent inchangés ; les invariants de paiement, webhook, claim d’email et concurrence métier ne sont pas sollicités par ces lectures.
 
 ### Données historiques et limites
 
