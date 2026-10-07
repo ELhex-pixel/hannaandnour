@@ -346,6 +346,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
         return json(200, { ok: true });
       }
 
+      case 'activateProducts':
       case 'archiveProducts': {
         if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100 || body.ids.some(id => typeof id !== 'string' || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))) {
           return json(400, { error: 'Sélection invalide : 1 à 100 identifiants de produits requis.' });
@@ -353,9 +354,10 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
         const limited = await rateLimit(sb, event, 'admin-archive', 30, 600, 'admin');
         if (limited) return limited;
         const ids = [...new Set(body.ids)];
-        const { data, error } = await sb.from('products').update({ active: false }).in('id', ids).select('id');
+        const active = action === 'activateProducts';
+        const { data, error } = await sb.from('products').update({ active }).in('id', ids).select('id');
         if (error) throw error;
-        return json(200, { archived_ids: (data || []).map(product => product.id) });
+        return json(200, { [active ? 'activated_ids' : 'archived_ids']: (data || []).map(product => product.id) });
       }
 
       case 'uploadImage': {

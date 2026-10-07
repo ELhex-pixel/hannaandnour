@@ -63,6 +63,11 @@
     closeProductEditor();
     productSelection = {};
     productsAll = [];
+    productBulkBusy = false;
+    productBulkRevision++;
+    document.getElementById('productBulkStatus').textContent = '';
+    document.getElementById('productBulkStatus').hidden = true;
+    updateProductSelection();
     productRequest++;
     document.getElementById('productsList').textContent = '';
     document.getElementById('productStats').textContent = '';
@@ -263,13 +268,15 @@
   var productsAll = [];
   var productSelection = {};
   var productRequest = 0;
-  var archiveBusy = false;
+  var productBulkBusy = false;
+  var productBulkRevision = 0;
 
   function updateProductSelection() {
     var count = Object.keys(productSelection).length;
     document.getElementById('productSelectionCount').textContent = count ? count + ' produit(s) sélectionné(s), y compris hors filtre' : 'Aucun produit sélectionné';
-    document.getElementById('archiveSelectedProducts').disabled = !count || archiveBusy;
-    document.getElementById('clearProductSelection').disabled = !count || archiveBusy;
+    document.getElementById('activateSelectedProducts').disabled = !count || productBulkBusy;
+    document.getElementById('archiveSelectedProducts').disabled = !count || productBulkBusy;
+    document.getElementById('clearProductSelection').disabled = !count || productBulkBusy;
   }
 
   function productRow(p) {
@@ -277,7 +284,7 @@
     var totalStock = (p.variants || []).reduce(function (n, v) { return n + (v.active === false ? 0 : (parseInt(v.stock, 10) || 0)); }, 0);
     var managed = (p.variants || []).length > 0;
     return '<tr>' +
-      '<td data-label="Sélection"><input type="checkbox" class="select-product" data-id="' + esc(p.id) + '" aria-label="Sélectionner ' + esc(p.name_fr || p.name_en) + '"' + (productSelection[p.id] ? ' checked' : '') + (archiveBusy ? ' disabled' : '') + '></td>' +
+      '<td data-label="Sélection"><input type="checkbox" class="select-product" data-id="' + esc(p.id) + '" aria-label="Sélectionner ' + esc(p.name_fr || p.name_en) + '"' + (productSelection[p.id] ? ' checked' : '') + (productBulkBusy ? ' disabled' : '') + '></td>' +
       '<td data-label=""><img class="thumb" src="' + esc(p.image || 'images/hero.jpg') + '" alt=""></td>' +
       '<td data-label="Produit"><strong>' + esc(p.name_fr || p.name_en) + '</strong><br><small>' + esc(p.sku || p.slug) + '</small></td>' +
       '<td data-label="Prix">' + money(p.price_cents) + '</td>' +
@@ -323,7 +330,7 @@
     });
     updateProductSelection();
     if (!list.length) { box.innerHTML = '<p class="empty">Aucun produit pour ces filtres. Changez la recherche ou créez une fiche.</p>'; return; }
-    box.innerHTML = '<table class="admin-table"><thead><tr><th><input type="checkbox" id="selectVisibleProducts" aria-label="Sélectionner les produits affichés"' + (list.every(function (p) { return productSelection[p.id]; }) ? ' checked' : '') + (archiveBusy ? ' disabled' : '') + '></th><th>Photo</th><th>Produit</th><th>Prix</th><th>Catégorie</th><th>Stock</th><th>Visibilité</th><th>Actions</th></tr></thead><tbody>' +
+    box.innerHTML = '<table class="admin-table"><thead><tr><th><input type="checkbox" id="selectVisibleProducts" aria-label="Sélectionner les produits affichés"' + (list.every(function (p) { return productSelection[p.id]; }) ? ' checked' : '') + (productBulkBusy ? ' disabled' : '') + '></th><th>Photo</th><th>Produit</th><th>Prix</th><th>Catégorie</th><th>Stock</th><th>Visibilité</th><th>Actions</th></tr></thead><tbody>' +
       list.map(productRow).join('') + '</tbody></table>';
   }
 
@@ -2787,7 +2794,7 @@
     document.getElementById('filterCategory').addEventListener('change', renderProducts);
     document.getElementById('filterProductVisibility').addEventListener('change', renderProducts);
     document.getElementById('productsList').addEventListener('change', function (e) {
-      if (archiveBusy) return;
+      if (productBulkBusy) return;
       if (e.target.id === 'selectVisibleProducts') {
         this.querySelectorAll('.select-product').forEach(function (checkbox) {
           var id = checkbox.getAttribute('data-id');
@@ -2801,29 +2808,36 @@
       }
       renderProducts();
     });
-    document.getElementById('clearProductSelection').addEventListener('click', function () { if (!archiveBusy) { productSelection = {}; renderProducts(); } });
-    document.getElementById('archiveSelectedProducts').addEventListener('click', function () {
-      if (archiveBusy) return;
-      var ids = Object.keys(productSelection);
-      if (!ids.length) return;
-      if (ids.length > 100) { toast('Sélectionnez au maximum 100 produits par opération.', 'err'); return; }
-      if (!confirm('Archiver ces ' + ids.length + ' produits, y compris ceux masqués par vos filtres ?\n\n' + productsAll.filter(function (p) { return productSelection[p.id]; }).map(function (p) { return p.name_fr || p.name_en || p.slug; }).join('\n') + '\n\nIls ne seront plus vendus. Les commandes, photos et stocks restent conservés.')) return;
-      var owner = token();
-      var status = document.getElementById('productBulkStatus');
-      archiveBusy = true;
-      status.hidden = false;
-      status.textContent = 'Archivage en cours…';
-      renderProducts();
-      call('archiveProducts', { ids: ids }).then(function (res) {
-        if (owner !== token()) return;
-        var archived = res.archived_ids || [];
-        archived.forEach(function (id) { delete productSelection[id]; });
-        status.textContent = archived.length + ' produit(s) archivé(s). Historique et stock conservés.' + (archived.length < ids.length ? ' Certains produits n’ont pas été trouvés : vérifiez la liste actualisée.' : '');
-        return loadProducts();
-      }).catch(function (error) {
-        if (owner !== token()) return;
-        status.textContent = 'Archivage non confirmé : ' + error.message + '. Actualisez la liste pour vérifier avant de recommencer.';
-      }).finally(function () { archiveBusy = false; if (owner === token()) renderProducts(); });
+    document.getElementById('clearProductSelection').addEventListener('click', function () { if (!productBulkBusy) { productSelection = {}; renderProducts(); } });
+    ['activateSelectedProducts', 'archiveSelectedProducts'].forEach(function (buttonId) {
+      document.getElementById(buttonId).addEventListener('click', function () {
+        if (productBulkBusy) return;
+        var ids = Object.keys(productSelection);
+        if (!ids.length) return;
+        if (ids.length > 100) { toast('Sélectionnez au maximum 100 produits par opération.', 'err'); return; }
+        var activate = buttonId === 'activateSelectedProducts';
+        var notice = activate ? 'Ils seront remis en ligne. Vérifiez les fiches, les prix et les stocks avant la vente. Un stock non configuré peut autoriser des ventes sans limite. Aucune quantité ne sera ajoutée ; les commandes, photos et stocks restent conservés.' : 'Ils ne seront plus vendus. Les commandes, photos et stocks restent conservés.';
+        if (!confirm((activate ? 'Activer' : 'Archiver') + ' ces ' + ids.length + ' produits, y compris ceux masqués par vos filtres ?\n\n' + productsAll.filter(function (p) { return productSelection[p.id]; }).map(function (p) { return p.name_fr || p.name_en || p.slug; }).join('\n') + '\n\n' + notice)) return;
+        var owner = token(), request = ++productBulkRevision;
+        function active() { return owner === token() && request === productBulkRevision; }
+        var status = document.getElementById('productBulkStatus');
+        productBulkBusy = true;
+        status.hidden = false;
+        status.textContent = activate ? 'Activation en cours…' : 'Archivage en cours…';
+        renderProducts();
+        call(activate ? 'activateProducts' : 'archiveProducts', { ids: ids }).then(function (res) {
+          if (!active()) return;
+          var changed = res[activate ? 'activated_ids' : 'archived_ids'];
+          if (!Array.isArray(changed) || changed.some(function (id) { return ids.indexOf(id) < 0; })) throw new Error('Réponse incomplète : vérifiez la visibilité avant de réessayer.');
+          changed = changed.filter(function (id, index) { return changed.indexOf(id) === index; });
+          changed.forEach(function (id) { delete productSelection[id]; });
+          status.textContent = changed.length + ' produit(s) ' + (activate ? 'activé(s)' : 'archivé(s)') + '. Historique et stock conservés.' + (changed.length < ids.length ? ' Certains produits n’ont pas été trouvés : vérifiez la liste actualisée.' : '');
+          return loadProducts();
+        }).catch(function (error) {
+          if (!active()) return;
+          status.textContent = (activate ? 'Activation non confirmée : ' : 'Archivage non confirmé : ') + error.message + '. Actualisez la liste pour vérifier avant de recommencer.';
+        }).finally(function () { if (active()) { productBulkBusy = false; renderProducts(); } });
+      });
     });
   }
 

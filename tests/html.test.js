@@ -35,6 +35,11 @@ test('l’admin modernisé conserve les rubriques et isole les opérations sensi
   assert($('#deleteProductBtn').text().includes('Archiver'));
   for (const id of ['filterProducts', 'filterCategory', 'filterProductVisibility']) assert($('#' + id).attr('aria-label'));
   for (const id of ['f-price', 'f-compare', 'f-image']) assert.equal($('label[for="' + id + '"]').length, 1);
+  for (const id of ['activateSelectedProducts', 'archiveSelectedProducts', 'clearProductSelection']) {
+    assert.equal($('#' + id).parents('.admin-bulk-bar').length, 1);
+    assert($('#' + id).is('[disabled]'));
+    assert.equal($('#' + id).attr('type'), 'button');
+  }
 });
 test('l’admin occupe la largeur disponible sans marge extérieure', () => {
   const css = fs.readFileSync('public/css/styles.css', 'utf8');

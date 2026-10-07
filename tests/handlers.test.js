@@ -109,13 +109,13 @@ test('un remboursement arrivé avant le paiement retrouve la commande via les m�
   assert.equal(mock.state.rpc[0].args.p_order_id, 'order');
 });
 
-function archiveAdmin(overrides = {}, databaseError = false) {
+function archiveAdmin(overrides = {}, databaseError = false, returnedIds = null) {
   const exports = {};
   const state = { writes: [], ids: [], tables: [], limits: 0, inventory: [] };
   const query = {
     update(fields) { state.writes.push(fields); return this; },
     in(field, ids) { assert.equal(field, 'id'); state.ids = Array.from(ids); return this; },
-    select(fields) { assert.equal(fields, 'id'); return Promise.resolve({ data: state.ids.map(id => ({ id })), error: databaseError ? new Error('Database unavailable') : null }); }
+    select(fields) { assert.equal(fields, 'id'); return Promise.resolve({ data: (returnedIds || state.ids).map(id => ({ id })), error: databaseError ? new Error('Database unavailable') : null }); }
   };
   const shared = {
     json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }), isConfigured: () => true,
@@ -158,6 +158,53 @@ test('la limite de débit et les erreurs de base ne produisent pas de faux succ�
   assert.equal(limited.state.writes.length, 0);
   const failed = archiveAdmin({}, true);
   assert.equal((await failed.handler(event({ action: 'archiveProducts', ids: [archiveId] }))).statusCode, 500);
+});
+test('l’activation en lot exige la session admin avant toute écriture ou limite', async () => {
+  const mock = archiveAdmin({ requireAdmin: async () => ({ ok: false }) });
+  assert.equal((await mock.handler(event({ action: 'activateProducts', ids: [archiveId] }))).statusCode, 401);
+  assert.equal(mock.state.writes.length, 0);
+  assert.equal(mock.state.limits, 0);
+});
+test('l’activation refuse une sélection vide, trop longue ou mal formée', async () => {
+  for (const ids of [undefined, [], ['invalid'], [null], [1], Array(101).fill(archiveId), 'not-an-array']) {
+    const mock = archiveAdmin();
+    assert.equal((await mock.handler(event({ action: 'activateProducts', ids }))).statusCode, 400);
+    assert.equal(mock.state.writes.length, 0);
+  }
+});
+test('l’activation force uniquement la visibilité et déduplique les identifiants sans stock ni paiement', async () => {
+  const mock = archiveAdmin();
+  const response = await mock.handler(event({ action: 'activateProducts', ids: [archiveId, archiveId], active: false, stock: 999, price_cents: 1 }));
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(JSON.parse(response.body), { activated_ids: [archiveId] });
+  assert.deepEqual(JSON.parse(JSON.stringify(mock.state.writes)), [{ active: true }]);
+  assert.deepEqual(mock.state.ids, [archiveId]);
+  assert.deepEqual(mock.state.tables, ['products']);
+  assert.equal(mock.state.limits, 1);
+});
+test('la limite de débit et les erreurs de base empêchent un faux succès d’activation', async () => {
+  const limited = archiveAdmin({ rateLimit: async () => ({ statusCode: 429 }) });
+  assert.equal((await limited.handler(event({ action: 'activateProducts', ids: [archiveId] }))).statusCode, 429);
+  assert.equal(limited.state.writes.length, 0);
+  const failed = archiveAdmin({}, true);
+  assert.equal((await failed.handler(event({ action: 'activateProducts', ids: [archiveId] }))).statusCode, 500);
+});
+test('l’activation ne déclare que les produits retrouvés, y compris une sélection disparue', async () => {
+  const otherId = '22222222-2222-4222-8222-222222222222';
+  for (const returned of [[archiveId], []]) {
+    const mock = archiveAdmin({}, false, returned);
+    const response = await mock.handler(event({ action: 'activateProducts', ids: [archiveId, otherId] }));
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(JSON.parse(response.body).activated_ids, returned);
+  }
+});
+test('réessayer une activation conserve la même visibilité sans mouvement de stock', async () => {
+  const mock = archiveAdmin();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    assert.equal((await mock.handler(event({ action: 'activateProducts', ids: [archiveId] }))).statusCode, 200);
+  }
+  assert.deepEqual(JSON.parse(JSON.stringify(mock.state.writes)), [{ active: true }, { active: true }]);
+  assert.deepEqual(mock.state.tables, ['products', 'products']);
 });
 test('l’upload de photos exige une session et respecte le débit avant tout accès Storage', async () => {
   const denied = archiveAdmin({ requireAdmin: async () => ({ ok: false }) });
