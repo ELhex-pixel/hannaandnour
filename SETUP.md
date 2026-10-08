@@ -221,6 +221,16 @@ Le guide client lit les champs existants `fit_fr/en/ar` (tailles conseillées ou
 
 Sans conseil enregistré, le guide reprend uniquement les tailles effectivement configurées, ou signale l’absence d’information. Les textes sont affichés via `textContent`, dans la langue renseignée avec repli sur un texte existant, sans traduction inventée. Enlever une mesure dans l’admin la masque après enregistrement et rechargement. Champs existants et bornés à 2 000 caractères côté serveur ; aucune migration, activation, modification de stock, paiement ni email n’est introduit. Les protections serveur, sessions et limites de débit restent inchangées.
 
+### Chargement du catalogue, des fiches, du panier et du devis
+
+Le build `scripts/build.js` prépare les cinq pages (`index`, `shop`, `product`, `cart`, `checkout`) avec des blocs neutres avant toute exécution JavaScript. Les anciennes cartes, photos, variantes, avis chiffrés et lignes de panier d’illustration ne sont pas publiés comme contenu initial ; les montants et les actions commerciales attendent les données. Les gabarits statiques sources restent des fichiers de prévisualisation, pas le dossier à déployer : seul `dist/` doit être publié.
+
+Les pages commerciales exigent une configuration serveur reçue avec succès. Une panne ne remplace jamais le catalogue par les cartes statiques ou son ancien cache. Le cache reste conservé, tout comme les articles du panier ; aucune fiche, commande ou quantité de stock n’est effacée. L’ajout rapide ne fabrique plus de produit à partir d’une carte inconnue : il ouvre sa fiche. Les chargements JSON du catalogue et du devis ont un délai maximal de 12 secondes, avec un message et un bouton Réessayer en cas d’échec. Une panne des facettes facultatives ne bloque pas l’affichage des vrais produits.
+
+Le panier attend la configuration et les fiches sélectionnées avant d’afficher son estimation. Le paiement attend le devis serveur pour afficher articles, monnaie et totaux ; une nouvelle demande masque les anciens montants et désactive le bouton de paiement jusqu’à la réponse. Les versions du devis protègent toujours contre les réponses arrivant dans le désordre. Le devis et la reconfirmation du montant, de la monnaie et de la politique de retours restent inchangés côté serveur.
+
+Contrôles commerce : règles et calculs serveur/client conservés, prix reçus du navigateur toujours revalidés côté serveur, allocations de remise et protections des paiements inchangées. Aucun schéma, accès aux tables, rôle, session, webhook, stock, réservation ou envoi d’email modifié. Les quotas existants continuent de protéger les devis ; Réessayer ne crée ni commande ni session Stripe. Tests de données fictives uniquement, avec panne, attente, catalogue vide, fiche introuvable et FR/EN/AR ordinateur/mobile.
+
 ### Staging isolé
 
 1. Créer un second projet Supabase et y exécuter le schéma et les migrations. Utiliser seulement des données de test, pas les données personnelles de production.

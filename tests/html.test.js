@@ -119,6 +119,45 @@ test('le guide des tailles ne contient aucune mesure ni recommandation de démon
   const dict=require('../public/js/i18n');
   for(const lang of ['fr','en','ar']) assert(dict[lang].sgUnspecified);
 });
+test('les cinq pages publiées commencent par des blocs neutres sans fiches, panier ou prix démo', () => {
+  const { prepareLivePage } = require('../scripts/build');
+  for (const file of ['index.html','shop.html','product.html','cart.html','checkout.html']) {
+    const $ = cheerio.load(fs.readFileSync('public/'+file,'utf8'));
+    prepareLivePage($,file);
+    assert.equal($('body').attr('data-live-page'),file);
+    assert($('[aria-busy="true"]').length > 0,file);
+    assert($('.live-skeleton-card, .live-skeleton-row').length > 0,file);
+    assert.equal($('.product-card, .cart-item').length,0,file);
+    assert.equal($('a[href*="slug=silk-hijab"], a[href*="slug=flowing-abaya"], a[href*="slug=prayer-set"]').length,0,file);
+    if (file === 'shop.html') {
+      assert.equal($('.shop-results').text(),'');
+      assert($('#loadMore').is('[hidden][disabled]'));
+      assert.equal($('.filter-count').text(),'');
+    }
+    if (file === 'cart.html' || file === 'checkout.html') {
+      const prefix = file === 'cart.html' ? 'cart' : 'checkout';
+      assert.equal($('[id^="'+prefix+'Summary"]').text(),'');
+      assert.equal($('.cart-items img, .checkout-items img').length,0);
+    }
+    if (file === 'cart.html') assert.equal($('.cart-checkout a').attr('aria-disabled'),'true');
+    if (file === 'checkout.html') {
+      assert($('#placeOrderBtn').is('[disabled]'));
+      assert.equal($('.payment-method[data-method] strong').text(),'');
+    }
+    if (file === 'product.html') {
+      assert.equal($('[data-product-content][hidden][inert]').length,2);
+      assert.equal($('#mainImage').attr('src'),undefined);
+      assert.equal($('.product-price, .product-short-desc, #tab-description ul, #tab-fabric ul').text(),'');
+      assert.equal($('.color-option, .size-option').length,0);
+      assert.equal($('.product-title').attr('data-i18n'),undefined);
+      assert.equal($('.product-category').attr('data-i18n'),undefined);
+      assert($('#addToCartBtn, #buyNowBtn').toArray().every(node=>$(node).is('[disabled]')));
+    }
+    if (file === 'index.html') assert.equal($('#testimonialsSection').css('display'),'none');
+  }
+  const $ = cheerio.load(fs.readFileSync('public/admin.html','utf8'));
+  const original = $.html(); prepareLivePage($,'admin.html'); assert.equal($.html(),original);
+});
 test('le domaine et l’email de la boutique sont cohérents dans les sources publiées', () => {
   function files(dir) {
     return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {

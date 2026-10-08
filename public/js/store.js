@@ -16,6 +16,45 @@
     return API_BASE + '/' + name;
   }
 
+  function request(url, options) {
+    var controller = new AbortController();
+    var timer;
+    return new Promise(function (resolve, reject) {
+      timer = setTimeout(function () { controller.abort(); reject(new Error(tr('liveLoadError'))); }, 12000);
+      fetch(url, Object.assign({ cache: 'no-store' }, options || {}, { signal: controller.signal }))
+        .then(function (res) { return res.json().then(function (data) { if (!res.ok) throw new Error(data.error || tr('liveLoadError')); return data; }); })
+        .then(resolve, reject);
+    }).finally(function () { clearTimeout(timer); });
+  }
+
+  function loadingMarkup(layout, count) {
+    var html = '<span class="live-status" role="status" data-i18n="liveLoading">' + tr('liveLoading') + '</span>';
+    for (var i = 0; i < (count || 1); i++) {
+      html += '<div class="live-skeleton-' + (layout === 'row' ? 'row' : 'card') + '" aria-hidden="true"><div class="live-skeleton-image"></div><div class="live-skeleton-copy"><div class="live-skeleton-line"></div><div class="live-skeleton-line live-skeleton-short"></div></div></div>';
+    }
+    return html;
+  }
+
+  function loading(target, layout, count) {
+    if (!target) return;
+    target.setAttribute('aria-busy', 'true');
+    target.innerHTML = loadingMarkup(layout, count);
+  }
+
+  function loaded(target) {
+    if (target) target.setAttribute('aria-busy', 'false');
+  }
+
+  function loadError(target, retry, key) {
+    if (!target) return;
+    loaded(target);
+    target.textContent = '';
+    var box = document.createElement('div'); box.className = 'live-status';
+    var text = document.createElement('p'); text.setAttribute('role', 'status'); text.setAttribute('data-i18n', key || 'liveLoadError'); text.textContent = tr(key || 'liveLoadError');
+    var button = document.createElement('button'); button.type = 'button'; button.className = 'btn btn-outline'; button.setAttribute('data-i18n', 'liveRetry'); button.textContent = tr('liveRetry'); button.addEventListener('click', retry);
+    box.appendChild(text); box.appendChild(button); target.appendChild(box);
+  }
+
   function tr(key, params) {
     if (window.I18n && typeof window.I18n.t === 'function') {
       return window.I18n.t(key, params);
@@ -68,6 +107,7 @@
   var DEMO_COUNT = 3;
   var DEMO_SUM = 15;
   var configPromise = null;
+  var configOnline = false;
 
   function money(cents) {
     var v = (parseInt(cents, 10) || 0) / 100;
@@ -87,12 +127,9 @@
     if (cachedCfg.currency && cachedCfg.currency.code) {
       CURRENCY_CODE = cachedCfg.currency.code;
     }
-    configPromise = fetch(apiUrl('config'), { cache: 'no-store' })
-      .then(function (res) {
-        if (!res.ok) throw new Error('config request failed');
-        return res.json();
-      })
+    configPromise = request(apiUrl('config'))
       .then(function (data) {
+        configOnline = true;
         if (window.HN_COLORS && window.HN_COLORS.setSwatches) window.HN_COLORS.setSwatches(data.color_swatches || []);
         try {
           writeLS(CONFIG_CACHE_KEY, data);
@@ -107,12 +144,20 @@
         return data || {};
       })
       .catch(function () {
+        configOnline = false;
         configPromise = null;
         if (window.HN_COLORS && window.HN_COLORS.setSwatches) window.HN_COLORS.setSwatches(cachedCfg.color_swatches || []);
         applyConfigCopy(cachedCfg || {});
         return cachedCfg || {};
       }).finally(function () { configPending = false; });
     return configPromise;
+  }
+
+  function requireConfig(force) {
+    return loadConfig(force).then(function (data) {
+      if (!configOnline || !data.currency || !/^[a-z]{3}$/i.test(data.currency.code || '') || typeof data.currency.symbol !== 'string' || !data.currency.symbol.trim() || !data.settings || typeof data.settings !== 'object' || Array.isArray(data.settings)) throw new Error(tr('liveLoadError'));
+      return data;
+    });
   }
 
   function isAuthed() {
@@ -279,17 +324,12 @@
 
   function loadProducts(force) {
     if (!force && productsPromise) return productsPromise;
-    var cfg = configPromise || loadConfig();
+    var cfg = requireConfig();
     productsPromise = cfg.then(function () {
-      // Online: always re-fetch so admin edits (add/delete/price/featured)
-      // appear immediately. The localStorage cache is only an offline fallback.
-      return fetch(apiUrl('products'))
-        .then(function (res) {
-          if (!res.ok) throw new Error('products request failed');
-          return res.json();
-        })
+      return request(apiUrl('products'))
         .then(function (data) {
-          productsList = data.products || [];
+          if (!Array.isArray(data.products)) throw new Error(tr('liveLoadError'));
+          productsList = data.products;
           try {
             // Bound the cache so an oversized catalog never fills localStorage.
             if (JSON.stringify(productsList).length < 1500000) {
@@ -299,12 +339,6 @@
           return productsList;
         });
     }).catch(function (err) {
-      // Offline / API down: fall back to the last known catalog, then rethrow.
-      var cached = readLS(PROD_CACHE_KEY);
-      if (cached && Array.isArray(cached) && cached.length) {
-        productsList = cached;
-        return cached;
-      }
       productsPromise = null;
       throw err;
     });
@@ -312,10 +346,10 @@
   }
 
   function fetchProducts(params) {
-    return fetch(apiUrl('products') + '?' + new URLSearchParams(params || {}).toString()).then(function (res) {
-      if (!res.ok) throw new Error('products request failed');
-      return res.json();
-    }).then(function (data) { window.HN.rememberProducts(data.products || []); return data.products || []; });
+    return request(apiUrl('products') + '?' + new URLSearchParams(params || {}).toString()).then(function (data) {
+      if (!Array.isArray(data.products)) throw new Error(tr('liveLoadError'));
+      window.HN.rememberProducts(data.products); return data.products;
+    });
   }
 
   function loadProductSlugs(slugs) {
@@ -555,23 +589,11 @@
   function quickAdd(btn) {
     var card = btn && btn.closest ? btn.closest('.product-card, [data-slug]') : null;
     var slug = card ? card.getAttribute('data-slug') : (btn ? btn.getAttribute('data-slug') : null);
-    var product = slug ? getProduct(slug) : null;
-
-    if (!product && card) {
-      // Fallback when the catalog is unavailable: build from card data attributes.
-      var name = (card.querySelector('.product-card-title') || {}).textContent || tr('productFallback');
-      var price = parseInt(card.getAttribute('data-price-cents') || card.getAttribute('data-price'), 10) || 100;
-      product = {
-        slug: slug || 'product',
-        name_en: name,
-        price_cents: card.getAttribute('data-price-cents') ? price : (price * 100),
-        image: (card.querySelector('img') || {}).getAttribute ? card.querySelector('img').getAttribute('src') : ''
-      };
-    } else if (!product && slug) {
-      product = { slug: slug, name_en: slug, price_cents: 1, image: '' };
+    var product = productsList.filter(function (p) { return p.slug === slug && p.active !== false; })[0];
+    if (!product) {
+      if (slug) window.location.href = 'product.html?slug=' + encodeURIComponent(slug);
+      return;
     }
-
-    if (!product) return;
 
     // Products with managed variant stock need a color/size selection: the
     // one-tap button cannot pick a valid variant, so open the product page.
@@ -625,7 +647,7 @@
     // Re-announce the promo after a language switch (i18n resets [data-i18n]).
     document.addEventListener('langchange', function () { refreshPromoAnnounce(promosList); refreshFooterTrust(); });
     // Load the catalog in the background (rendering scripts call it too).
-    if (!window.HN_CONFIG_SUPPRESS_AUTOLOAD) {
+    if (!window.HN_CONFIG_SUPPRESS_AUTOLOAD && !document.body.hasAttribute('data-live-page')) {
       loadProducts().catch(function () { /* offline preview: static content remains */ });
     }
   }
@@ -640,6 +662,10 @@
     returnDays: function () { return RETURN_DAYS; },
     config: CONFIG,
     api: apiUrl,
+    request: request,
+    loading: loading,
+    loaded: loaded,
+    loadError: loadError,
     tr: tr,
     money: money,
     lang: currentLang,
@@ -675,6 +701,7 @@
     symbol: function () { return CURRENCY_SYMBOL; },
     currency: function () { return CURRENCY_CODE; },
     loadConfig: loadConfig,
+    requireConfig: requireConfig,
     loadPromos: loadPromos,
     promos: promos,
     promoRate: promoRate,

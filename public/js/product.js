@@ -99,20 +99,20 @@
 
   function renderInfo(p) {
     var catEl = document.querySelector('.product-category');
-    if (catEl) catEl.textContent = tr(catKey(p.category));
+    if (catEl) { catEl.removeAttribute('data-i18n'); catEl.textContent = tr(catKey(p.category)); }
 
     var infoEl = document.querySelector('.product-info');
     if (infoEl) infoEl.setAttribute('data-slug', p.slug);
 
     var titleEl = document.querySelector('.product-title');
-    if (titleEl) titleEl.textContent = HN.productName(p);
+    if (titleEl) { titleEl.removeAttribute('data-i18n'); titleEl.textContent = HN.productName(p); }
 
     var ratingWrapper = document.querySelector('.product-rating');
     if (ratingWrapper) {
       var starsEl = ratingWrapper.querySelector('.stars');
       if (starsEl) starsEl.textContent = KNOWN_REVIEW_COUNT ? stars(KNOWN_RATING) : '';
       var countEl = ratingWrapper.querySelector('.rating-count');
-      if (countEl) countEl.textContent = KNOWN_REVIEW_COUNT + ' ' + tr('reviewsLabel');
+      if (countEl) { countEl.removeAttribute('data-i18n'); countEl.textContent = KNOWN_REVIEW_COUNT + ' ' + tr('reviewsLabel'); }
     }
 
     var priceEl = document.querySelector('.product-price');
@@ -212,11 +212,13 @@
     // Description tab
     var descTab = document.getElementById('tab-description');
     if (descTab) {
+      var paragraphs = descTab.querySelectorAll('p');
+      paragraphs.forEach(function (paragraph, index) { paragraph.removeAttribute('data-i18n'); paragraph.textContent = index === 0 ? localized(p, 'description_en', 'description_fr', 'description_ar', '') : ''; });
       var features = listLocalized(p, 'features_en');
-      if (features.length) {
+      if (descTab.querySelector('ul')) {
         var heading = descTab.querySelector('h2');
         var list = descTab.querySelector('ul');
-        if (heading) heading.textContent = tr('whyTitle');
+        if (heading) { heading.textContent = tr('whyTitle'); heading.hidden = !features.length; }
         if (list) {
           var html = '';
           features.forEach(function (f) { html += '<li>' + esc(f) + '</li>'; });
@@ -241,12 +243,16 @@
     if (fabricTab) {
       var comp = fabricTab.querySelector('p');
       var compList = fabricTab.querySelector('ul');
-      if (comp) comp.textContent = localized(p, 'fabric_comp_en', 'fabric_comp_fr', 'fabric_comp_ar', '');
+      if (comp) { comp.removeAttribute('data-i18n'); comp.textContent = localized(p, 'fabric_comp_en', 'fabric_comp_fr', 'fabric_comp_ar', ''); }
       var care = listLocalized(p, 'care_en');
-      if (compList && care.length) {
+      if (compList) {
+        compList.textContent = '';
+      }
+      var careList = fabricTab.querySelectorAll('ul')[1];
+      if (careList) {
         var careHtml = '';
         care.forEach(function (c) { careHtml += '<li>' + esc(c) + '</li>'; });
-        compList.innerHTML = careHtml;
+        careList.innerHTML = careHtml;
       }
       var fabLine = document.getElementById('fabricListLine');
       if (fabLine) {
@@ -726,9 +732,14 @@
 
   /* ---- Init ---- */
 
-  function init() {
+  function init(force) {
     var slug = getSlug();
-    if (!slug) return;
+    var loading = document.getElementById('productLoading');
+    if (!loading) { loading = document.createElement('div'); loading.id = 'productLoading'; document.querySelector('.product-detail').before(loading); }
+    loading.hidden = false;
+    HN.loading(loading, 'card', 1);
+    document.querySelectorAll('[data-product-content]').forEach(function (section) { section.hidden = true; section.setAttribute('inert', ''); });
+    if (!slug) { HN.loadError(loading, function () { window.location.href = 'shop.html'; }, 'productNotFound'); return; }
 
     // Apply the persisted wishlist state to the detail heart right away,
     // without waiting for the catalog (slug is already known from the URL).
@@ -736,17 +747,17 @@
     if (infoEl) infoEl.setAttribute('data-slug', slug);
     HN.updateWishlistHearts();
 
-    HN.loadConfig().then(function (cfg) {
+    HN.requireConfig(force).then(function (cfg) {
       RETURNS_DAYS = HN.returnDays();
       if (cfg && cfg.reviews) DEMO_ON = !!cfg.reviews.show_demo;
-      return fetch(HN.api('products') + '?slug=' + encodeURIComponent(slug)).then(function (res) { if (!res.ok) throw new Error('not found'); return res.json(); }).then(function (data) { HN.rememberProducts(data.products || []); return data.products || []; });
+      return HN.fetchProducts({ slug: slug });
     })
       .then(function (products) {
         var p = null;
         for (var i = 0; i < products.length; i++) {
           if (products[i].slug === slug) { p = products[i]; break; }
         }
-        if (!p) throw new Error('not found');
+        if (!p) { HN.loadError(loading, function () { init(true); }, 'productNotFound'); return; }
         current = p;
         if (HN.track) HN.track('product_view', slug);
         renderInfo(p);
@@ -759,10 +770,12 @@
         updateReviewGate(p);
         updateStockUI();
         HN.updateWishlistHearts();
+        loading.hidden = true;
+        HN.loaded(loading);
+        document.querySelectorAll('[data-product-content]').forEach(function (section) { section.hidden = false; section.removeAttribute('inert'); });
       })
       .catch(function () {
-        showToast(tr('productNotFound'), tr('goToShop'), 'error');
-        setTimeout(function () { window.location.href = 'shop.html'; }, 1200);
+        HN.loadError(loading, function () { init(true); });
       });
   }
 
@@ -791,6 +804,7 @@
       document.querySelectorAll('.color-option').forEach(function (option) { option.classList.toggle('active', option.getAttribute('data-color') === previousColor); });
       renderGallery(current);
       renderDetails(current);
+      renderSizeGuide(current);
       updateStockUI();
       updateReviewGate(current);
       document.querySelectorAll('.review-verified').forEach(function (el) { el.textContent = tr('verifiedBadge'); });

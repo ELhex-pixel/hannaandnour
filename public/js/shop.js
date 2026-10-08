@@ -12,7 +12,6 @@
   var PAGE_SIZE = 8;
   var state = {
     items: [],
-    source: 'api', // 'api' | 'static'
     categories: [],
     sizes: [],
     occasions: [],
@@ -22,6 +21,7 @@
     page: 1,
     filtersOpen: false
   };
+  state.ready = false;
 
   var grid = document.getElementById('productsGrid');
   var loadMoreBtn = document.getElementById('loadMore');
@@ -52,11 +52,6 @@
   function escAttr(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
-
-  var DEFAULT_COLORS = ['Gold', 'Beige', 'Cream', 'Bronze', 'Espresso', 'White', 'Champagne'];
-  var DEFAULT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'One Size'];
-  var DEFAULT_FABRICS = ['Cotton', 'Silk', 'Chiffon', 'Jersey', 'Crepe', 'Velvet'];
-  var DEFAULT_OCCASIONS = ['Everyday', 'Eid', 'Wedding', 'Prayer', 'Work', 'Travel'];
 
   function collectValues(items, field) {
     var out = [];
@@ -123,135 +118,27 @@
       }).join('');
     }
 
-    updateCategoryCounts();
-  }
-
-  // Category counts (incl. "All Products") are real, computed from the catalog
-  // that loadProducts fetched from the API, so admin add/delete edits show up.
-  var CATEGORY_OPTIONS = [
-    { value: '', all: true },
-    { value: 'hijab', label: 'catHijabs' },
-    { value: 'abaya', label: 'catAbayas' },
-    { value: 'dress', label: 'catDresses' },
-    { value: 'prayer', label: 'catPrayerWear' },
-    { value: 'accessory', label: 'catAccessories' }
-  ];
-
-  function updateCategoryCounts() {
-    var items = state.items || [];
-    document.querySelectorAll('.filter-option[data-group="category"]').forEach(function (opt) {
-      var val = opt.getAttribute('data-value') || '';
-      var n = -1;
-      for (var i = 0; i < CATEGORY_OPTIONS.length; i++) {
-        if (CATEGORY_OPTIONS[i].value === val) {
-          n = CATEGORY_OPTIONS[i].all ? items.length : countValue(items, 'category', val);
-          break;
-        }
-      }
-      if (n < 0) return;
-      var countEl = opt.querySelector('.filter-count');
-      if (countEl) countEl.textContent = String(n);
-    });
+    document.querySelectorAll('.filter-count').forEach(function (node) { node.textContent = ''; });
+    setFilterControls();
   }
 
   function buildCard(p) {
     return HN.card(p);
   }
 
-  /* ---- Load items: API first, static cards as fallback ---- */
-
-  function itemsFromStaticCards() {
-    var cards = grid ? grid.querySelectorAll('.product-card') : [];
-    var items = [];
-    for (var i = 0; i < cards.length; i++) {
-      var c = cards[i];
-      var countMatch = null;
-      var countEl = c.querySelector('.rating-count');
-      if (countEl) {
-        var m = /\((\d+)\)/.exec(countEl.textContent || '');
-        if (m) countMatch = parseInt(m[1], 10);
-      }
-      items.push({
-        slug: c.getAttribute('data-slug') || c.getAttribute('data-category'),
-        category: normalizeCategory(c.getAttribute('data-category')),
-        price_cents: parseInt(c.getAttribute('data-price-cents'), 10) ||
-          (parseInt(c.getAttribute('data-price'), 10) || 0) * 100,
-        name_en: c.getAttribute('data-name') || tr('productFallback'),
-        image: c.getAttribute('data-image') || '',
-        rating: parseFloat(c.getAttribute('data-rating')) || 0,
-        review_count: countMatch || 0,
-        colors: DEFAULT_COLORS.slice(),
-        sizes: DEFAULT_SIZES.slice(),
-        fabrics: DEFAULT_FABRICS.slice(),
-        occasions: DEFAULT_OCCASIONS.slice(),
-        compare_at_price_cents: null, badge: null
-      });
-    }
-    return items;
-  }
-
-  function loadItems() {
-    return HN.loadProducts().then(function (products) {
-      state.items = (products || []).filter(function (p) { return p.active !== false; });
-      state.source = 'api';
-      return fetch(HN.api('products') + '?facets=true').then(function (res) { if (!res.ok) throw new Error('facets'); return res.json(); }).then(function (facets) { state.facets = facets; });
-    }).catch(function () {
-      state.items = itemsFromStaticCards();
-      state.source = 'static';
+  function loadItems(force) {
+    return HN.requireConfig(force).then(function () {
+      state.ready = true;
+      HN.request(HN.api('products') + '?facets=true').then(function (facets) {
+        if (!Array.isArray(facets.sizes) || !Array.isArray(facets.occasions)) return;
+        state.facets = facets; buildFilterOptions();
+      }).catch(function () { state.facets = null; });
     });
-  }
-
-  /* ---- Filter / sort ---- */
-
-  function applyFilters() {
-    var minCents = state.minCents, maxCents = state.maxCents;
-    var list = state.items.filter(function (p) {
-      if (state.categories.length && state.categories.indexOf(p.category) === -1) return false;
-      if (state.sizes.length && !state.sizes.some(function (s) { return readValue(p.sizes, s); })) return false;
-      if (state.occasions.length && !state.occasions.some(function (o) { return readValue(p.occasions, o); })) return false;
-      if (minCents !== null && (p.price_cents || 0) < minCents) return false;
-      if (maxCents !== null && (p.price_cents || 0) > maxCents) return false;
-      return true;
-    });
-
-    list.sort(function (a, b) {
-      switch (state.sort) {
-        case 'price-asc': return (a.price_cents || 0) - (b.price_cents || 0);
-        case 'price-desc': return (b.price_cents || 0) - (a.price_cents || 0);
-        case 'rating': return (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0);
-        case 'newest': return String(b.created_at || '').localeCompare(String(a.created_at || ''));
-        case 'featured':
-          // Admin "Mettre en avant" first, then rating as a tiebreak.
-          return ((b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0)) ||
-            ((parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
-        default: return 0;
-      }
-    });
-    return list;
   }
 
   function render() {
-    if (!grid) return;
-    if (state.source === 'api') { renderRemote(); return; }
-    var list = applyFilters();
-    var start = 0;
-    var end = Math.min(list.length, state.page * PAGE_SIZE);
-    var visible = list.slice(start, end);
-
-    var html = '';
-    for (var i = 0; i < visible.length; i++) html += buildCard(visible[i]);
-
-    grid.innerHTML = html || '<p class="text-center" style="grid-column:1/-1; padding: var(--spacing-2xl) 0;">' + tr('emptyCatalog') + '</p>';
-    if (HN) HN.updateWishlistHearts();
-
-    if (resultsEl) {
-      resultsEl.textContent = tr('showingResults', { visible: visible.length, total: list.length });
-    }
-    if (loadMoreBtn) {
-      var more = list.length > end;
-      loadMoreBtn.style.display = more ? '' : 'none';
-    }
-    updateActiveFilters();
+    if (!grid || !state.ready) return;
+    renderRemote();
   }
 
   /* ---- Active filter tags ---- */
@@ -268,20 +155,30 @@
     remoteSignature = signature;
     params.set('page', state.page);
     var revision = ++remoteRevision;
+    HN.loading(grid, 'card', PAGE_SIZE);
+    if (resultsEl) resultsEl.textContent = '';
     if (loadMoreBtn) loadMoreBtn.disabled = true;
-    fetch(HN.api('products') + '?' + params.toString()).then(function (res) { if (!res.ok) throw new Error('catalog'); return res.json(); })
+    HN.request(HN.api('products') + '?' + params.toString())
       .then(function (data) {
         if (revision !== remoteRevision) return;
+        if (!Array.isArray(data.products)) throw new Error(tr('liveLoadError'));
         var seen = {};
         remoteItems = remoteItems.concat(data.products || []).filter(function (p) { if (seen[p.slug]) return false; seen[p.slug] = true; return true; });
+        state.items = remoteItems;
         HN.rememberProducts(data.products || []);
         grid.innerHTML = remoteItems.map(buildCard).join('') || '<p class="text-center">' + tr('emptyCatalog') + '</p>';
+        HN.loaded(grid);
         HN.updateWishlistHearts();
-        if (resultsEl) resultsEl.textContent = tr('showingResults', { visible: remoteItems.length, total: data.total });
-        if (loadMoreBtn) { loadMoreBtn.disabled = false; loadMoreBtn.style.display = data.has_more ? '' : 'none'; }
+        if (resultsEl) resultsEl.textContent = tr('showingResults', { visible: remoteItems.length, total: Number.isInteger(data.total) ? data.total : remoteItems.length });
+        if (loadMoreBtn) { loadMoreBtn.hidden = !data.has_more; loadMoreBtn.disabled = false; loadMoreBtn.style.display = data.has_more ? '' : 'none'; }
         document.querySelectorAll('.filter-count').forEach(function (node) { node.textContent = ''; });
+        if (!state.facets) buildFilterOptions();
         updateActiveFilters();
-      }).catch(function () { if (revision === remoteRevision) { if (loadMoreBtn) loadMoreBtn.disabled = false; if (resultsEl) resultsEl.textContent = tr('emptyCatalog'); } });
+      }).catch(function () {
+        if (revision !== remoteRevision) return;
+        if (loadMoreBtn) loadMoreBtn.hidden = true;
+        HN.loadError(grid, render);
+      });
   }
 
   function updateActiveFilters() {
@@ -419,27 +316,20 @@
 
   /* ---- Init ---- */
 
-  function init() {
-    wireFilters();
-    loadItems()
+  function init(force) {
+    state.ready = false;
+    HN.loading(grid, 'card', PAGE_SIZE);
+    if (loadMoreBtn) loadMoreBtn.hidden = true;
+    loadItems(force)
       .then(function () {
         buildFilterOptions();
-        if (state.source === 'api') render();
-        else {
-          // Static markup already present; just compute counts & results.
-          var cards = grid ? grid.querySelectorAll('.product-card').length : 0;
-          if (resultsEl) resultsEl.textContent = tr('showingResults', { visible: cards, total: cards });
-          if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-          updateActiveFilters();
-        }
+        render();
       })
       .catch(function () {
-        var cards = itemsFromStaticCards();
-        state.items = cards;
-        buildFilterOptions();
-        render();
+        HN.loadError(grid, function () { init(true); });
       });
   }
 
+  wireFilters();
   init();
 })();

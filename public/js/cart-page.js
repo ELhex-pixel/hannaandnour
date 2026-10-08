@@ -17,6 +17,7 @@
   var PICKUP_SHIPPING_CENTS = 0;
   var PROMO_LOCAL = { WELCOME15: 0.15 };
   var PROMO_KEY = 'hn-promo';
+  var ready = false;
 
   function applyConfig(cfg) {
     if (!cfg || !cfg.settings) return;
@@ -79,7 +80,8 @@
   }
 
   function renderItems() {
-    if (!itemsEl) return;
+    if (!itemsEl || !ready) return;
+    HN.loaded(itemsEl);
     var items = HN.cart.list();
 
     if (!items.length) {
@@ -120,7 +122,7 @@
   }
 
   function renderSummary() {
-    if (!summaryBox) return;
+    if (!summaryBox || !ready) return;
     var items = HN.cart.list();
     var t = totals();
     var count = items.reduce(function (n, it) { return n + (it.qty || 1); }, 0);
@@ -143,10 +145,12 @@
 
     if (totalEl) totalEl.textContent = HN.money(t.total);
 
-    var checkoutLink = summaryBox ? summaryBox.querySelector('a[href="checkout.html"]') : null;
+    var checkoutLink = summaryBox ? summaryBox.querySelector('.cart-checkout a') : null;
     if (checkoutLink) {
       checkoutLink.style.pointerEvents = items.length ? '' : 'none';
       checkoutLink.style.opacity = items.length ? '' : '0.5';
+      checkoutLink.setAttribute('aria-disabled', items.length ? 'false' : 'true');
+      if (items.length) checkoutLink.removeAttribute('tabindex'); else checkoutLink.setAttribute('tabindex', '-1');
     }
   }
 
@@ -224,9 +228,8 @@
   /* Abandoned-cart recovery: `?restore=<cart_token>` re-adds the exact items. */
   function restoreFromUrl() {
     var m = (window.location.search || '').match(/[?&]restore=([0-9a-f]{40,64})/);
-    if (!m) return;
-    fetch(HN.api('orders') + '?cart_token=' + encodeURIComponent(m[1]))
-      .then(function (r) { return r.json(); })
+    if (!m) return Promise.resolve();
+    return HN.request(HN.api('orders') + '?cart_token=' + encodeURIComponent(m[1]))
       .then(function (res) {
         if (!res.items || !res.items.length) return;
         HN.cart.clear();
@@ -247,19 +250,27 @@
           window.history.replaceState({}, '', window.location.pathname + window.location.hash);
         } catch (e) { /* ignore */ }
         renderItems();
-      })
-      .catch(function () { /* invalid/expired token: ignore */ });
+      });
   }
 
-  /* The static demo rows are replaced on load by renderItems(). */
-  HN.loadConfig()
-    .then(applyConfig)
-    .catch(function () { /* offline: defaults */ })
-    .finally(function () {
-      restoreFromUrl();
+  function init(force) {
+    ready = false;
+    HN.loading(itemsEl, 'row', Math.max(1, HN.cart.list().length));
+    document.querySelectorAll('[id^="cartSummary"]').forEach(function (el) { el.innerHTML = '<span class="live-amount" aria-hidden="true"></span>'; });
+    var link = summaryBox && summaryBox.querySelector('.cart-checkout a');
+    if (link) { link.style.pointerEvents = 'none'; link.setAttribute('aria-disabled', 'true'); link.setAttribute('tabindex', '-1'); }
+    var apply = document.getElementById('applyPromo'); if (apply) apply.disabled = true;
+    HN.requireConfig(force).then(applyConfig).then(restoreFromUrl).then(function () {
+      var slugs = HN.cart.list().map(function (item) { return item.slug; });
+      return slugs.length ? HN.loadProductSlugs(slugs) : [];
+    }).then(function () {
+      ready = true;
+      if (apply) apply.disabled = false;
       renderItems();
-      wireEvents();
-      seedPromoInput();
-    });
+    }).catch(function () { HN.loadError(itemsEl, function () { init(true); }); });
+  }
+  wireEvents();
+  seedPromoInput();
+  init();
   document.addEventListener('hn:cart', HN.refreshBadge, false);
 })();

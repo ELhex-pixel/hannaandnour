@@ -6,6 +6,54 @@ const sharp = require('sharp');
 const translations = require('../public/js/i18n');
 const { preflight } = require('./preflight');
 
+function prepareLivePage($, file) {
+  if (!['index.html', 'shop.html', 'product.html', 'cart.html', 'checkout.html'].includes(file)) return;
+  $('body').attr('data-live-page', file);
+  const skeleton = (layout, count) => '<span class="live-status" role="status" data-i18n="liveLoading">Chargement…</span>' + Array.from({ length: count }, () => '<div class="live-skeleton-' + layout + '" aria-hidden="true"><div class="live-skeleton-image"></div><div class="live-skeleton-copy"><div class="live-skeleton-line"></div><div class="live-skeleton-line live-skeleton-short"></div></div></div>').join('');
+  const placeholder = (selector, layout, count) => $(selector).attr('aria-busy', 'true').html(skeleton(layout, count));
+  const amounts = selector => $(selector).removeAttr('data-i18n').html('<span class="live-amount" aria-hidden="true"></span>');
+  if (file === 'index.html') {
+    placeholder('[data-feed="bestsellers"]', 'card', 4);
+    placeholder('[data-feed="collections"]', 'card', 3);
+    $('#testimonialsSection').css('display', 'none');
+    $('[data-feed="testimonials"]').empty();
+  }
+  if (file === 'shop.html') {
+    placeholder('#productsGrid', 'card', 8);
+    $('.shop-results').empty();
+    $('.filter-count').empty();
+    $('#loadMore').attr('hidden', '').attr('disabled', '');
+  }
+  if (file === 'cart.html') {
+    placeholder('.cart-items', 'row', 1);
+    amounts('[id^="cartSummary"]');
+    $('.cart-checkout a').attr('aria-disabled', 'true').attr('tabindex', '-1').css('pointer-events', 'none');
+    $('#applyPromo').attr('disabled', '');
+  }
+  if (file === 'checkout.html') {
+    placeholder('.checkout-items', 'row', 1);
+    amounts('[id^="checkoutSummary"], .payment-method[data-method] strong');
+    $('#placeOrderBtn, #applyDiscount').attr('disabled', '');
+  }
+  if (file === 'product.html') {
+    $('.product-detail').first().before('<div id="productLoading" class="product-loading" aria-busy="true">' + skeleton('card', 1) + '<div class="live-skeleton-copy" aria-hidden="true"><div class="live-skeleton-line"></div><div class="live-skeleton-line live-skeleton-short"></div><div class="live-skeleton-line"></div></div></div>');
+    $('.product-detail').first().attr('data-product-content', '').attr('hidden', '').attr('inert', '');
+    $('.product-tabs').attr('data-product-content', '').attr('hidden', '').attr('inert', '');
+    $('.product-info [data-i18n]').filter((_, node) => ['catHijabs', 'silkHijab', 'reviews128'].includes($(node).attr('data-i18n'))).removeAttr('data-i18n').empty();
+    $('.product-price, .product-short-desc, .product-rating .stars, .product-rating .rating-count, .color-options-detail, .size-options, #selectedSize, #selectedColor, .product-gallery-thumbnails').empty();
+    $('#mainImage').removeAttr('src').attr('alt', '');
+    $('#addToCartBtn, #buyNowBtn').attr('disabled', '');
+    $('.page-header-breadcrumb a').last().text('').attr('href', 'shop.html');
+    $('.page-header-breadcrumb span').last().empty();
+    $('#tab-description p, #tab-description ul, #tab-fabric p, #tab-fabric ul').removeAttr('data-i18n').empty();
+    $('.reviews-number, .reviews-total, #reviewsStars, .review-bar-count').empty();
+    $('.review-bar-fill').css('width', '0%');
+    $('#demoReviews').empty();
+    $('title').text('Hanna & Nour');
+    $('meta[name="description"]').attr('content', 'Hanna & Nour');
+  }
+}
+
 async function build() {
   const preview = process.env.CONTEXT === 'deploy-preview' || process.env.CONTEXT === 'branch-deploy';
   if (preview && process.env.STAGING_MODE !== 'true') throw new Error('Preview désactivée : configurez un environnement staging isolé avant de déployer.');
@@ -42,6 +90,7 @@ async function build() {
     for (const lang of [null, 'fr', 'en', 'ar']) {
       const language = lang || 'fr';
       const $ = cheerio.load(source);
+      prepareLivePage($, file);
       $('base').remove();
       $('head').prepend('<base href="/">');
       $('html').attr('lang', language).attr('dir', language === 'ar' ? 'rtl' : 'ltr');
@@ -84,4 +133,5 @@ async function build() {
   await fs.writeFile('dist/_headers', headers + '\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n');
   console.log('Build terminé : pages FR/EN/AR, assets versionnés et images WebP dans dist/.');
 }
-build().catch(error => { console.error(error.message); process.exitCode = 1; });
+module.exports = { prepareLivePage };
+if (require.main === module) build().catch(error => { console.error(error.message); process.exitCode = 1; });

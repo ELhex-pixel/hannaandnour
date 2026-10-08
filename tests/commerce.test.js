@@ -287,13 +287,14 @@ function returnsDisplay(language = 'fr') {
   const footer = { textContent: '' }, events = [], requests = [], cache = {};
   const context = {
     CONFIG_DATA: {}, RETURN_DAYS: null, REVIEW_DEMO: false, DEMO_COUNT: 0, DEMO_SUM: 0,
-    CURRENCY_SYMBOL: '€', CURRENCY_CODE: 'eur', CONFIG_CACHE_KEY: 'fixture-config', configPending: false, configPromise: null,
+    CURRENCY_SYMBOL: '€', CURRENCY_CODE: 'eur', CONFIG_CACHE_KEY: 'fixture-config', configPending: false, configPromise: null, configOnline: false,
     window: { I18n: { t: (key, args) => dict[language][key].replace('{n}', args ? args.n : '') } },
     document: { getElementById: id => id === 'footerTrustReturns' ? footer : null, dispatchEvent: event => events.push(event) },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
     readLS: () => cache.config, writeLS: (key, data) => { cache.config = data; }, apiUrl: name => '/api/' + name,
     fetch: async (url, options) => { requests.push({ url, options }); return { ok: true, json: async () => context.response }; }
   };
+  context.request = url => context.fetch(url, { cache: 'no-store' }).then(response => response.json());
   const source = fs.readFileSync('public/js/store.js', 'utf8');
   const loader = source.slice(source.indexOf('  function loadConfig('), source.indexOf('  function isAuthed('));
   const apply = source.slice(source.indexOf('  function applyConfigCopy('), source.indexOf('  function currentLang('));
@@ -342,4 +343,50 @@ test('une erreur d’un affichage secondaire n’empêche pas la synchronisation
   mock.context.applyConfigCopy({ return_policy: { days: 37 }, settings: {} });
   assert.equal(mock.footer.textContent, 'Retours sous 37 jours');
   assert.equal(mock.events.at(-1).type, 'hn:config');
+});
+
+function liveStore(fetcher, timers = {}) {
+  const cache = new Map(), dict = require('../public/js/i18n');
+  const context = {
+    window: { HN_CONFIG: { API_BASE:'/api' }, location:{href:''}, localStorage:{ getItem:key=>cache.get(key)||null, setItem:(key,value)=>cache.set(key,value) }, I18n:{ t:key=>dict.fr[key]||key, lang:()=> 'fr' } },
+    document: { readyState:'loading', addEventListener(){}, querySelectorAll:()=>[], getElementById:()=>null, dispatchEvent(){} },
+    CustomEvent:class{}, AbortController, URLSearchParams, fetch:fetcher, setTimeout, clearTimeout, ...timers
+  };
+  vm.runInNewContext(fs.readFileSync('public/js/store.js','utf8'),context);
+  return { HN:context.window.HN, cache, context };
+}
+const liveConfig = { currency:{ code:'eur',symbol:'€' }, settings:{ tax_rate:0,standard_cents:0,free_threshold_cents:7500 }, return_policy:{days:14} };
+test('un échec catalogue refuse le cache ancien sans effacer le panier, puis un réessai relit les vrais produits', async () => {
+  let available=false;
+  const mock=liveStore(async url=>({ok:url.endsWith('/config')||available,json:async()=>url.endsWith('/config')?liveConfig:available?{products:[{slug:'reel',price_cents:4200}]}:{error:'unavailable'}}));
+  const cart=[{slug:'reel',qty:1,priceCents:4200}];
+  mock.cache.set('hn-cart',JSON.stringify(cart));mock.cache.set('hn-products',JSON.stringify([{slug:'ancienne-demo'}]));
+  await assert.rejects(mock.HN.loadProducts());
+  assert.equal(mock.HN.products().length,0);
+  assert.equal(mock.cache.get('hn-cart'),JSON.stringify(cart));
+  available=true;
+  const products=await mock.HN.loadProducts();assert.equal(products.length,1);assert.equal(products[0].slug,'reel');
+  assert.equal(mock.cache.get('hn-cart'),JSON.stringify(cart));
+});
+test('la configuration commerciale exige une réponse réelle et refuse le cache lors d’une panne', async () => {
+  let available=false;
+  const mock=liveStore(async()=>({ok:available,json:async()=>liveConfig}));
+  mock.cache.set('hn-config',JSON.stringify(liveConfig));
+  await assert.rejects(mock.HN.requireConfig());
+  available=true;assert.equal((await mock.HN.requireConfig(true)).currency.code,'eur');
+});
+test('une requête bloquée, y compris pendant la lecture JSON, finit en erreur sans affichage de substitution', async () => {
+  for (const jsonPending of [false,true]) {
+    let fire, cleared=0, signal;
+    const mock=liveStore((url,options)=>{ signal=options.signal;return jsonPending?Promise.resolve({ok:true,json:()=>new Promise(()=>{})}):new Promise(()=>{}); }, {setTimeout:(fn,ms)=>{assert.equal(ms,12000);fire=fn;return 1;},clearTimeout:()=>cleared++});
+    const promise=mock.HN.request('/api/products');await Promise.resolve();fire();
+    await assert.rejects(promise);assert.equal(signal.aborted,true);assert.equal(mock.HN.products().length,0);
+    assert.equal(cleared,1);
+  }
+});
+test('l’ajout rapide sans produit chargé n’invente plus ni article ni prix et ouvre sa fiche', () => {
+  const mock=liveStore(async()=>({ok:true,json:async()=>({})}));
+  mock.cache.set('hn-products',JSON.stringify([{slug:'silk-hijab',price_cents:3500}]));
+  mock.HN.quickAdd({closest:()=>({getAttribute:()=> 'silk-hijab'})});
+  assert.equal(mock.HN.cart.list().length,0);assert.equal(mock.context.window.location.href,'product.html?slug=silk-hijab');
 });

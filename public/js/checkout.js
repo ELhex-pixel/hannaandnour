@@ -59,6 +59,8 @@
     renderItems();
     renderSummary();
     renderShippingMethodPrices();
+    HN.loaded(document.querySelector('.checkout-items'));
+    var apply = document.getElementById('applyDiscount'); if (apply) apply.disabled = false;
     var btn = document.getElementById('placeOrderBtn');
     if (btn) { btn.disabled = false; btn.textContent = tr('placeOrder') + ' • ' + formatMoney(data.totals.total); }
   }
@@ -75,21 +77,25 @@
   function refreshQuote() {
     var revision = ++state.revision;
     state.quote = null;
+    showPendingQuote();
     var btn = document.getElementById('placeOrderBtn');
     if (btn) { btn.disabled = true; btn.textContent = tr('processing'); }
-    return fetch(HN.api('checkout'), {
+    return HN.request(HN.api('checkout'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'quote', items: HN.cart.list(), shipping_method: state.method, promo: getPromo() })
-    }).then(function (res) { return res.json().then(function (data) { if (!res.ok) throw new Error(data.error); return data; }); })
+    })
       .then(function (data) { if (revision === state.revision) acceptQuote(data); })
       .catch(function (err) {
         if (revision !== state.revision) return;
         if (btn) { btn.textContent = tr('quoteUnavailable'); btn.disabled = true; }
+        HN.loadError(document.querySelector('.checkout-items'), refreshQuote, 'quoteUnavailable');
+        var apply = document.getElementById('applyDiscount'); if (apply) apply.disabled = false;
         window.hnToast && hnToast(tr('checkoutError'), err.message || tr('quoteUnavailable'), 'error');
       });
   }
 
   function renderSummary() {
+    if (!state.quote) return;
     var items = HN.cart.list();
     var t = totals();
     var count = items.reduce(function (n, it) { return n + (it.qty || 1); }, 0);
@@ -122,6 +128,7 @@
   }
 
   function renderItems() {
+    if (!state.quote) return;
     var box = document.querySelector('.cart-summary');
     if (!box) return;
     var items = HN.cart.list();
@@ -349,7 +356,15 @@
     });
   }
 
-  function init() {
+  function showPendingQuote() {
+    HN.loading(document.querySelector('.checkout-items'), 'row', Math.max(1, HN.cart.list().length));
+    document.querySelectorAll('[id^="checkoutSummary"]').forEach(function (el) { el.innerHTML = '<span class="live-amount" aria-hidden="true"></span>'; });
+    var policy = document.getElementById('checkoutReturnPolicy'); if (policy) policy.textContent = '';
+    var discount = document.getElementById('checkoutDiscountRow'); if (discount) discount.style.display = 'none';
+    var apply = document.getElementById('applyDiscount'); if (apply) apply.disabled = true;
+  }
+
+  function init(force) {
     var items = HN.cart.list();
     if (!items.length) {
       setEmptyCartButton();
@@ -357,10 +372,9 @@
       return;
     }
 
-    renderItems();
-
-    // Load admin-editable shipping settings (fallback to defaults offline).
-    HN.loadConfig()
+    showPendingQuote();
+    var button = document.getElementById('placeOrderBtn'); if (button) button.disabled = true;
+    HN.requireConfig(force)
       .then(function (data) {
         if (data && data.settings) {
           state.settings = {};
@@ -371,20 +385,20 @@
           state.settings = DEFAULTS;
         }
       })
-      .catch(function () { /* offline: defaults */ })
-      .finally(function () {
+      .then(function () {
         state.loaded = true;
-        wireShippingMethods();
+        if (!state.wired) {
+          wireShippingMethods();
+          wirePromo();
+          wirePlaceOrder();
+          state.wired = true;
+        }
         renderShippingMethodPrices();
         updateDeliveryUI();
-        renderSummary();
-        wirePromo();
-        wirePlaceOrder();
         refreshQuote();
-      });
-
-    document.addEventListener('langchange', function () { renderShippingMethodPrices(); renderSummary(); renderReturnPolicy(); });
+      }).catch(function () { HN.loadError(document.querySelector('.checkout-items'), function () { init(true); }); });
   }
 
+  document.addEventListener('langchange', function () { if (state.loaded) renderShippingMethodPrices(); renderSummary(); renderReturnPolicy(); });
   init();
 })();

@@ -44,11 +44,10 @@
     if (!list.length) {
       list = (products || []).filter(function (p) { return p.active !== false && p.is_bestseller; });
     }
-    if (!list.length) return; // keep the static markup as a fallback
-
     var html = '';
     for (var j = 0; j < list.length; j++) html += HN.card(list[j]);
-    grid.innerHTML = html || grid.innerHTML;
+    grid.innerHTML = html || '<p class="live-status" data-i18n="emptyCatalog">' + HN.tr('emptyCatalog') + '</p>';
+    HN.loaded(grid);
     if (HN.updateWishlistHearts) HN.updateWishlistHearts();
   }
 
@@ -56,7 +55,7 @@
   function renderCollections(home) {
     var grid = document.querySelector('[data-feed="collections"]');
     if (!grid) return;
-    if (!home || !Array.isArray(home.collections) || !home.collections.length) return;
+    if (!home || !Array.isArray(home.collections) || !home.collections.length) { grid.textContent = ''; HN.loaded(grid); return; }
     var html = home.collections.map(function (c) {
       return '<a href="' + esc(c.url || 'collections.html') + '" class="collection-card">' +
         '<img src="' + esc(c.image || 'images/hero.jpg') + '" alt="">' +
@@ -67,13 +66,14 @@
         '</div></a>';
     }).join('');
     grid.innerHTML = html;
+    HN.loaded(grid);
   }
 
   // Testimonials: fed by the admin demo reviews (only when the illustration is ON).
   function renderTestimonials(demoReviews) {
     var grid = document.querySelector('[data-feed="testimonials"]');
     if (!grid) return;
-    if (!demoReviews || !demoReviews.length) return; // keep static fallback
+    if (!demoReviews || !demoReviews.length) { grid.textContent = ''; return; }
     var html = demoReviews.slice(0, 3).map(function (r) {
       return '<div class="testimonial-card">' +
         '<div class="testimonial-stars">' + fiveStars() + '</div>' +
@@ -86,8 +86,12 @@
     grid.innerHTML = html || grid.innerHTML;
   }
 
-  function init() {
-    HN.loadConfig()
+  function init(force) {
+    var grid = document.querySelector('[data-feed="bestsellers"]');
+    var collections = document.querySelector('[data-feed="collections"]');
+    HN.loading(grid, 'card', 4);
+    HN.loading(collections, 'card', 3);
+    HN.requireConfig(force)
       .then(function (cfg) {
         cfg = cfg || {};
         var slugs = cfg.home && cfg.home.bestsellers;
@@ -107,7 +111,10 @@
         }
         return null;
       })
-      .catch(function () { /* offline: static content remains */ });
+      .catch(function () {
+        HN.loadError(grid, function () { init(true); });
+        HN.loadError(collections, function () { init(true); });
+      });
   }
 
   init();
