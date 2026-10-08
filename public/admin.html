@@ -690,7 +690,7 @@
         <h3>Politique de retours — futures commandes uniquement</h3>
         <p>Les conditions sont affichées avant paiement et conservées avec la commande. Les changements ne réduisent pas les conditions déjà promises. Les droits de rétractation et de garantie légaux restent applicables ; les erreurs et non-conformités sont à la charge de la boutique.</p>
         <form id="returnPolicyForm" class="form-grid">
-          <div class="field"><label for="returnPolicyDays">Délai de demande après livraison (jours)</label><input id="returnPolicyDays" type="number" min="30" max="365" step="1" required><small>Minimum de 30 jours conservé tant que les pages légales annoncent ce délai.</small></div>
+          <div class="field"><label for="returnPolicyDays">Délai de demande après livraison (jours)</label><input id="returnPolicyDays" type="number" min="0" max="365" step="1" value="0" required><small>Saisie possible dès 0 ; choisissez 14 à 365 jours pour enregistrer une politique. Les droits légaux et les anciennes commandes sont conservés.</small></div>
           <div class="field"><label for="returnPolicyPayer">Frais retour pour changement d’avis</label><select id="returnPolicyPayer"><option value="customer">Client, informé avant achat</option><option value="store">Offerts par la boutique</option></select></div>
           <button type="submit" class="btn btn-primary" id="saveReturnPolicy">Enregistrer la nouvelle politique</button>
           <button type="button" class="btn btn-secondary" id="refreshReturnPolicy">Actualiser</button>
@@ -728,7 +728,7 @@
           <div class="field"><label>Retrait / point relais ($)</label><input type="number" step="0.01" min="0" id="setPickup"></div>
           <div class="field"><label>Livraison gratuite &agrave; partir de</label><input type="number" step="0.01" min="0" id="setFree"></div>
           <div class="field"><label>Taxe (%)</label><input type="number" step="0.1" min="0" max="100" id="setTax"></div>
-          <div class="field"><label>Ancien délai de retours (lecture seule)</label><input type="number" id="setReturns" readonly><small>Utilisez la politique de retours ci-dessus pour les nouvelles commandes.</small></div>
+          <div class="field"><label for="setReturns">Délai actuel sur le site (lecture seule)</label><input type="number" id="setReturns" readonly><small>Synchronisé avec la politique de retours ci-dessus ; les anciennes commandes gardent leur propre délai.</small></div>
           <div class="field">
             <label>Devise de la boutique</label>
             <select id="setCurrency" style="width:100%;">

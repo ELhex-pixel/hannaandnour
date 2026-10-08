@@ -126,11 +126,24 @@ function archiveAdmin(overrides = {}, databaseError = false, returnedIds = null)
   };
   vm.runInNewContext(fs.readFileSync('netlify/functions/admin.js', 'utf8'), {
     exports, process: { env: {} }, Buffer, console: { error() {} },
-    require: name => name === './shared' ? shared : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
+    require: name => name === './shared' ? shared : name === './lib/return-policy' ? require('../netlify/functions/lib/return-policy') : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
   });
   return { handler: exports.handler, state };
 }
 const archiveId = '11111111-1111-4111-8111-111111111111';
+test('les réglages admin affichent la politique actuelle, pas l’ancien délai de livraison', async () => {
+  const mock = archiveAdmin({
+    getSetting: async (sb, key, fallback) => key === 'shipping' ? { returns_days: 30 } : key === 'return_policy' ? { version: 'current', days: 37, withdrawal_payer: 'customer' } : fallback,
+    defaultCatalog: () => ({ colors: [] }),
+    loadColorSwatches: async () => []
+  });
+  const response = await mock.handler(event({ action: 'getSettings' }));
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.equal(body.settings.returns_days, 37);
+  assert.equal(body.return_policy.days, 37);
+  assert.equal(mock.state.writes.length, 0);
+});
 test('la teinte personnalisée exige une session admin et une limite avant toute écriture', async () => {
   const denied = archiveAdmin({ requireAdmin: async () => ({ ok: false }) });
   assert.equal((await denied.handler(event({ action: 'saveColorSwatch', name: 'Gris maison', hex: '#C0C0C0' }))).statusCode, 401);

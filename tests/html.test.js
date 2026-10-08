@@ -44,6 +44,9 @@ test('l’admin modernisé conserve les rubriques et isole les opérations sensi
   assert.equal($('#colorsCustomToggle').attr('type'), 'checkbox');
   assert.equal($('#colorsAddInput').attr('maxlength'), '80');
   assert($('#colorsAddHex').attr('aria-label'));
+  assert.equal($('#returnPolicyDays').attr('min'), '0');
+  assert.equal($('#returnPolicyDays').attr('value'), '0');
+  assert($('#setReturns').is('[readonly]'));
 });
 test('l’admin occupe la largeur disponible sans marge extérieure', () => {
   const css = fs.readFileSync('public/css/styles.css', 'utf8');

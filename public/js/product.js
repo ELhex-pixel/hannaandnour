@@ -14,7 +14,7 @@
     label: function (n) { return String(n == null ? '' : n); }
   };
 
-  var RETURNS_DAYS = 30;
+  var RETURNS_DAYS = null;
   var DEMO_ON = false;
   var KNOWN_REVIEW_COUNT = 0;
   var KNOWN_RATING = 0;
@@ -173,8 +173,8 @@
   function updateReturnsMeta() {
     var titleEl = document.querySelector('[data-i18n="metaReturnTitle"]');
     var textEl = document.querySelector('[data-i18n="metaReturnText"]');
-    if (titleEl) titleEl.textContent = tr('metaReturnTitleN', { n: RETURNS_DAYS });
-    if (textEl) textEl.textContent = tr('metaReturnTextN', { n: RETURNS_DAYS });
+    if (titleEl) titleEl.textContent = RETURNS_DAYS === null ? tr('metaReturnTitle') : tr('metaReturnTitleN', { n: RETURNS_DAYS });
+    if (textEl) textEl.textContent = RETURNS_DAYS === null ? tr('metaReturnText') : tr('metaReturnTextN', { n: RETURNS_DAYS });
   }
 
   function injectProductSchema(p) {
@@ -739,10 +739,7 @@
     HN.updateWishlistHearts();
 
     HN.loadConfig().then(function (cfg) {
-      if (cfg && cfg.settings) {
-        var d = parseInt(cfg.settings.returns_days, 10);
-        if (!isNaN(d) && d > 0) RETURNS_DAYS = d;
-      }
+      RETURNS_DAYS = HN.returnDays();
       if (cfg && cfg.reviews) DEMO_ON = !!cfg.reviews.show_demo;
       return fetch(HN.api('products') + '?slug=' + encodeURIComponent(slug)).then(function (res) { if (!res.ok) throw new Error('not found'); return res.json(); }).then(function (data) { HN.rememberProducts(data.products || []); return data.products || []; });
     })
@@ -772,6 +769,10 @@
   }
 
   var current = null;
+  document.addEventListener('hn:config', function () {
+    RETURNS_DAYS = HN.returnDays();
+    updateReturnsMeta();
+  });
 
   // main.js handles color/size selection via document-level delegation (runs
   // first). This listener re-evaluates the stock state right after, using the

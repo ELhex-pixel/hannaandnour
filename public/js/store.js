@@ -62,6 +62,8 @@
   var CURRENCY_CODE = '';
   var CONFIG_CACHE_KEY = 'hn-config';
   var CONFIG_DATA = {};
+  var RETURN_DAYS = null;
+  var configPending = false;
   var REVIEW_DEMO = false;
   var DEMO_COUNT = 3;
   var DEMO_SUM = 15;
@@ -75,8 +77,9 @@
   // Loads the admin-editable /api/config (currency symbol, shipping, tax) once
   // and reuses the cached copy when offline. Pages that call loadProducts are
   // gated on this so prices render with the right symbol.
-  function loadConfig() {
-    if (configPromise) return configPromise;
+  function loadConfig(force) {
+    if (configPromise && (!force || configPending)) return configPromise;
+    configPending = true;
     var cachedCfg = readLS(CONFIG_CACHE_KEY) || {};
     if (cachedCfg.currency && cachedCfg.currency.symbol) {
       CURRENCY_SYMBOL = cachedCfg.currency.symbol;
@@ -84,7 +87,7 @@
     if (cachedCfg.currency && cachedCfg.currency.code) {
       CURRENCY_CODE = cachedCfg.currency.code;
     }
-    configPromise = fetch(apiUrl('config'))
+    configPromise = fetch(apiUrl('config'), { cache: 'no-store' })
       .then(function (res) {
         if (!res.ok) throw new Error('config request failed');
         return res.json();
@@ -108,7 +111,7 @@
         if (window.HN_COLORS && window.HN_COLORS.setSwatches) window.HN_COLORS.setSwatches(cachedCfg.color_swatches || []);
         applyConfigCopy(cachedCfg || {});
         return cachedCfg || {};
-      });
+      }).finally(function () { configPending = false; });
     return configPromise;
   }
 
@@ -123,25 +126,28 @@
   function applyConfigCopy(cfg) {
     try {
       CONFIG_DATA = (cfg && cfg.settings) || {};
+      var days = cfg && cfg.return_policy ? cfg.return_policy.days : CONFIG_DATA.returns_days;
+      RETURN_DAYS = Number.isInteger(days) && days >= 14 && days <= 365 ? days : null;
       REVIEW_DEMO = !!(cfg && cfg.reviews && cfg.reviews.show_demo);
       if (cfg && cfg.reviews && cfg.reviews.demo && typeof cfg.reviews.demo === 'object') {
         DEMO_COUNT = parseInt(cfg.reviews.demo.count, 10) || 0;
         DEMO_SUM = parseInt(cfg.reviews.demo.sum, 10) || 0;
       }
       if (window.I18n && typeof window.I18n.setShipThreshold === 'function' &&
-          cfg.settings && typeof cfg.settings.free_threshold_cents === 'number') {
-        window.I18n.setShipThreshold(cfg.settings.free_threshold_cents);
+          typeof CONFIG_DATA.free_threshold_cents === 'number') {
+        window.I18n.setShipThreshold(CONFIG_DATA.free_threshold_cents);
       }
       if (window.I18n && typeof window.I18n.refreshCurrency === 'function') {
         window.I18n.refreshCurrency();
         if (typeof refreshPromoAnnounce === 'function') refreshPromoAnnounce();
       }
-      refreshFooterTrust();
       var tSec = document.getElementById('testimonialsSection');
       if (tSec) {
         tSec.style.display = cfg && cfg.reviews && cfg.reviews.show_demo ? '' : 'none';
       }
     } catch (e) {}
+    refreshFooterTrust();
+    document.dispatchEvent(new CustomEvent('hn:config', { detail: cfg }));
   }
 
   function currentLang() {
@@ -235,9 +241,7 @@
       if (!window.I18n || typeof window.I18n.t !== 'function') return;
       var el = document.getElementById('footerTrustReturns');
       if (el) {
-        var days = parseInt(CONFIG_DATA.returns_days, 10);
-        if (isNaN(days) || days <= 0) days = 30;
-        el.textContent = window.I18n.t('trustReturns', { n: days });
+        el.textContent = RETURN_DAYS === null ? window.I18n.t('returnPolicyLink') : window.I18n.t('trustReturns', { n: RETURN_DAYS });
       }
       el = document.getElementById('footerTrustPromo');
       if (el) {
@@ -611,6 +615,11 @@
     updateWishlistHearts();
     // Load admin config first (currency symbol) so prices render correctly.
     loadConfig();
+    function refreshCurrentConfig() { if (!document.hidden) loadConfig(true); }
+    window.addEventListener('focus', refreshCurrentConfig);
+    window.addEventListener('pageshow', refreshCurrentConfig);
+    window.addEventListener('storage', function (event) { if (event.key === 'hn-return-policy-version') refreshCurrentConfig(); });
+    document.addEventListener('visibilitychange', refreshCurrentConfig);
     // Load promo codes so the header announce and cart preview use live codes.
     loadPromos();
     // Re-announce the promo after a language switch (i18n resets [data-i18n]).
@@ -628,6 +637,7 @@
   }
 
   window.HN = {
+    returnDays: function () { return RETURN_DAYS; },
     config: CONFIG,
     api: apiUrl,
     tr: tr,

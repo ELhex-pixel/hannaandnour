@@ -14,6 +14,8 @@ async function preflight(env = process.env, client) {
     if (inventory.error || inventory.data !== 1) throw new Error('schema');
     const operations = await client.rpc('admin_operations_schema_version');
     if (operations.error || operations.data !== 1) throw new Error('schema');
+    const returnEditor = await client.rpc('return_policy_editor_schema_version');
+    if (returnEditor.error || returnEditor.data !== 1) throw new Error('schema');
     for (const [table, columns] of [
       ['orders', 'inventory_reserved,stock_issue,confirmation_claimed_at,admin_archived,payment_intent_id,refunded_cents,carrier,stripe_creation_started,refund_restock,prepared_at,return_policy'],
       ['order_items', 'stock_debited,net_total_cents,prepared_quantity'],
@@ -29,7 +31,7 @@ async function preflight(env = process.env, client) {
       if (tableError) throw new Error('schema');
     }
   } catch (error) {
-    throw new Error('Publication bloquée : la base du site ciblé doit recevoir supabase/migration_integrity_features.sql puis supabase/migration_admin_inventory.sql puis supabase/migration_admin_operations.sql (et leurs prérequis). Aucune migration distante n’a été exécutée automatiquement.');
+    throw new Error('Publication bloquée : la base du site ciblé doit recevoir supabase/migration_integrity_features.sql puis supabase/migration_admin_inventory.sql puis supabase/migration_admin_operations.sql puis supabase/migration_return_policy_editor.sql (et leurs prérequis). Aucune migration distante n’a été exécutée automatiquement.');
   }
   console.log('Compatibilité Supabase vérifiée en lecture seule.');
 }

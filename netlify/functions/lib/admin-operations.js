@@ -5,7 +5,7 @@ const ID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 async function adminOperations(sb, action, body) {
   if (action === 'getReturnPolicy') return json(200, { policy: returnPolicy(await getSetting(sb,'return_policy',null),await getSetting(sb,'shipping',{})) });
   if (action === 'saveReturnPolicy') {
-    if (!Number.isInteger(body.days) || body.days < 30 || body.days > 365 || !['customer','store'].includes(body.withdrawal_payer) || typeof body.expected_version !== 'string') return json(400,{ error:'Délai de 30 à 365 jours et prise en charge requis. Le minimum de 30 jours déjà annoncé et les droits légaux restent inchangés.' });
+    if (!Number.isInteger(body.days) || body.days < 14 || body.days > 365 || !['customer','store'].includes(body.withdrawal_payer) || typeof body.expected_version !== 'string') return json(400,{ error:'Choisissez un délai de 14 à 365 jours. Zéro est une valeur de saisie, pas une suppression des droits légaux. Les anciennes commandes conservent leur délai.' });
     const { data, error } = await sb.rpc('save_return_policy',{ p_days:body.days,p_payer:body.withdrawal_payer,p_expected_version:body.expected_version });
     return error ? json(409,{ error:'Politique non confirmée : actualisez avant de réessayer.' }) : json(200,{ policy:data });
   }

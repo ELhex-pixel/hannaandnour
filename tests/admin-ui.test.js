@@ -404,3 +404,67 @@ test('le choix de teinte verrouille le double clic et ignore les réponses d’u
     assert.equal(mock.state.toasts.length, 0);
   }
 });
+
+function policyEditor(response) {
+  const nodes = {}, state = { calls: [], notifications: [], token: 'fixture-token' };
+  const node = id => nodes[id] || (nodes[id] = { value: '', disabled: false, textContent: '', handlers: {}, reset() {}, addEventListener(name, handler) { this.handlers[name] = handler; } });
+  const context = {
+    document: { getElementById: node, querySelector: node, addEventListener() {} },
+    window: { HN_ADMIN: { token: () => state.token } },
+    localStorage: { setItem: (...args) => state.notifications.push(args) },
+    confirm: () => true,
+    call: (action, body) => { state.calls.push({ action, body }); return response ? response(action, body) : Promise.resolve({ policy: { version: 'next', days: body ? body.days : 37, withdrawal_payer: 'customer', fault_payer: 'store' } }); }
+  };
+  const source = fs.readFileSync('public/js/admin-features.js', 'utf8');
+  vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('  var operationsRevision'), source.indexOf('  var sendcloudBtn')), context);
+  context.policy = { version: 'current', days: 37, withdrawal_payer: 'customer', fault_payer: 'store' };
+  node('returnPolicyDays').value = '37';
+  node('returnPolicyPayer').value = 'customer';
+  return { context, state, nodes, submit: () => node('returnPolicyForm').handlers.submit({ preventDefault() {} }) };
+}
+test('la saisie 0 à 13 est expliquée et ne modifie pas la politique active', async () => {
+  for (const days of [0,13,14.5,366]) {
+    const mock = policyEditor();
+    mock.nodes.returnPolicyDays.value = String(days);
+    mock.submit();
+    await settleBulk();
+    assert.equal(mock.state.calls.length, 0);
+    assert.equal(mock.context.policy.days, 37);
+    assert.match(mock.nodes.returnPolicyStatus.textContent, /14 à 365/);
+  }
+});
+test('le chargement et les sauvegardes 14 ou 30 synchronisent les deux champs admin', async () => {
+  const mock = policyEditor();
+  mock.context.loadPolicy();
+  await settleBulk();
+  assert.equal(mock.nodes.setReturns.value, 37);
+  for (const days of [14,30]) {
+    mock.nodes.returnPolicyDays.value = String(days);
+    mock.submit();
+    await settleBulk();
+    assert.equal(mock.nodes.setReturns.value, days);
+    assert.equal(mock.nodes.returnPolicyDays.value, days);
+    assert.equal(mock.context.policy.days, days);
+  }
+  assert.equal(mock.state.notifications.length, 2);
+  assert(mock.state.notifications.every(([key]) => key === 'hn-return-policy-version'));
+});
+test('une erreur ou déconnexion pendant une sauvegarde de politique ne publie pas de faux délai local', async () => {
+  const failed = policyEditor(() => Promise.reject(new Error('Refus simulé')));
+  failed.nodes.returnPolicyDays.value = '14';
+  failed.submit();
+  await settleBulk();
+  assert.equal(failed.context.policy.days, 37);
+  assert.equal(failed.state.notifications.length, 0);
+  assert.equal(failed.nodes.saveReturnPolicy.disabled, false);
+  let resolve;
+  const late = policyEditor(() => new Promise(done => { resolve = done; }));
+  late.nodes.returnPolicyDays.value = '14';
+  late.submit();
+  late.state.token = '';
+  resolve({ policy: { version: 'late', days: 14 } });
+  await settleBulk();
+  assert.equal(late.context.policy.days, 37);
+  assert.equal(late.state.notifications.length, 0);
+});

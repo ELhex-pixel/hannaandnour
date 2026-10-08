@@ -272,3 +272,65 @@ test('seules les teintes validées sont exposées depuis settings, jamais les r�
   assert.deepEqual(result, [{ name: 'gris maison', hex: '#ABCDEF' }]);
   assert.deepEqual(state, ['key,value', ['key', 'product-color:%']]);
 });
+
+function returnsDisplay(language = 'fr') {
+  const dict = require('../public/js/i18n');
+  const footer = { textContent: '' }, events = [], requests = [], cache = {};
+  const context = {
+    CONFIG_DATA: {}, RETURN_DAYS: null, REVIEW_DEMO: false, DEMO_COUNT: 0, DEMO_SUM: 0,
+    CURRENCY_SYMBOL: '€', CURRENCY_CODE: 'eur', CONFIG_CACHE_KEY: 'fixture-config', configPending: false, configPromise: null,
+    window: { I18n: { t: (key, args) => dict[language][key].replace('{n}', args ? args.n : '') } },
+    document: { getElementById: id => id === 'footerTrustReturns' ? footer : null, dispatchEvent: event => events.push(event) },
+    CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
+    readLS: () => cache.config, writeLS: (key, data) => { cache.config = data; }, apiUrl: name => '/api/' + name,
+    fetch: async (url, options) => { requests.push({ url, options }); return { ok: true, json: async () => context.response }; }
+  };
+  const source = fs.readFileSync('public/js/store.js', 'utf8');
+  const loader = source.slice(source.indexOf('  function loadConfig('), source.indexOf('  function isAuthed('));
+  const apply = source.slice(source.indexOf('  function applyConfigCopy('), source.indexOf('  function currentLang('));
+  const trust = source.slice(source.indexOf('  function refreshFooterTrust('), source.indexOf('  function productName('));
+  vm.createContext(context);
+  vm.runInContext(loader + apply + trust, context);
+  return { context, footer, events, requests };
+}
+test('le pied de page utilise la politique actuelle et non le délai historique, dans les trois langues', () => {
+  const dict = require('../public/js/i18n');
+  for (const language of ['fr','en','ar']) {
+    const mock = returnsDisplay(language);
+    for (const days of [37,14,30]) {
+      mock.context.applyConfigCopy({ return_policy: { days }, settings: { returns_days: 30 } });
+      assert.equal(mock.context.RETURN_DAYS, days);
+      assert.equal(mock.footer.textContent, dict[language].trustReturns.replace('{n}', days));
+      assert.equal(mock.events.at(-1).type, 'hn:config');
+    }
+  }
+});
+test('un délai nul, illégal ou absent n’invente jamais 30 jours dans l’affichage', () => {
+  const mock = returnsDisplay();
+  for (const days of [0,13,366,14.5,'14',undefined]) {
+    mock.context.applyConfigCopy({ return_policy: { days }, settings: { returns_days: 30 } });
+    assert.equal(mock.context.RETURN_DAYS, null);
+    assert.equal(mock.footer.textContent, 'Politique de retours');
+  }
+  mock.context.applyConfigCopy({});
+  assert.equal(mock.footer.textContent, 'Politique de retours');
+});
+test('le rafraîchissement relit sans cache la politique et coalesce les requêtes simultanées', async () => {
+  const mock = returnsDisplay();
+  mock.context.response = { return_policy: { days: 37 }, settings: { returns_days: 30 } };
+  await mock.context.loadConfig();
+  await mock.context.loadConfig();
+  assert.equal(mock.requests.length, 1);
+  mock.context.response = { return_policy: { days: 14 }, settings: { returns_days: 30 } };
+  await Promise.all([mock.context.loadConfig(true), mock.context.loadConfig(true)]);
+  assert.equal(mock.requests.length, 2);
+  assert(mock.requests.every(request => request.options.cache === 'no-store'));
+  assert.equal(mock.footer.textContent, 'Retours sous 14 jours');
+});
+test('une erreur d’un affichage secondaire n’empêche pas la synchronisation du délai', () => {
+  const mock = returnsDisplay();
+  mock.context.window.I18n.refreshCurrency = () => { throw new Error('Fixture'); };
+  mock.context.applyConfigCopy({ return_policy: { days: 37 }, settings: {} });
+  assert.equal(mock.footer.textContent, 'Retours sous 37 jours');
+  assert.equal(mock.events.at(-1).type, 'hn:config');
+});

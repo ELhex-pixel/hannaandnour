@@ -10,12 +10,22 @@ const { adminOperations } = require('../netlify/functions/lib/admin-operations')
 test('les coûts et décisions de retour incomplets sont refusés avant tout RPC',async () => {
   const sb = { rpc() { throw new Error('Unexpected write'); } };
   for (const cents of [undefined,-1,1.5,'100']) assert.equal((await adminOperations(sb,'saveVariantCost',{ variant_id:randomUUID(),unit_cost_cents:cents,currency:'eur',reason:'Test' })).statusCode,400);
-  assert.equal((await adminOperations(sb,'saveReturnPolicy',{ days:14,withdrawal_payer:'customer',expected_version:'initial' })).statusCode,400);
+  for (const days of [0,1,13,14.5,366]) assert.equal((await adminOperations(sb,'saveReturnPolicy',{ days,withdrawal_payer:'customer',expected_version:'initial' })).statusCode,400);
   assert.equal((await adminReturns(sb,'recordReturn',{ quantity:1,return_ref:randomUUID() })).statusCode,400);
   assert.equal((await adminReturns(sb,'updateReturnRequest',{ id:randomUUID(),status:'received',note:'Test' })).statusCode,400);
 });
 
 const now = new Date('2026-10-07T12:00:00Z');
+test('une politique de 14, 30 ou 37 jours passe par la même RPC protégée et versionnée', async () => {
+  for (const days of [14,30,37]) {
+    const sb = { rpc: async (name, body) => {
+      assert.equal(name, 'save_return_policy');
+      assert.deepEqual(body, { p_days: days, p_payer: 'customer', p_expected_version: 'current' });
+      return { data: { days, version: 'next', withdrawal_payer: 'customer', fault_payer: 'store' } };
+    } };
+    assert.equal((await adminOperations(sb, 'saveReturnPolicy', { days, withdrawal_payer: 'customer', expected_version: 'current' })).statusCode, 200);
+  }
+});
 const eur = { code:'eur',symbol:'€' };
 const order = changes => ({ id:'order',paid_at:'2026-10-06T10:00:00Z',status:'paid',currency:'eur',total_cents:2800,subtotal_cents:2000,discount_cents:1,refunded_cents:0,order_items:[{ id:'item',product_slug:'veste',product_name:'Veste',unit_price_cents:1000,net_total_cents:1999,quantity:2,order_item_costs:{ unit_cost_cents:400,currency:'eur' } }],order_returns:[],...changes });
 test('les retours physiques ne sont pas soustraits des remboursements monétaires',() => {
@@ -117,6 +127,27 @@ test('migration locale rejouable : retours atomiques, coûts privés figés et p
     assert.equal((await db.query('select refunded_cents from orders where id=$1',[second.id])).rows[0].refunded_cents,0);
     const withdrawal = (await db.query("select request_return($1,$2,$3,1,'Changement avis',1,'withdrawal') as id",[user,second.id,second.item])).rows[0].id;
     await assert.rejects(db.query("select decide_return_request($1,'approved','customer','Retour local')",[withdrawal]),/return_store_payer_required/);
+    const previousOrders = (await db.query('select id,return_policy from orders order by id')).rows;
+    const previousStock = await stock();
+    const migration = fs.readFileSync('supabase/migration_return_policy_editor.sql','utf8');
+    await assert.rejects(db.exec(migration.replace(/commit;\s*$/, 'select 1/0; commit;')), /division by zero/);
+    await db.exec('rollback');
+    assert.equal((await db.query("select to_regprocedure('return_policy_editor_schema_version()') as marker")).rows[0].marker, null);
+    await assert.rejects(db.query("select save_return_policy(14,'customer',$1)",[policy.version]),/policy_invalid/);
+    await db.exec(migration);
+    await db.exec(migration);
+    assert.equal((await db.query('select return_policy_editor_schema_version() as version')).rows[0].version, 1);
+    assert.deepEqual((await db.query('select id,return_policy from orders order by id')).rows, previousOrders);
+    assert.equal(await stock(), previousStock);
+    const shortened = (await db.query("select save_return_policy(14,'customer',$1) as result",[policy.version])).rows[0].result;
+    assert.equal(shortened.days, 14);
+    for (const days of [0,1,13,366]) await assert.rejects(db.query("select save_return_policy($1,'customer',$2)",[days,shortened.version]),/policy_invalid/);
+    await assert.rejects(db.query("select save_return_policy(30,'customer',$1)",[policy.version]),/policy_changed/);
+    assert.deepEqual((await db.query('select id,return_policy from orders order by id')).rows, previousOrders);
+    const future = randomUUID();
+    await db.query("insert into orders(id,order_number,email,customer_name,address1,city,state,postal_code,country,shipping_method,subtotal_cents,total_cents,currency,user_id) values($1,'HN-POLICY-14','fixture@example.test','Local','Local','Paris','','75000','FR','standard',1000,1000,'eur',$2)",[future,user]);
+    assert.equal((await db.query('select return_policy from orders where id=$1',[future])).rows[0].return_policy.days, 14);
+    assert.equal(await stock(), previousStock);
     for (const role of ['anon','authenticated']) {
       for (const table of ['variant_costs','variant_cost_history','order_item_costs']) {
         assert.equal((await db.query('select relrowsecurity as enabled from pg_class where oid=$1::regclass',[table])).rows[0].enabled,true);
@@ -132,6 +163,7 @@ test('migration locale rejouable : retours atomiques, coûts privés figés et p
         finally { await db.exec('reset role'); }
       }
       for (const fn of ['save_return_policy(integer,text,text)','inspect_order_return(uuid,uuid,integer,text,text,integer,text)','inspect_return_request(uuid,integer,text)','save_variant_cost(uuid,integer,text,timestamp with time zone,text)','request_return(uuid,uuid,uuid,integer,text,integer,text)']) assert.equal((await db.query("select has_function_privilege($1,$2,'execute') as allowed",[role,fn])).rows[0].allowed,false);
+      assert.equal((await db.query("select has_function_privilege($1,'return_policy_editor_schema_version()','execute') as allowed",[role])).rows[0].allowed,false);
     }
   } finally { await db.close(); }
 });

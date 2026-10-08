@@ -115,6 +115,9 @@
 
   var operationsRevision = 0, costsLoad = 0, policyLoad = 0, costs = [], policy = null, costBusy = false, policyBusy = false;
   function operationCurrent(version, owner) { return version === operationsRevision && owner === window.HN_ADMIN.token(); }
+  function validReturnPolicy(value) {
+    return value && Number.isInteger(value.days) && value.days >= 14 && value.days <= 365 && typeof value.version === 'string' && ['customer','store'].indexOf(value.withdrawal_payer) >= 0;
+  }
   function pickCost() {
     var row = costs.filter(function (c) { return c.variant_id === document.getElementById('costVariant').value; })[0];
     document.getElementById('costAmount').value = row && row.unit_cost_cents != null ? (row.unit_cost_cents / 100).toFixed(2) : '';
@@ -143,8 +146,10 @@
     var version = operationsRevision, owner = window.HN_ADMIN.token();
     call('getReturnPolicy').then(function (res) {
       if (!operationCurrent(version,owner) || load !== policyLoad) return;
+      if (!validReturnPolicy(res.policy)) throw new Error('Politique incomplète : actualisez avant de modifier.');
       policy = res.policy;
       document.getElementById('returnPolicyDays').value = policy.days;
+      document.getElementById('setReturns').value = policy.days;
       document.getElementById('returnPolicyPayer').value = policy.withdrawal_payer;
       document.getElementById('returnPolicyStatus').textContent = 'Politique chargée. Aucun changement des anciennes commandes.';
     }).catch(function (error) { if (operationCurrent(version,owner)) document.getElementById('returnPolicyStatus').textContent = error.message; });
@@ -175,13 +180,17 @@
   document.getElementById('returnPolicyForm').addEventListener('submit',function (event) {
     event.preventDefault(); if (policyBusy || !policy) return;
     var days = Number(document.getElementById('returnPolicyDays').value), payer = document.getElementById('returnPolicyPayer').value;
-    if (!Number.isInteger(days) || days < 30 || days > 365 || !confirm('Afficher cette politique aux futurs achats : '+days+' jours ; changement d’avis à la charge '+(payer === 'store' ? 'de la boutique' : 'du client')+' ? Les commandes existantes et les droits légaux restent inchangés.')) return;
+    if (!Number.isInteger(days) || days < 14 || days > 365) { document.getElementById('returnPolicyStatus').textContent = 'Saisissez 14 à 365 jours pour enregistrer. Zéro ne supprime pas le droit légal de rétractation.'; return; }
+    if (!confirm('Afficher cette politique aux futurs achats : '+days+' jours ; changement d’avis à la charge '+(payer === 'store' ? 'de la boutique' : 'du client')+' ? Les commandes existantes et les droits légaux restent inchangés.')) return;
     var version = operationsRevision, owner = window.HN_ADMIN.token(); policyBusy = true; policyLoad++;
     document.getElementById('saveReturnPolicy').disabled = true;
     call('saveReturnPolicy',{ days:days,withdrawal_payer:payer,expected_version:policy.version }).then(function (res) {
       if (!operationCurrent(version,owner)) return;
-      if (!res.policy) throw new Error('Réponse incomplète : actualisez pour vérifier.');
+      if (!validReturnPolicy(res.policy) || res.policy.days !== days || res.policy.withdrawal_payer !== payer) throw new Error('Réponse incomplète : actualisez pour vérifier.');
       policy = res.policy; document.getElementById('returnPolicyStatus').textContent = 'Nouvelle politique enregistrée. Conditions anciennes conservées.';
+      document.getElementById('returnPolicyDays').value = policy.days;
+      document.getElementById('setReturns').value = policy.days;
+      try { localStorage.setItem('hn-return-policy-version', policy.version); } catch (error) {}
     }).catch(function (error) { if (operationCurrent(version,owner)) document.getElementById('returnPolicyStatus').textContent = error.message; })
       .finally(function () { if (operationCurrent(version,owner)) { policyBusy = false; document.getElementById('saveReturnPolicy').disabled = false; } });
   });
@@ -189,6 +198,7 @@
     operationsRevision++; costs = []; policy = null; costBusy = false; policyBusy = false;
     document.getElementById('variantCostForm').reset(); document.getElementById('costVariant').textContent = '';
     document.getElementById('returnPolicyForm').reset();
+    document.getElementById('setReturns').value = '';
     ['variantCostStatus','returnPolicyStatus'].forEach(function (id) { document.getElementById(id).textContent = ''; });
     ['saveVariantCost','saveReturnPolicy'].forEach(function (id) { document.getElementById(id).disabled = false; });
   });

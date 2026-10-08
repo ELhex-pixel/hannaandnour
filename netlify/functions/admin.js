@@ -570,13 +570,14 @@ if (body.shipping_status !== undefined) {
 
 case 'getSettings': {
         const settings = await loadSettings(sb);
+        const return_policy = require('./lib/return-policy').returnPolicy(await getSetting(sb, 'return_policy', null), settings);
         const catalog = await loadCatalog(sb);
         const currency = await getSetting(sb, 'currency', null) || { code: 'usd', symbol: '$' };
         const reviews = (await getSetting(sb, 'reviews', null)) || { show_demo: false };
         const home = await getSetting(sb, 'home', null);
         const story = await getSetting(sb, 'story', null);
         const color_swatches = await loadColorSwatches(sb);
-        return json(200, { settings, catalog, currency, reviews, home, story, color_swatches });
+        return json(200, { settings: { ...settings, returns_days: return_policy.days }, return_policy, catalog, currency, reviews, home, story, color_swatches });
       }
 
       case 'saveSettings': {

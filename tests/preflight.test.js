@@ -32,3 +32,8 @@ test('le marqueur retours/coûts est obligatoire et n’exécute aucune migratio
   await assert.rejects(preflight(env,{ rpc:async name => { calls.push(name); return name === 'admin_operations_schema_version' ? { error:{} } : { data:1 }; } }),/migration_admin_operations/);
   assert.deepEqual(calls,['commerce_schema_version','admin_inventory_schema_version','admin_operations_schema_version']);
 });
+test('la nouvelle saisie de retours exige sa migration avant toute publication', async () => {
+  const calls = [];
+  await assert.rejects(preflight(env, { rpc: async name => { calls.push(name); return name === 'return_policy_editor_schema_version' ? { error: {} } : { data: 1 }; } }), /migration_return_policy_editor/);
+  assert.deepEqual(calls, ['commerce_schema_version', 'admin_inventory_schema_version', 'admin_operations_schema_version', 'return_policy_editor_schema_version']);
+});
