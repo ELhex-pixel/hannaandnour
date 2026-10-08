@@ -177,8 +177,7 @@ function cleanProductFields(body) {
   p.is_bestseller = !!body.is_bestseller;
   p.active = body.active !== false;
   p.image = String(body.image || 'images/hero.jpg').trim();
-  p.gallery = Array.isArray(body.gallery) ? body.gallery.map(String).filter(Boolean) : [];
-  if (!p.gallery.length && p.image) p.gallery = [p.image];
+  p.gallery = require('../../public/js/product-media').clean(body.gallery || [], p.colors, p.image);
   p.rating = Math.min(5, Math.max(0, parseFloat(body.rating) || 4.5));
   p.review_count = Math.max(0, parseInt(body.review_count, 10) || 0);
   ['fit', 'measurements'].forEach(field => ['en', 'fr', 'ar'].forEach(lang => { p[field + '_' + lang] = String(body[field + '_' + lang] || '').trim().slice(0, 2000); }));
@@ -281,7 +280,10 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
 
       case 'saveProduct': {
         const id = String(body.id || '').trim();
-        const fields = cleanProductFields(body);
+        const limited = await rateLimit(sb, event, 'admin-save-product', 60, 600, 'admin');
+        if (limited) return limited;
+        let fields;
+        try { fields = cleanProductFields(body); } catch (error) { return json(400, { error: 'Photos invalides : utilisez une URL d’image valide, au maximum 100 photos et uniquement les coloris de la fiche.' }); }
 
         let productId = id || null;
         if (!productId) {
@@ -356,6 +358,24 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
         const { error } = await sb.from('products').update({ active: false }).eq('id', body.id);
         if (error) throw error;
         return json(200, { ok: true });
+      }
+
+      case 'purgeProducts': {
+        if (body.confirmation !== 'SUPPRIMER' || !Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100 || body.ids.some(id => typeof id !== 'string' || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))) return json(400, { error: 'Sélection invalide ou confirmation SUPPRIMER manquante.' });
+        const limited = await rateLimit(sb, event, 'admin-purge-products', 10, 600, 'admin');
+        if (limited) return limited;
+        const { data, error } = await sb.rpc('purge_unused_products', { p_ids: [...new Set(body.ids)], p_confirmation: body.confirmation });
+        if (error) {
+          const errors = {
+            product_delete_active: 'Archivez les fiches avant de les supprimer.',
+            product_delete_stock: 'Une fiche possède encore du stock. Vérifiez le disponible physique ; aucune quantité ne sera effacée.',
+            product_delete_history: 'Une fiche est liée à une commande, un avis, un ajustement ou un coût. Conservez-la archivée pour préserver son historique.',
+            product_delete_invalid: 'Sélection ou confirmation invalide.'
+          };
+          return json(errors[error.message] ? 409 : 503, { error: errors[error.message] || 'Suppression non confirmée. Actualisez le catalogue avant de réessayer.' });
+        }
+        if (!data || !Array.isArray(data.deleted_ids) || !Array.isArray(data.missing_ids)) return json(503, { error: 'Suppression non confirmée. Actualisez le catalogue.' });
+        return json(200, data);
       }
 
       case 'activateProducts':

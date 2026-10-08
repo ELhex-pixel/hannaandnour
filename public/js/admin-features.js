@@ -292,22 +292,34 @@
   function esc(value) { return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function say(message) { el('inventoryStatus').hidden = false; el('inventoryStatus').textContent = message; }
   function clearPending() { pending = null; try { sessionStorage.removeItem(pendingKey); } catch (e) {} }
+  function preview() {
+    var mode = el('inventoryMode').value, value = el('inventoryQuantity').value, qty = Number(value);
+    if (!snapshot || ['restock','remove','count'].indexOf(mode) < 0 || value === '') { el('inventoryPreview').textContent = 'Choisissez une variante, une opération et une quantité pour voir le résultat avant envoi.'; return false; }
+    if (!Number.isInteger(qty) || qty < 0 || qty > 1000000 || (mode !== 'count' && qty === 0)) { el('inventoryPreview').textContent = 'Saisissez une quantité entière valide.'; return false; }
+    var after = mode === 'restock' ? snapshot.stock + qty : mode === 'remove' ? snapshot.stock - qty : qty;
+    if (after < 0 || after > 1000000) { el('inventoryPreview').textContent = after < 0 ? 'Retrait impossible : quantité supérieure au disponible affiché.' : 'La quantité dépasserait la limite du stock.'; return false; }
+    el('inventoryPreview').textContent = 'Aperçu : ' + snapshot.stock + (mode === 'restock' ? ' + ' + qty : mode === 'remove' ? ' − ' + qty : '') + ' → ' + after + ' unité(s) disponibles. Aucun changement avant confirmation. Le serveur vérifiera le stock au moment de l’enregistrement.';
+    return true;
+  }
   function lock(on) {
     form.querySelectorAll('input,select,textarea').forEach(function (node) { node.disabled = on; });
-    el('saveInventory').disabled = busy;
+    el('saveInventory').disabled = busy || (!pending && !preview());
     el('saveInventory').textContent = pending ? 'Vérifier / réessayer la même opération' : 'Confirmer l’ajustement';
   }
   function modeLabel() {
     var mode = el('inventoryMode').value;
-    el('inventoryQuantityLabel').textContent = mode === 'restock' ? 'Nombre d’unités à ajouter' : mode === 'remove' ? 'Nombre d’unités disponibles à retirer' : 'Disponible compté, hors unités réservées ou vendues';
+    el('inventoryQuantityLabel').textContent = mode === 'restock' ? 'Nombre d’unités à ajouter' : mode === 'remove' ? 'Nombre d’unités disponibles à retirer' : mode === 'count' ? 'Nouveau disponible, hors unités réservées ou vendues' : 'Quantité — choisissez d’abord l’opération';
     el('inventoryQuantity').min = mode === 'count' ? '0' : '1';
+    el('inventoryReason').placeholder = mode === 'remove' ? 'Exemple : déstockage, article abîmé…' : mode === 'count' ? 'Exemple : recomptage du disponible physique…' : 'Exemple : arrivage fournisseur, référence du bon…';
+    lock(!!pending);
   }
   function pick(id) {
     var row = rows.filter(function (value) { return value.id === id; })[0];
-    if (!row) { snapshot = null; el('inventoryCurrent').textContent = 'Variante non disponible dans la liste chargée.'; return; }
+    if (!row) { snapshot = null; el('inventoryVariant').value = ''; el('inventoryCurrent').textContent = 'Variante non disponible dans la liste chargée.'; lock(!!pending); return; }
     snapshot = row;
     el('inventoryVariant').value = id;
     el('inventoryCurrent').textContent = row.label + ' — ' + row.stock + ' unité(s) actuellement disponibles' + (row.active ? '' : ' — hors ligne');
+    lock(!!pending);
   }
   function render() {
     var active = rows.filter(function (row) { return row.active; });
@@ -334,7 +346,7 @@
   function load(selectId) {
     if (busy) return;
     var request = ++revision, owner = api.token();
-    var selected = selectId || (pending ? pending.variant_id : el('inventoryVariant').value);
+    var selected = typeof selectId === 'string' ? selectId : (pending ? pending.variant_id : el('inventoryVariant').value);
     api.call('listProducts').then(function (res) {
       if (request !== revision || owner !== api.token()) return;
       rows = [];
@@ -345,7 +357,7 @@
       });
       render();
       el('inventoryVariant').innerHTML = '<option value="">Choisir une variante</option>' + rows.map(function (row) { return '<option value="' + esc(row.id) + '">' + esc(row.label) + (row.active ? '' : ' — hors ligne') + '</option>'; }).join('');
-      if (selected) pick(selected);
+      pick(selected || '');
       if (pending) {
         el('inventoryMode').value = pending.mode;
         el('inventoryQuantity').value = pending.quantity;
@@ -364,6 +376,7 @@
     if (!pending) {
       if (!snapshot) { say('Choisissez une variante.'); return; }
       var qty = Number(el('inventoryQuantity').value), mode = el('inventoryMode').value, reason = el('inventoryReason').value.trim();
+      if (!preview()) { say('Vérifiez la variante, l’opération et l’aperçu avant de confirmer.'); return; }
       if (!el('inventoryQuantity').value || !Number.isInteger(qty) || qty < 0 || qty > 1000000 || (mode !== 'count' && qty === 0) || reason.length < 3 || reason.length > 300) { say('Renseignez une quantité entière valide et un motif de 3 à 300 caractères.'); return; }
       if (!confirm(snapshot.label + '\n\n' + (mode === 'restock' ? 'Ajouter ' + qty + ' unités au disponible.' : mode === 'remove' ? 'Retirer ' + qty + ' unités du disponible.' : 'Remplacer le disponible affiché (' + snapshot.stock + ') par ' + qty + ', hors unités réservées ou vendues.') + '\nMotif : ' + reason)) return;
       if (!window.crypto || !window.crypto.randomUUID) { say('Utilisez un navigateur récent avec une connexion sécurisée. Aucune opération envoyée.'); return; }
@@ -377,7 +390,7 @@
     api.call('adjustInventory', pending).then(function (res) {
       if (owner !== api.token() || request !== revision) return;
       var result = res.result;
-      if (!result || !Number.isInteger(result.stock_before) || !Number.isInteger(result.stock_after)) throw new Error('Réponse incomplète : opération non confirmée.');
+      if (!result || result.operation_id !== pending.operation_id || !Number.isInteger(result.stock_before) || result.stock_before < 0 || !Number.isInteger(result.stock_after) || result.stock_after < 0 || result.stock_after > 1000000 || result.stock_after !== (pending.mode === 'restock' ? result.stock_before + pending.quantity : pending.mode === 'remove' ? result.stock_before - pending.quantity : pending.quantity)) throw new Error('Réponse incomplète : opération non confirmée.');
       clearPending();
       say((result.already ? 'Opération déjà enregistrée, aucun double ajustement. ' : 'Ajustement enregistré. ') + 'Disponible lors de l’opération : ' + result.stock_before + ' → ' + result.stock_after + '.');
       el('inventoryQuantity').value = '';
@@ -394,6 +407,7 @@
     });
   });
   el('inventoryMode').addEventListener('change', modeLabel);
+  el('inventoryQuantity').addEventListener('input', function () { lock(!!pending); });
   el('inventoryVariant').addEventListener('change', function () { if (!pending) pick(this.value); });
   el('inventorySearch').addEventListener('input', render);
   el('inventoryFilter').addEventListener('change', render);
@@ -407,12 +421,17 @@
     form.scrollIntoView({ block: 'start' });
     el('inventoryQuantity').focus();
   });
-  document.addEventListener('hn:inventory-variant', function (event) { if (!pending && !busy) load(event.detail); });
+  document.addEventListener('hn:inventory-variant', function (event) {
+    if (pending || busy) { say('Confirmez d’abord l’opération en cours avant de changer de variante.'); return; }
+    load(event.detail);
+    form.scrollIntoView({ block: 'start' });
+  });
   document.addEventListener('hn:admin-logout', function () {
     revision++;
     rows = []; snapshot = null; pending = null; busy = false;
     try { sessionStorage.removeItem(pendingKey); } catch (e) {}
     form.reset();
+    modeLabel();
     lock(false);
     ['inventoryList', 'inventorySummary', 'inventoryHistory', 'inventoryCurrent'].forEach(function (id) { el(id).textContent = ''; });
     el('inventoryVariant').innerHTML = '<option value="">Choisir une variante</option>';

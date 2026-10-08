@@ -80,12 +80,16 @@
   .variant-grid { display: grid; gap: 8px; margin-top: 8px; }
   .variant-row { display: grid; grid-template-columns: 130px 1fr 90px 60px 170px; gap: 8px; align-items: center; }
   .variant-row input { padding: 6px 8px; border: 1px solid #E2D8C5; border-radius: 8px; }
+  .variant-row .v-adjust { grid-column: 1 / -1; justify-self: start; }
 
   .gallery-item { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; border: 1px solid #E7DECC; border-radius: 10px; padding: 6px; margin: 0 8px 8px 0; }
   .gallery-item img { width: 72px; height: 90px; object-fit: cover; border-radius: 8px; }
   .gallery-item .g-actions { display: flex; gap: 4px; margin-top: 2px; }
   .gallery-item .g-actions button { font-size: 12px; padding: 1px 7px; line-height: 1.4; min-width: 26px; }
   .gallery-item img.err { opacity: 0.35; }
+  .gallery-item label { width: 200px; max-width: 100%; }
+  .gallery-item .g-color { width: 100%; }
+  #galleryColorPreview { display: flex; flex-wrap: wrap; gap: 8px; }
   #galleryGrid { min-height: 36px; }
   #galleryGrid .empty { color: #8a7d66; font-size: 13px; padding: 6px 0; }
 
@@ -436,7 +440,8 @@
         <button class="btn btn-primary" id="newProductBtn">+ Nouveau produit</button>
       </div>
       <div class="admin-notice"><strong>Un produit archivé reste dans votre historique.</strong> Il n’est plus vendu sur le site. « Stock non configuré » ne signifie pas « épuisé » : renseignez chaque taille et coloris avant les ventes.</div>
-      <div class="admin-bulk-bar"><span id="productSelectionCount" role="status">Aucun produit sélectionné</span><button type="button" class="btn btn-primary btn-small" id="activateSelectedProducts" disabled>Activer la sélection</button><button type="button" class="btn btn-danger btn-small" id="archiveSelectedProducts" disabled>Archiver la sélection</button><button type="button" class="btn btn-secondary btn-small" id="clearProductSelection" disabled>Effacer la sélection</button></div>
+      <div class="admin-bulk-bar"><span id="productSelectionCount" role="status">Aucun produit sélectionné</span><button type="button" class="btn btn-primary btn-small" id="activateSelectedProducts" disabled>Activer la sélection</button><button type="button" class="btn btn-danger btn-small" id="archiveSelectedProducts" disabled>Archiver la sélection</button><button type="button" class="btn btn-danger btn-small" id="deleteSelectedProducts" disabled>Supprimer définitivement</button><button type="button" class="btn btn-secondary btn-small" id="clearProductSelection" disabled>Désélectionner</button></div>
+      <p class="admin-muted">Supprimer définitivement concerne uniquement les fiches hors ligne, sans stock ni historique. Les photos originales ne sont pas effacées. Pour conserver une fiche, utilisez Archiver.</p>
       <p id="productBulkStatus" class="admin-operation-status" role="status" hidden></p>
       <div class="card" id="productsList"><p class="empty">Chargement...</p></div>
     </div>
@@ -495,10 +500,10 @@
       <div class="card"><h3>Ajuster une variante</h3><p class="admin-muted">Chaque opération ci-dessous est enregistrée avec son motif. Un double envoi de la même opération ne la compte pas deux fois.</p>
         <form id="inventoryForm" class="form-grid">
           <div class="field full"><label for="inventoryVariant">Produit, coloris et taille</label><select id="inventoryVariant" required><option value="">Choisir une variante</option></select><p id="inventoryCurrent" class="admin-muted"></p></div>
-          <div class="field"><label for="inventoryMode">Opération</label><select id="inventoryMode"><option value="restock">Arrivage — ajouter des unités</option><option value="remove">Perte / défaut — retirer des unités disponibles</option><option value="count">Comptage — corriger le disponible</option></select></div>
-          <div class="field"><label for="inventoryQuantity" id="inventoryQuantityLabel">Nombre d’unités à ajouter</label><input id="inventoryQuantity" type="number" min="1" max="1000000" step="1" required></div>
+          <div class="field"><label for="inventoryMode">Opération</label><select id="inventoryMode" required><option value="">Choisir : ajouter, retirer ou corriger</option><option value="restock">Arrivage — ajouter des unités</option><option value="remove">Déstockage / perte / défaut — retirer des unités</option><option value="count">Correction — saisir le nouveau disponible</option></select></div>
+          <div class="field"><label for="inventoryQuantity" id="inventoryQuantityLabel">Quantité — choisissez d’abord l’opération</label><input id="inventoryQuantity" type="number" min="1" max="1000000" step="1" required></div>
           <div class="field full"><label for="inventoryReason">Motif obligatoire</label><textarea id="inventoryReason" minlength="3" maxlength="300" required placeholder="Exemple : arrivage fournisseur, référence du bon…"></textarea></div>
-          <div class="field full"><button type="submit" class="btn btn-primary" id="saveInventory">Confirmer l’ajustement</button></div>
+          <div class="field full"><p id="inventoryPreview" class="admin-operation-status" role="status">Choisissez une variante et une opération pour voir le résultat avant envoi.</p><p class="admin-muted">Le motif explique votre action, mais ne choisit pas l’opération. « Déstockage » avec Arrivage ajoute des unités : choisissez Retirer pour en enlever.</p><button type="submit" class="btn btn-primary" id="saveInventory">Confirmer l’ajustement</button></div>
         </form><p id="inventoryStatus" class="admin-operation-status" role="status" hidden></p>
       </div>
       <div class="card"><h3>Journal des ajustements manuels</h3><p class="admin-muted">Les 100 dernières opérations de cette rubrique. Ce journal ne reconstruit pas les anciennes ventes ni le stock initial saisi dans les fiches produit.</p><div id="inventoryHistory"></div></div>
@@ -936,7 +941,7 @@
         <div class="field"><label>Mesures vérifiées (AR)</label><textarea id="f-measurements_ar"></textarea></div>
         <div class="field"><label>Transparence vérifiée</label><select id="f-opacity"><option value="unspecified">Non renseignée</option><option value="opaque">Opaque</option><option value="semi-sheer">Semi-transparente</option><option value="sheer">Transparente</option></select></div>
         <div class="field"><label>Vidéo produit (URL HTTPS)</label><input id="f-video_url" type="url"></div>
-        <div class="field full" id="productPhotosSection"><h3>Photos du produit</h3><p class="admin-muted">La photo principale apparaît dans le catalogue. La galerie regroupe les autres vues. Enregistrez la fiche après vos modifications.</p></div>
+        <div class="field full" id="productPhotosSection"><h3>Photos du produit</h3><p class="admin-muted">La photo principale apparaît dans le catalogue. Associez chaque photo au bon coloris ci-dessous ; « Photo générale » ne promet aucun coloris. Enregistrez la fiche après vos modifications.</p></div>
         <div class="field full"><label for="f-image">Image principale (URL)</label><input id="f-image" placeholder="images/... ou URL Supabase"><img id="previewMain" class="admin-main-preview" alt="Aperçu de l’image principale" style="display:none;"></div>
         <div class="field full"><label>&nbsp;</label>
           <div>
@@ -952,6 +957,7 @@
           <div id="galleryUploadStatus" class="admin-operation-status" role="status" hidden></div>
           <button type="button" class="btn btn-secondary btn-small" id="stopGalleryUpload" hidden>Arrêter après la photo en cours</button>
           <div id="galleryGrid"></div>
+          <div class="field"><label for="galleryPreviewColor">Aperçu des photos par coloris</label><select id="galleryPreviewColor"><option value="">Toutes les photos</option></select><p id="galleryColorStatus" class="admin-muted" role="status"></p><div id="galleryColorPreview"></div></div>
           <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
             <input type="text" id="galleryUrl" placeholder="Collez une URL d'image puis Entr&eacute;e&hellip;" style="flex:1; min-width:180px; padding:6px 8px; border:1px solid #E2D8C5; border-radius:8px;">
             <button class="btn btn-secondary btn-small" id="galleryUrlAdd">Ajouter l'URL</button>
@@ -994,6 +1000,7 @@
   <script src="js/config.js"></script>
   <script src="js/admin-api.js"></script>
   <script src="js/colors.js"></script>
+  <script src="js/product-media.js"></script>
   <script src="vendor/jsbarcode.min.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/admin-features.js"></script>

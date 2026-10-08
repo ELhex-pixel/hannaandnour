@@ -55,6 +55,81 @@ test('la préparation ne fait que les RPC de contrôle, sans paiement, email ou 
   assert.equal(mock.calls.length, 2);
 });
 
+function inventoryEditor(adjust) {
+  const nodes = {}, listeners = {}, storage = new Map();
+  const state = { token:'fixture-token',calls:[],stock:18,present:true,confirms:[] };
+  const node = id => nodes[id] || (nodes[id] = { value:'',textContent:'',hidden:false,disabled:false,handlers:{},addEventListener(name,handler) { this.handlers[name]=handler; },querySelectorAll:()=>[],reset() {},focus() {},scrollIntoView() {} });
+  node('inventoryFilter').value='active';
+  const api = { token:()=>state.token,call:async (action,body) => {
+    if (action==='listProducts') return { products:state.present?[{ name_fr:'Fixture locale',variants:[{ id:variantId,stock:state.stock,color:'Vin',size:'M' }] }]:[] };
+    if (action==='listInventoryAdjustments') return { adjustments:[] };
+    assert.equal(action,'adjustInventory');
+    state.calls.push({ ...body });
+    if (adjust) return adjust(body,state);
+    const before=state.stock;
+    state.stock=body.mode==='restock'?before+body.quantity:body.mode==='remove'?before-body.quantity:body.quantity;
+    return { result:{ operation_id:body.operation_id,stock_before:before,stock_after:state.stock } };
+  } };
+  const context = { window:{ HN_ADMIN:api,crypto:{ randomUUID } },document:{ getElementById:node,querySelector:node,addEventListener(name,handler) { listeners[name]=handler; } },sessionStorage:{ getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key) },confirm:message=>{ state.confirms.push(message); return true; } };
+  const source=fs.readFileSync('public/js/admin-features.js','utf8');
+  vm.runInNewContext(source.slice(source.indexOf("(function () {\n  'use strict';\n  var api = window.HN_ADMIN;")),context);
+  return { nodes,state,storage,listeners,load:()=>node('refreshInventory').handlers.click(),pick:()=>node('inventoryVariant').handlers.change.call({ value:variantId }),submit:()=>node('inventoryForm').handlers.submit({ preventDefault() {} }),input(mode,value) { node('inventoryMode').value=mode; node('inventoryMode').handlers.change(); node('inventoryQuantity').value=String(value); node('inventoryQuantity').handlers.input(); node('inventoryReason').value='Déstockage local'; } };
+}
+const settleInventory = () => new Promise(resolve=>setImmediate(resolve));
+test('le stock exige un choix explicite et prévisualise ajout, retrait et correction sans écriture', async () => {
+  const mock=inventoryEditor(); mock.load(); await settleInventory(); mock.pick();
+  mock.input('',9); mock.submit();
+  assert.equal(mock.state.calls.length,0);
+  assert.equal(mock.nodes.saveInventory.disabled,true);
+  for (const [mode,qty,after] of [['restock',9,27],['remove',9,9],['count',9,9],['count',0,0]]) {
+    mock.input(mode,qty);
+    assert.match(mock.nodes.inventoryPreview.textContent,new RegExp('→ '+after+' unité'));
+    assert.equal(mock.state.calls.length,0);
+  }
+  mock.input('remove',19); mock.submit();
+  assert.match(mock.nodes.inventoryPreview.textContent,/Retrait impossible/);
+  assert.equal(mock.nodes.saveInventory.disabled,true);
+  assert.equal(mock.state.calls.length,0);
+});
+test('une correction envoie le nouveau disponible, pas un arrivage, puis recharge la valeur confirmée', async () => {
+  const mock=inventoryEditor(); mock.load(); await settleInventory(); mock.pick(); mock.input('count',9); mock.submit();
+  await settleInventory();
+  assert.equal(mock.state.calls[0].mode,'count');
+  assert.equal(mock.state.calls[0].quantity,9);
+  assert.equal(mock.state.calls[0].expected_stock,18);
+  assert.match(mock.nodes.inventoryStatus.textContent,/18 → 9/);
+  assert.match(mock.nodes.inventoryCurrent.textContent,/9 unité/);
+  assert.equal(mock.storage.size,0);
+});
+test('une réponse perdue conserve la même opération et une réponse incorrecte ne confirme pas un faux stock', async () => {
+  let first=true;
+  const mock=inventoryEditor(async body=>{ if (first) { first=false; throw new Error('Réponse perdue locale'); } return { result:{ already:true,operation_id:body.operation_id,stock_before:18,stock_after:9 } }; });
+  mock.load(); await settleInventory(); mock.pick(); mock.input('remove',9); mock.submit(); await settleInventory();
+  assert.equal(mock.storage.size,1);
+  mock.submit(); await settleInventory();
+  assert.equal(mock.state.calls[0].operation_id,mock.state.calls[1].operation_id);
+  assert.match(mock.nodes.inventoryStatus.textContent,/aucun double ajustement/);
+  assert.equal(mock.storage.size,0);
+  const bad=inventoryEditor(async()=>({ result:{ operation_id:'incorrect',stock_before:18,stock_after:9 } }));
+  bad.load(); await settleInventory(); bad.pick(); bad.input('count',9); bad.submit(); await settleInventory();
+  assert.equal(bad.storage.size,1);
+  assert.match(bad.nodes.inventoryStatus.textContent,/Réponse incomplète/);
+});
+test('une variante disparue après actualisation ne laisse pas une ancienne quantité modifiable', async () => {
+  const mock=inventoryEditor(); mock.load(); await settleInventory(); mock.pick(); mock.input('count',9);
+  mock.state.present=false; mock.load(); await settleInventory(); mock.submit();
+  assert.equal(mock.state.calls.length,0);
+  assert.equal(mock.nodes.inventoryVariant.value,'');
+  assert.equal(mock.nodes.saveInventory.disabled,true);
+});
+test('ouvrir le gestionnaire sans variante précise efface un ancien choix sans écrire', async () => {
+  const mock=inventoryEditor();mock.load();await settleInventory();mock.pick();mock.input('count',9);
+  mock.listeners['hn:inventory-variant']({detail:''});await settleInventory();mock.submit();
+  assert.equal(mock.nodes.inventoryVariant.value,'');
+  assert.equal(mock.state.calls.length,0);
+  assert.equal(mock.nodes.saveInventory.disabled,true);
+});
+
 test('base locale : ajustements idempotents, comptages protégés et préparation persistante sans double stock', async () => {
   const db = new PGlite();
   try {

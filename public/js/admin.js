@@ -276,6 +276,7 @@
     document.getElementById('productSelectionCount').textContent = count ? count + ' produit(s) sélectionné(s), y compris hors filtre' : 'Aucun produit sélectionné';
     document.getElementById('activateSelectedProducts').disabled = !count || productBulkBusy;
     document.getElementById('archiveSelectedProducts').disabled = !count || productBulkBusy;
+    document.getElementById('deleteSelectedProducts').disabled = !count || productBulkBusy;
     document.getElementById('clearProductSelection').disabled = !count || productBulkBusy;
   }
 
@@ -392,6 +393,7 @@
   /* ---- Product editor ---- */
 
   var editing = null;
+  var galleryColors = Object.create(null);
   var editorRevision = 0;
   var imageBusy = false;
   var galleryStop = false;
@@ -434,6 +436,9 @@
       badge: '', rating: 4.5, review_count: 0, image: 'images/hero.jpg', gallery: [],
       is_featured: false, is_bestseller: false, active: false, variants: []
     };
+    galleryColors = Object.create(null);
+    var existingPhotos = window.HN_MEDIA.entries(editing);
+    existingPhotos.forEach(function (photo) { galleryColors[photo.src] = photo.color; });
 
     document.getElementById('editorTitle').textContent = p ? 'Modifier : ' + (p.name_fr || p.name_en || p.slug) : 'Nouveau produit';
     document.getElementById('f-id').value = p ? p.id : '';
@@ -463,7 +468,8 @@
     setVal('f-opacity', editing.opacity || 'unspecified');
     setVal('f-video_url', editing.video_url || '');
     setVal('f-image', editing.image || 'images/hero.jpg');
-    setVal('f-gallery', (editing.gallery || []).join('\n'));
+    setVal('f-gallery', existingPhotos.map(function (photo) { return photo.src; }).join('\n'));
+    document.getElementById('galleryPreviewColor').value = '';
     renderGalleryGrid();
     document.getElementById('f-featured').checked = !!editing.is_featured;
     document.getElementById('f-bestseller').checked = !!editing.is_bestseller;
@@ -533,13 +539,14 @@
     }
 
     var html = rows.map(function (r, i) {
-      var persisted = (editing.variants || []).some(function (v) { return v.id && v.color === r.color && v.size === r.size; });
+      var persisted = (editing.variants || []).filter(function (v) { return v.id && v.color === r.color && v.size === r.size; })[0];
       return '<div class="variant-row" data-i="' + i + '">' +
         (r.color ? colorCellHtml(r.color) : '<input type="text" class="v-color" value="" placeholder="Couleur">') +
         '<input type="text" class="v-size" value="' + esc(r.size) + '" placeholder="Taille" ' + (r.size ? 'readonly' : '') + '>' +
         '<input type="number" class="v-stock" min="0" step="1" value="' + (stockFor(r.color, r.size) === '' ? '' : stockFor(r.color, r.size)) + '" placeholder="0"' + (persisted ? ' readonly aria-label="Stock existant, à ajuster dans la rubrique Stock"' : ' aria-label="Stock initial de la nouvelle variante"') + '>' +
         '<span style="font-size:12px;color:#8a7d66;">stock</span>' +
         '<input type="text" class="v-barcode" value="' + esc(barcodeFor(r.color, r.size)) + '" placeholder="Code-barres (auto)">' +
+        (persisted ? '<button type="button" class="btn btn-secondary btn-small v-adjust" data-editor-inventory="' + esc(persisted.id) + '">Modifier ce stock</button>' : '') +
         '</div>';
     }).join('');
 
@@ -614,6 +621,7 @@
         '<span class="dot" style="background:' + esc(COLORS.hex(e.fr)) + ';"></span> ' + esc(e.fr) + '</label>';
     });
     listEl.innerHTML = checks || '<p style="color:#9a8c75;font-size:13px;">Liste vide</p>';
+    renderGalleryGrid();
   }
 
   function wireColorsPicker() {
@@ -742,7 +750,7 @@
       badge: getVal('f-badge') || null,
       rating: parseFloat(getVal('f-rating')) || 4.5,
       image: getVal('f-image') || 'images/hero.jpg',
-      gallery: getVal('f-gallery').split('\n').map(function (s) { return s.trim(); }).filter(Boolean),
+      gallery: galleryPayload(),
       is_featured: document.getElementById('f-featured').checked,
       is_bestseller: document.getElementById('f-bestseller').checked,
       active: document.getElementById('f-active').checked,
@@ -752,6 +760,7 @@
     ['fit', 'measurements'].forEach(function (field) { ['en', 'fr', 'ar'].forEach(function (lang) { p[field + '_' + lang] = getVal('f-' + field + '_' + lang); }); });
     p.opacity = getVal('f-opacity');
     p.video_url = getVal('f-video_url');
+    p.gallery = window.HN_MEDIA.clean(p.gallery, p.colors, p.image);
     return p;
   }
 
@@ -766,18 +775,35 @@
     renderGalleryGrid();
   }
 
+  function galleryPayload() {
+    return galleryLines().map(function (src) { return galleryColors[src] ? { src: src, color: galleryColors[src] } : src; });
+  }
+
+  function renderColorPreview() {
+    var color = document.getElementById('galleryPreviewColor').value;
+    var photos = window.HN_MEDIA.select({ image: getVal('f-image'), gallery: galleryPayload() }, color);
+    document.getElementById('galleryColorStatus').textContent = color ? photos.matched ? 'Photos associées à ' + color + ', puis vues générales.' : 'Aucune photo associée à ' + color + '. Les vues générales ne garantissent pas ce coloris.' : 'Toutes les photos ; choisissez un coloris pour vérifier son affichage.';
+    document.getElementById('galleryColorPreview').innerHTML = photos.images.length ? photos.images.map(function (src) { return '<img class="admin-main-preview" src="' + esc(src) + '" alt="Aperçu de la sélection">'; }).join('') : '<p class="empty">Aucune photo pour cette sélection.</p>';
+  }
+
   function renderGalleryGrid() {
     var box = document.getElementById('galleryGrid');
     if (!box) return;
     var lines = galleryLines();
+    var colors = pickerColors();
+    var preview = document.getElementById('galleryPreviewColor'), selected = preview.value;
+    preview.innerHTML = '<option value="">Toutes les photos</option>' + colors.map(function (color) { return '<option value="' + esc(color) + '">' + esc(color) + '</option>'; }).join('');
+    preview.value = colors.indexOf(selected) >= 0 ? selected : '';
     if (!lines.length) {
       box.innerHTML = '<p class="empty">Aucune image &mdash; ajoutez-en via upload ou URL.</p>';
+      renderColorPreview();
       return;
     }
     var html = '';
     for (var i = 0; i < lines.length; i++) {
       html += '<div class="gallery-item" data-i="' + i + '">' +
         '<img src="' + esc(lines[i]) + '" alt="Image ' + (i + 1) + '">' +
+        '<label>Coloris de cette photo<select class="g-color" aria-label="Coloris de la photo ' + (i + 1) + '"><option value="">Photo générale / non associée</option>' + colors.map(function (color) { return '<option value="' + esc(color) + '"' + (window.HN_MEDIA.norm(color) === window.HN_MEDIA.norm(galleryColors[lines[i]]) ? ' selected' : '') + '>' + esc(color) + '</option>'; }).join('') + (galleryColors[lines[i]] && !colors.some(function (color) { return window.HN_MEDIA.norm(color) === window.HN_MEDIA.norm(galleryColors[lines[i]]); }) ? '<option selected value="' + esc(galleryColors[lines[i]]) + '">Coloris retiré : ' + esc(galleryColors[lines[i]]) + '</option>' : '') + '</select></label>' +
         '<div class="g-actions">' +
         '<button type="button" class="btn btn-secondary btn-small g-main" aria-label="Choisir la photo ' + (i + 1) + ' comme image principale">' + (lines[i] === getVal('f-image') ? 'Principale' : 'Choisir principale') + '</button>' +
         '<button type="button" class="btn btn-secondary btn-small g-up" aria-label="Monter la photo ' + (i + 1) + '"' + (i === 0 ? ' disabled' : '') + '>&uarr;</button>' +
@@ -786,6 +812,7 @@
         '</div></div>';
     }
     box.innerHTML = html;
+    renderColorPreview();
   }
 
   function moveGallery(i, dir) {
@@ -798,7 +825,10 @@
 
   function deleteGallery(i) {
     var lines = galleryLines();
+    var removed = lines[i];
     lines.splice(i, 1);
+    delete galleryColors[removed];
+    if (getVal('f-image') === removed) setVal('f-image', lines[0] || '');
     saveGalleryLines(lines);
   }
 
@@ -807,12 +837,19 @@
     if (!input) return;
     var v = (input.value || '').trim();
     if (!v) return;
-    if (!/^https?:\/\//i.test(v) && v.indexOf('images/') !== 0) { toast('URL invalide (http(s) ou images/…)', 'err'); return; }
+    if (!window.HN_MEDIA.validUrl(v)) { toast('URL invalide (http(s) ou images/…)', 'err'); return; }
     var lines = galleryLines();
     if (lines.indexOf(v) >= 0) { input.value = ''; toast('Déjà présente', 'err'); return; }
     lines.push(v);
     saveGalleryLines(lines);
     input.value = '';
+  }
+
+  function openVariantInventory(id) {
+    if (!confirm('Ouvrir la rubrique Stock ? Les modifications non enregistrées de cette fiche ne seront pas sauvegardées.')) return;
+    closeProductEditor();
+    document.querySelector('[data-tab="inventory"]').click();
+    document.dispatchEvent(new CustomEvent('hn:inventory-variant', { detail: id || '' }));
   }
 
   function wireEditor() {
@@ -830,6 +867,9 @@
     // Close by clicking the dark backdrop around the editor.
     document.getElementById('productEditor').addEventListener('click', function (e) {
       if (e.target === this) { closeProductEditor(); return; }
+      var inventory = e.target.closest('[data-editor-inventory]');
+      if (inventory) { openVariantInventory(inventory.getAttribute('data-editor-inventory')); return; }
+      if (imageBusy && e.target.closest('.g-actions, #galleryUrlAdd')) return;
       var section = e.target.closest('[data-editor-section]');
       if (section) { document.getElementById(section.getAttribute('data-editor-section')).scrollIntoView({ block: 'start' }); return; }
       var main = e.target.closest('.g-main');
@@ -844,15 +884,29 @@
     });
     document.getElementById('newProductBtn').addEventListener('click', function () { openEditor(null); });
     document.getElementById('editInventoryBtn').addEventListener('click', function () {
-      var variant = (editing.variants || [])[0];
-      closeProductEditor();
-      document.querySelector('[data-tab="inventory"]').click();
-      if (variant && variant.id) document.dispatchEvent(new CustomEvent('hn:inventory-variant', { detail: variant.id }));
+      var variants = editing.variants || [];
+      openVariantInventory(variants.length === 1 ? variants[0].id : null);
     });
     document.getElementById('f-colors').addEventListener('input', buildVariantGrid);
+    document.getElementById('f-colors').addEventListener('input', renderGalleryGrid);
     document.getElementById('f-sizes').addEventListener('input', buildVariantGrid);
     wireColorsPicker();
     document.getElementById('f-gallery').addEventListener('input', renderGalleryGrid);
+    document.getElementById('f-image').addEventListener('change', function () {
+      var src = getVal('f-image');
+      if (!window.HN_MEDIA.validUrl(src)) return;
+      var lines = galleryLines();
+      if (lines.indexOf(src) < 0) lines.unshift(src);
+      saveGalleryLines(lines);
+    });
+    document.getElementById('galleryPreviewColor').addEventListener('change', renderColorPreview);
+    document.getElementById('galleryGrid').addEventListener('change', function (event) {
+      var input = event.target.closest('.g-color');
+      if (!input || imageBusy) return;
+      var src = galleryLines()[Number(input.closest('.gallery-item').getAttribute('data-i'))];
+      galleryColors[src] = input.value;
+      renderColorPreview();
+    });
     var galleryUrlInput = document.getElementById('galleryUrl');
     if (galleryUrlInput) galleryUrlInput.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') addGalleryUrl();
@@ -943,7 +997,13 @@
       input.addEventListener('input', show);
       input.addEventListener('change', show);
     }
-    bind('uploadMainBtn', 'fileMain', function (url) { setVal('f-image', url); document.dispatchEvent(new CustomEvent('hn:main-image-uploaded')); });
+    bind('uploadMainBtn', 'fileMain', function (url) {
+      setVal('f-image', url);
+      var lines = galleryLines();
+      if (lines.indexOf(url) < 0) lines.unshift(url);
+      saveGalleryLines(lines);
+      document.dispatchEvent(new CustomEvent('hn:main-image-uploaded'));
+    });
     var galleryInput = document.getElementById('fileGallery');
     var galleryButton = document.getElementById('uploadGalleryBtn');
     var status = document.getElementById('galleryUploadStatus');
@@ -1004,6 +1064,7 @@
   function lockProductImages(busy) {
     imageBusy = busy;
     ['saveProductBtn', 'uploadMainBtn', 'uploadGalleryBtn', 'deleteProductBtn'].forEach(function (id) { document.getElementById(id).disabled = busy; });
+    document.querySelectorAll('#galleryGrid button, #galleryGrid select').forEach(function (node) { node.disabled = busy; });
   }
 
   /* ---------------- Orders ---------------- */
@@ -2860,24 +2921,34 @@
       renderProducts();
     });
     document.getElementById('clearProductSelection').addEventListener('click', function () { if (!productBulkBusy) { productSelection = {}; renderProducts(); } });
-    ['activateSelectedProducts', 'archiveSelectedProducts'].forEach(function (buttonId) {
+    ['activateSelectedProducts', 'archiveSelectedProducts', 'deleteSelectedProducts'].forEach(function (buttonId) {
       document.getElementById(buttonId).addEventListener('click', function () {
         if (productBulkBusy) return;
         var ids = Object.keys(productSelection);
         if (!ids.length) return;
         if (ids.length > 100) { toast('Sélectionnez au maximum 100 produits par opération.', 'err'); return; }
         var activate = buttonId === 'activateSelectedProducts';
-        var notice = activate ? 'Ils seront remis en ligne. Vérifiez les fiches, les prix et les stocks avant la vente. Un stock non configuré peut autoriser des ventes sans limite. Aucune quantité ne sera ajoutée ; les commandes, photos et stocks restent conservés.' : 'Ils ne seront plus vendus. Les commandes, photos et stocks restent conservés.';
-        if (!confirm((activate ? 'Activer' : 'Archiver') + ' ces ' + ids.length + ' produits, y compris ceux masqués par vos filtres ?\n\n' + productsAll.filter(function (p) { return productSelection[p.id]; }).map(function (p) { return p.name_fr || p.name_en || p.slug; }).join('\n') + '\n\n' + notice)) return;
+        var purge = buttonId === 'deleteSelectedProducts';
+        var notice = purge ? 'Suppression irréversible des fiches hors ligne, sans stock ni historique. Toute fiche protégée bloque le lot entier ; utilisez Archiver pour la conserver. Les fichiers photo restent conservés.' : activate ? 'Ils seront remis en ligne. Vérifiez les fiches, les prix et les stocks avant la vente. Un stock non configuré peut autoriser des ventes sans limite. Aucune quantité ne sera ajoutée ; les commandes, photos et stocks restent conservés.' : 'Ils ne seront plus vendus. Les commandes, photos et stocks restent conservés.';
+        if (!confirm((purge ? 'Supprimer définitivement' : activate ? 'Activer' : 'Archiver') + ' ces ' + ids.length + ' produits, y compris ceux masqués par vos filtres ?\n\n' + productsAll.filter(function (p) { return productSelection[p.id]; }).map(function (p) { return p.name_fr || p.name_en || p.slug; }).join('\n') + '\n\n' + notice)) return;
+        if (purge && prompt('Suppression définitive des fiches sélectionnées. Seules les fiches hors ligne, sans stock ni historique sont autorisées. Les photos originales restent conservées.\n\nTapez SUPPRIMER pour confirmer.') !== 'SUPPRIMER') return;
         var owner = token(), request = ++productBulkRevision;
         function active() { return owner === token() && request === productBulkRevision; }
         var status = document.getElementById('productBulkStatus');
         productBulkBusy = true;
         status.hidden = false;
-        status.textContent = activate ? 'Activation en cours…' : 'Archivage en cours…';
+        status.textContent = purge ? 'Vérification et suppression en cours…' : activate ? 'Activation en cours…' : 'Archivage en cours…';
         renderProducts();
-        call(activate ? 'activateProducts' : 'archiveProducts', { ids: ids }).then(function (res) {
+        call(purge ? 'purgeProducts' : activate ? 'activateProducts' : 'archiveProducts', purge ? { ids: ids, confirmation: 'SUPPRIMER' } : { ids: ids }).then(function (res) {
           if (!active()) return;
+          if (purge) {
+            if (!Array.isArray(res.deleted_ids) || !Array.isArray(res.missing_ids)) throw new Error('Réponse incomplète : actualisez le catalogue.');
+            var resolved = res.deleted_ids.concat(res.missing_ids);
+            if (resolved.length !== ids.length || resolved.some(function (id, index) { return ids.indexOf(id) < 0 || resolved.indexOf(id) !== index; })) throw new Error('Réponse incomplète : actualisez le catalogue.');
+            resolved.forEach(function (id) { delete productSelection[id]; });
+            status.textContent = res.deleted_ids.length + ' fiche(s) supprimée(s).' + (res.missing_ids.length ? ' ' + res.missing_ids.length + ' déjà absente(s).' : '') + ' Photos originales conservées.';
+            return loadProducts();
+          }
           var changed = res[activate ? 'activated_ids' : 'archived_ids'];
           if (!Array.isArray(changed) || changed.some(function (id) { return ids.indexOf(id) < 0; })) throw new Error('Réponse incomplète : vérifiez la visibilité avant de réessayer.');
           changed = changed.filter(function (id, index) { return changed.indexOf(id) === index; });
@@ -2886,7 +2957,7 @@
           return loadProducts();
         }).catch(function (error) {
           if (!active()) return;
-          status.textContent = (activate ? 'Activation non confirmée : ' : 'Archivage non confirmé : ') + error.message + '. Actualisez la liste pour vérifier avant de recommencer.';
+          status.textContent = (purge ? 'Suppression non confirmée : ' : activate ? 'Activation non confirmée : ' : 'Archivage non confirmé : ') + error.message + '. Actualisez la liste pour vérifier avant de recommencer.';
         }).finally(function () { if (active()) { productBulkBusy = false; renderProducts(); } });
       });
     });

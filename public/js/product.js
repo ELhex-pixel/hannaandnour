@@ -83,20 +83,27 @@
   function renderGallery(p) {
     var main = document.getElementById('mainImage');
     var thumbs = document.querySelector('.product-gallery-thumbnails');
-    var images = [];
-    if (Array.isArray(p.gallery)) {
-      images = p.gallery.map(function (g) { return g.src || g; });
+    var active = document.querySelector('.color-option.active');
+    var color = active ? active.getAttribute('data-color') || '' : '';
+    var selection = window.HN_MEDIA.select(p, color), images = selection.images;
+    if (main) {
+      main.style.filter = '';
+      main.hidden = !images.length;
+      if (images.length) main.src = images[0]; else main.removeAttribute('src');
+      main.alt = HN.productName(p) + (selection.matched && color ? ' — ' + COLORS.label(color, HN.lang()) : '');
     }
-    if (!images.length && p.image) images = [p.image];
-
-    if (main) { main.src = images[0] || 'images/hero.jpg'; main.alt = esc(HN.productName(p)); }
+    var notice = document.getElementById('productPhotoColorNotice');
+    if (!notice && main) { notice = document.createElement('p'); notice.id = 'productPhotoColorNotice'; notice.setAttribute('role', 'status'); main.parentElement.insertAdjacentElement('afterend', notice); }
+    if (notice) {
+      notice.hidden = !color || selection.matched;
+      notice.textContent = images.length ? tr('photoColorUnassigned', { color: COLORS.label(color, HN.lang()) }) : tr('photoColorMissing', { color: COLORS.label(color, HN.lang()) });
+    }
 
     if (thumbs) {
       var html = '';
       for (var i = 0; i < images.length; i++) {
-        var filter = images.length > 1 && i === 1 && images[1] === images[0] ? 'hue-rotate(160deg)' : '';
         html += '<div class="product-thumbnail' + (i === 0 ? ' active' : '') + '" data-img="' + esc(images[i]) + '">' +
-          '<img src="' + esc(images[i]) + '" alt="' + esc(HN.productName(p)) + ' view"' + (filter ? ' style="filter:' + filter + ';"' : '') + '></div>';
+          '<img src="' + esc(images[i]) + '" alt="' + esc(HN.productName(p)) + '"></div>';
       }
       thumbs.innerHTML = html;
     }
@@ -136,27 +143,29 @@
 
     // Colors
     var colorWrap = document.querySelector('.color-options-detail');
-    if (colorWrap && Array.isArray(p.colors) && p.colors.length) {
+    var productColors = Array.isArray(p.colors) && p.colors.length ? p.colors : productVariants(p).map(function (variant) { return variant.color || ''; }).filter(function (color, index, list) { return color && list.indexOf(color) === index; });
+    if (colorWrap) {
       var colorsHtml = '';
       var lang = HN.lang();
-      p.colors.forEach(function (c, i) {
+      productColors.forEach(function (c, i) {
         colorsHtml += '<span class="color-option' + (i === 0 ? ' active' : '') + '" style="background: ' + colorHex(c) + ';' + (String(c).toLowerCase() === 'white' ? ' border: 1px solid #ccc;' : '') + '" data-color="' + esc(c) + '" title="' + esc(COLORS.label(c, lang)) + '"></span>';
       });
       colorWrap.innerHTML = colorsHtml;
       var colorLabel = document.getElementById('selectedColor');
-      if (colorLabel) colorLabel.textContent = COLORS.label(p.colors[0], lang);
+      if (colorLabel) colorLabel.textContent = productColors.length ? COLORS.label(productColors[0], lang) : '';
     }
 
     // Sizes
     var sizeWrap = document.querySelector('.size-options');
-    if (sizeWrap && Array.isArray(p.sizes) && p.sizes.length) {
+    var productSizes = Array.isArray(p.sizes) && p.sizes.length ? p.sizes : productVariants(p).map(function (variant) { return variant.size || ''; }).filter(function (size, index, list) { return list.indexOf(size) === index; });
+    if (sizeWrap) {
       var sizesHtml = '';
-      p.sizes.forEach(function (s, i) {
-        sizesHtml += '<button class="size-option' + (i === 0 ? ' active' : '') + '" type="button">' + esc(s) + '</button>';
+      productSizes.forEach(function (s, i) {
+        sizesHtml += '<button class="size-option' + (i === 0 ? ' active' : '') + '" type="button" data-size="' + esc(s) + '">' + esc(s || tr('sizeUnspecified')) + '</button>';
       });
       sizeWrap.innerHTML = sizesHtml;
       var sizeLabel = document.getElementById('selectedSize');
-      if (sizeLabel) sizeLabel.textContent = p.sizes[0];
+      if (sizeLabel) sizeLabel.textContent = productSizes.length ? productSizes[0] || tr('sizeUnspecified') : '';
     }
 
     // Breadcrumb last crumb
@@ -344,11 +353,14 @@
     var activeSwatch = document.querySelector('.color-option.active');
     var color = activeSwatch ? (activeSwatch.getAttribute('data-color') || '') : '';
     var size = sizeLabel ? sizeLabel.textContent : '';
+    var activeSize = document.querySelector('.size-option.active');
+    if (activeSize && activeSize.hasAttribute('data-size')) size = activeSize.getAttribute('data-size');
     if (colorLabel) colorLabel.textContent = COLORS.label(color, HN.lang());
 
     // Mark out-of-stock sizes for the current color.
     document.querySelectorAll('.size-option').forEach(function (btn) {
       var s = btn.textContent.trim();
+      if (btn.hasAttribute && btn.hasAttribute('data-size')) s = btn.getAttribute('data-size');
       var st = managed ? stockFor(p, color, s) : null;
       btn.disabled = managed && st === 0;
       btn.classList.toggle('out-of-stock', managed && st === 0);
@@ -683,6 +695,8 @@
     var size = '';
     var sizeLabel = document.getElementById('selectedSize');
     if (sizeLabel) size = sizeLabel.textContent;
+    var activeSize = document.querySelector('.size-option.active');
+    if (activeSize && activeSize.hasAttribute('data-size')) size = activeSize.getAttribute('data-size');
     var activeSwatch = document.querySelector('.color-option.active');
     if (activeSwatch) color = activeSwatch.getAttribute('data-color') || '';
     var qty = 1;
@@ -712,7 +726,7 @@
         slug: p.slug,
         name_en: p.name_en || HN.productName(p),
         price_cents: p.price_cents,
-        image: p.image || ''
+        image: window.HN_MEDIA.select(p, o.color).images[0] || p.image || ''
       }, { color: o.color, size: o.size, qty: o.qty, variantId: o.variantId, stock: o.stock });
       showToast(tr('cartAdd'), HN.productName(p) + ' x' + o.qty + ' ' + tr('cartAddMsg'), 'success');
       if (redirect) window.location.href = 'checkout.html';
@@ -751,8 +765,8 @@
         if (!p) throw new Error('not found');
         current = p;
         if (HN.track) HN.track('product_view', slug);
-        renderGallery(p);
         renderInfo(p);
+        renderGallery(p);
         renderDetails(p);
         renderSizeGuide(p);
         loadReviews(p);
@@ -782,12 +796,16 @@
     var target = e.target;
     if (target && (target.closest('.color-option') || target.closest('.size-option'))) {
       updateStockUI();
+      if (target.closest('.color-option')) renderGallery(current);
     }
   });
 
   document.addEventListener('langchange', function () {
     if (current) {
+      var previousColor = selectedOptions().color;
       renderInfo(current);
+      document.querySelectorAll('.color-option').forEach(function (option) { option.classList.toggle('active', option.getAttribute('data-color') === previousColor); });
+      renderGallery(current);
       renderDetails(current);
       updateStockUI();
       updateReviewGate(current);

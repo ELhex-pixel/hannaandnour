@@ -90,7 +90,7 @@ test('les liens serveur et CORS utilisent le domaine officiel sans écraser les 
 
 function productStockUI(product, language = 'fr') {
   const dict = require('../public/js/i18n');
-  const state = { color: 'Noir', adds: [], toasts: [] };
+  const state = { color: 'Noir', activeSize:null, adds: [], toasts: [] };
   const button = size => ({ textContent: size, disabled: false, classes: {}, classList: { toggle(name, enabled) { this[name] = enabled; } }, addEventListener(name, handler) { this[name] = handler; } });
   const nodes = { selectedSize: { textContent: 'S' }, selectedColor: {}, quantity: { value: '1' }, addToCartBtn: button(''), buyNowBtn: button('') };
   const sizes = ['S', 'M', 'L'].map(button);
@@ -100,12 +100,12 @@ function productStockUI(product, language = 'fr') {
     stockEl: { style: {}, textContent: '' },
     document: {
       getElementById: id => nodes[id] || null,
-      querySelector: selector => selector === '.color-option.active' ? { getAttribute: () => state.color } : null,
+      querySelector: selector => selector === '.color-option.active' ? { getAttribute: () => state.color } : selector === '.size-option.active' ? state.activeSize : null,
       querySelectorAll: selector => selector === '.size-option' ? sizes : [],
       getElementsByTagName: () => [head],
       createElement: () => ({})
     },
-    window: { location: { origin: 'https://example.test' }, hnToast: (...args) => state.toasts.push(args) },
+    window: { HN_MEDIA:require('../public/js/product-media'), location: { origin: 'https://example.test' }, hnToast: (...args) => state.toasts.push(args) },
     HN: { productName: () => 'Produit fictif', lang: () => language, currency: () => 'eur', cart: { add: (...args) => state.adds.push(args) } },
     COLORS: { label: color => color },
     tr: (key, values) => (dict[language][key] || key).replace('{n}', values ? values.n : ''),
@@ -121,6 +121,15 @@ function productStockUI(product, language = 'fr') {
   return { context, state, nodes, sizes, update: () => context.updateStockUI() };
 }
 const stockVariant = (size, stock, active = true, color = 'Noir') => ({ id: size + '-' + color, size, color, stock, active });
+test('une taille vide utilise la vraie variante sans reprendre une taille de démonstration', () => {
+  const mock=productStockUI({ variants:[stockVariant('',18)] });
+  mock.nodes.selectedSize.textContent='Taille non renseignée';
+  mock.state.activeSize={hasAttribute:()=>true,getAttribute:()=>''};
+  mock.update();
+  assert.equal(mock.nodes.addToCartBtn.disabled,false);
+  assert.equal(mock.context.selectedOptions().size,'');
+  assert.equal(mock.context.selectedOptions().stock,18);
+});
 
 test('les variantes désactivées et les combinaisons inexistantes sont indisponibles, pas en stock faible', () => {
   const mock = productStockUI({ variants: [stockVariant('S', 10, false), stockVariant('M', 4)] });

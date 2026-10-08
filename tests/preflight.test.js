@@ -37,3 +37,8 @@ test('la nouvelle saisie de retours exige sa migration avant toute publication',
   await assert.rejects(preflight(env, { rpc: async name => { calls.push(name); return name === 'return_policy_editor_schema_version' ? { error: {} } : { data: 1 }; } }), /migration_return_policy_editor/);
   assert.deepEqual(calls, ['commerce_schema_version', 'admin_inventory_schema_version', 'admin_operations_schema_version', 'return_policy_editor_schema_version']);
 });
+test('la suppression de catalogue exige sa migration sans exécuter de suppression', async () => {
+  const calls=[];
+  await assert.rejects(preflight(env,{rpc:async name=>{ calls.push(name); return name==='admin_catalog_schema_version'?{error:{}}:{data:1}; }}),/migration_catalog_cleanup/);
+  assert.deepEqual(calls,['commerce_schema_version','admin_inventory_schema_version','admin_operations_schema_version','return_policy_editor_schema_version','admin_catalog_schema_version']);
+});

@@ -240,7 +240,7 @@ function adminUi(call) {
   const nodes = new Map();
   function element() {
     const node = { children: [], listeners: {}, value: '', disabled: false, hidden: false,
-      addEventListener(name, callback) { this.listeners[name] = callback; }, appendChild(child) { this.children.push(child); } };
+      querySelectorAll() { return []; }, addEventListener(name, callback) { this.listeners[name] = callback; }, appendChild(child) { this.children.push(child); } };
     let content = '';
     Object.defineProperty(node, 'textContent', {
       get() { return content + this.children.map(child => child.textContent).join('\n'); },

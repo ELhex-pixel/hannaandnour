@@ -126,11 +126,46 @@ function archiveAdmin(overrides = {}, databaseError = false, returnedIds = null)
   };
   vm.runInNewContext(fs.readFileSync('netlify/functions/admin.js', 'utf8'), {
     exports, process: { env: {} }, Buffer, console: { error() {} },
-    require: name => name === './shared' ? shared : name === './lib/return-policy' ? require('../netlify/functions/lib/return-policy') : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
+    require: name => name === './shared' ? shared : name === './lib/return-policy' ? require('../netlify/functions/lib/return-policy') : name === '../../public/js/product-media' ? require('../public/js/product-media') : name === './lib/product-assistant' ? {categories:['abaya','hijab']} : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
   });
   return { handler: exports.handler, state };
 }
 const archiveId = '11111111-1111-4111-8111-111111111111';
+test('une association photo/coloris invalide ne modifie pas le produit et exige la session admin', async () => {
+  const mock=archiveAdmin();
+  for (const gallery of [[{src:'images/vin.jpg',color:'Autre'}],['javascript:alert(1)'],Array(101).fill('images/test.jpg')]) {
+    const response=await mock.handler(event({action:'saveProduct',id:archiveId,name_en:'Local',colors:['Vin'],image:'images/test.jpg',gallery}));
+    assert.equal(response.statusCode,400);
+  }
+  assert.equal(mock.state.writes.length,0);
+  const denied=archiveAdmin({requireAdmin:async()=>({ok:false})});
+  assert.equal((await denied.handler(event({action:'saveProduct',gallery:[]}))).statusCode,401);
+});
+test('la suppression exige session, sélection, confirmation et quota avant une seule RPC privée', async () => {
+  const calls=[];
+  const sb={ rpc:async (name,body)=>{ calls.push({name,body}); return { data:{ deleted_ids:body.p_ids,missing_ids:[] } }; } };
+  const mock=archiveAdmin({ getSupabase:()=>sb });
+  for (const body of [{ ids:[archiveId] },{ ids:[],confirmation:'SUPPRIMER' },{ ids:['invalid'],confirmation:'SUPPRIMER' },{ ids:Array(101).fill(archiveId),confirmation:'SUPPRIMER' }]) assert.equal((await mock.handler(event({ action:'purgeProducts',...body }))).statusCode,400);
+  assert.equal(calls.length,0);
+  const denied=archiveAdmin({ getSupabase:()=>sb,requireAdmin:async()=>({ok:false}) });
+  assert.equal((await denied.handler(event({action:'purgeProducts',ids:[archiveId],confirmation:'SUPPRIMER'}))).statusCode,401);
+  const limited=archiveAdmin({ getSupabase:()=>sb,rateLimit:async()=>({statusCode:429}) });
+  assert.equal((await limited.handler(event({action:'purgeProducts',ids:[archiveId],confirmation:'SUPPRIMER'}))).statusCode,429);
+  assert.equal(calls.length,0);
+  assert.equal((await mock.handler(event({action:'purgeProducts',ids:[archiveId,archiveId],confirmation:'SUPPRIMER'}))).statusCode,200);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].name,'purge_unused_products');
+  assert.deepEqual(Array.from(calls[0].body.p_ids),[archiveId]);
+  assert.equal(mock.state.limits,1);
+});
+test('la suppression protégée distingue les refus sans divulguer les erreurs SQL privées', async () => {
+  for (const message of ['product_delete_active','product_delete_stock','product_delete_history','private-fixture-error']) {
+    const mock=archiveAdmin({ getSupabase:()=>({rpc:async()=>({error:{message}})}) });
+    const response=await mock.handler(event({action:'purgeProducts',ids:[archiveId],confirmation:'SUPPRIMER'}));
+    assert.equal(response.statusCode,message==='private-fixture-error'?503:409);
+    assert(!response.body.includes('private-fixture-error'));
+  }
+});
 test('les réglages admin affichent la politique actuelle, pas l’ancien délai de livraison', async () => {
   const mock = archiveAdmin({
     getSetting: async (sb, key, fallback) => key === 'shipping' ? { returns_days: 30 } : key === 'return_policy' ? { version: 'current', days: 37, withdrawal_payer: 'customer' } : fallback,

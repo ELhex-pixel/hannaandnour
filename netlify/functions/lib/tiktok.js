@@ -44,7 +44,8 @@ function productRows(product, metadata, config) {
   const totals = commerce.calculate([{ price_cents: product.price_cents, qty: 1 }], { ...config.shipping, standard_cents: 0 }, 'standard', 0);
   const price = totals.subtotal + totals.tax;
   if (price < 1 || price > 630000) throw new Error('Prix TTC hors limite TikTok (0,01–6 300 EUR)');
-  const images = [product.image, ...(product.gallery || []).filter(url => url !== product.image)].slice(0, 9).map(imageUrl);
+  const gallery = (product.gallery || []).map(photo => typeof photo === 'string' ? photo : photo && photo.src);
+  const images = [product.image, ...gallery.filter(url => url !== product.image)].slice(0, 9).map(imageUrl);
   const base = { ...meta.extra, category: meta.category, product_name: name, product_description: description, main_image: images[0], price: price / 100 };
   images.slice(1).forEach((url, i) => { base['image_' + (i + 2)] = url; });
   for (const key of ['parcel_weight', 'parcel_length', 'parcel_width', 'parcel_height']) if (meta[key]) base[key] = Number(meta[key]);

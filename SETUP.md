@@ -34,6 +34,7 @@ paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Func
     - `supabase/migration_admin_inventory.sql` (ajustements de stock idempotents avec motif, progression de préparation)
      - `supabase/migration_admin_operations.sql` (contrôle des retours, politique figée par commande, coûts privés et marge estimée)
      - `supabase/migration_return_policy_editor.sql` (réglage futur de 14 à 365 jours, sans modification des données historiques)
+     - `supabase/migration_catalog_cleanup.sql` (suppression protégée des fiches inutilisées et protection des références historiques)
 3. Récupérez dans **Settings > API** :
    - `Project URL` → `SUPABASE_URL`
    - `service_role secret` → `SUPABASE_SERVICE_ROLE_KEY` (serveur, **jamais** dans le navigateur)
@@ -180,6 +181,20 @@ L’ancienne caisse `scanSale` et les resets globaux `resetAll`/`resetStock` son
 Invariants vérifiés pour ces lots : règles et politique relues côté serveur puis affichées au client ; quantités non fiables revalidées ; remises entières et montant Stripe conservés par les tests existants ; RLS, lectures, écritures et RPC privées des nouveaux journaux/coûts ; réception transactionnelle et réessais idempotents ; ordre cohérent des verrous ; sessions en en-tête ; limites persistantes avant les modules admin. Les nouveaux formulaires n’ont aucun effet externe à revendiquer (email, paiement, étiquette). Les webhooks de paiement ne sont pas modifiés par ce lot et restent couverts par leurs tests de réconciliation.
 
 Avant application, rechercher les doublons de `orders.order_number` et de `reviews(order_id, product_id)` pour les lignes liées à une commande. Les nouveaux index uniques feront échouer la migration plutôt que supprimer des données. Corriger les doublons manuellement, sans effacer des commandes payées.
+
+### Suppression de fiches et modification du disponible
+
+« Désélectionner » décoche les fiches sans appeler l’API. « Archiver » conserve le catalogue et son historique. « Supprimer définitivement » exige la confirmation de la liste complète, y compris hors filtre, puis la saisie de `SUPPRIMER`. La RPC privée `purge_unused_products` refuse le lot entier si une fiche est en ligne, possède du stock (même sur une variante inactive), une commande liée par produit/variante/ancien slug, un avis, un ajustement ou un coût. Les seules variantes supprimées sont donc inutilisées et à zéro. Aucun fichier photo ni objet Storage n’est effacé. Les répétitions signalent les fiches déjà absentes ; les réponses incomplètes ne confirment pas un faux succès.
+
+La nouvelle migration `supabase/migration_catalog_cleanup.sql` installe cette RPC et son marqueur privé `admin_catalog_schema_version()` = 1, sans supprimer aucune donnée. Les clés étrangères historiques sur `order_items.product_id` et `variant_id` protègent les nouvelles écritures concurrentes ; `NOT VALID` conserve d’éventuelles anciennes références orphelines sans les réécrire. Les verrous et contrôles font partie de la même transaction. Une sauvegarde récupérable, un contrôle de cible, une répétition et un accord distinct sont nécessaires avant application distante et publication. Le build exige ce cinquième marqueur ; ne pas rejouer les anciennes migrations.
+
+Le stock existant reste en lecture seule dans la fiche pour éviter de contourner le journal. « Modifier ce stock » ouvre la variante précise dans Stock, après avertissement sur les modifications non sauvegardées. Aucune opération n’est présélectionnée : ajout, retrait/déstockage et correction du nouveau disponible sont des choix distincts. L’aperçu avant → après est informatif ; la RPC reste l’autorité, et le comptage protège contre une valeur modifiée entre-temps. Le motif ne choisit jamais le type d’opération. Quantité zéro possible en correction uniquement ; les retraits dépassant le disponible affiché sont refusés. Les identifiants conservés empêchent les doubles ajustements après une réponse perdue ; une réponse incorrecte ou tardive ne libère pas un faux succès. Aucun paiement, remboursement, email ni nouvelle fonction de remise à zéro globale.
+
+Invariants contrôlés : validation et quota serveur, RPC privée/RLS, sessions en en-tête, transaction et protection des écritures concurrentes, répétitions idempotentes, conservation des commandes, du stock réel et des photos. Les montants et webhooks ne sont pas modifiés par ce lot.
+
+Les photos peuvent être associées manuellement à un coloris de la fiche. La galerie JSON existante conserve les anciennes URL et accepte aussi `{ "src": "URL", "color": "Coloris" }` ; aucun nouveau stockage public ni changement des photos existantes n’est nécessaire. Le module partagé `public/js/product-media.js` valide URL, volume, doublons et coloris côté serveur et utilise la même sélection dans l’aperçu admin et la fiche FR/EN/AR. La photo principale existante reste visible même si la galerie était vide ; l’upload principal rejoint aussi la galerie. Les déplacements conservent l’association par URL ; une couleur retirée impose de corriger explicitement son association avant sauvegarde. L’enregistrement de la fiche reste nécessaire après un upload ou une association.
+
+Le choix du coloris affiche ses photos puis les vues générales, jamais une photo associée à un autre coloris. Si aucune photo n’est associée, un texte indique que les vues générales ne garantissent pas ce coloris ; si aucune vue générale n’existe non plus, l’image est masquée et le manque est explicite. Aucune recoloration artificielle ni association déduite d’un nom de fichier. La duplication conserve les associations, mais reste hors ligne et à stock zéro ; l’export TikTok conserve la validation de ses URL publiques HTTPS.
 
 ### Staging isolé
 

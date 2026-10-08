@@ -47,6 +47,11 @@ test('l’admin modernisé conserve les rubriques et isole les opérations sensi
   assert.equal($('#returnPolicyDays').attr('min'), '0');
   assert.equal($('#returnPolicyDays').attr('value'), '0');
   assert($('#setReturns').is('[readonly]'));
+  assert($('#deleteSelectedProducts').text().includes('Supprimer définitivement'));
+  assert($('#clearProductSelection').text().includes('Désélectionner'));
+  assert($('#inventoryMode').is('[required]'));
+  assert.equal($('#inventoryMode option').first().attr('value'),'');
+  assert.equal($('#inventoryPreview').attr('role'),'status');
 });
 test('l’admin occupe la largeur disponible sans marge extérieure', () => {
   const css = fs.readFileSync('public/css/styles.css', 'utf8');

@@ -216,7 +216,7 @@ test('déconnexion, fermeture ou arrêt pendant la compression empêchent lectur
 
 function bulkProducts(response) {
   const nodes = {};
-  const state = { calls: [], confirms: [], allowed: true, token: 'fixture-token', loads: 0, toasts: [] };
+  const state = { calls: [], confirms: [], allowed: true, typed: 'SUPPRIMER', token: 'fixture-token', loads: 0, toasts: [] };
   const node = id => nodes[id] || (nodes[id] = { handlers: {}, disabled: false, hidden: true, textContent: '', addEventListener(name, handler) { this.handlers[name] = handler; } });
   const context = {
     document: { getElementById: node },
@@ -225,6 +225,7 @@ function bulkProducts(response) {
     productBulkBusy: false, productBulkRevision: 0,
     token: () => state.token,
     confirm: message => { state.confirms.push(message); return state.allowed; },
+    prompt: () => state.typed,
     toast: message => state.toasts.push(message),
     call: (action, body) => { state.calls.push({ action, ids: Array.from(body.ids) }); return response ? response(action, body) : Promise.resolve({ activated_ids: body.ids }); },
     loadProducts: async () => { state.loads++; },
@@ -312,6 +313,49 @@ test('une réponse d’activation tardive ne termine pas une nouvelle opération
   assert.equal(mock.context.productBulkBusy, false);
   assert.equal(mock.state.loads, 1);
 });
+test('désélectionner ne supprime aucune fiche ni ne fait d’appel API', () => {
+  const mock = bulkProducts();
+  mock.nodes.clearProductSelection.handlers.click();
+  assert.equal(Object.keys(mock.context.productSelection).length,0);
+  assert.equal(mock.state.calls.length,0);
+});
+test('la suppression exige confirmation saisie, inclut les fiches hors filtre et verrouille les boutons', async () => {
+  const canceled = bulkProducts();
+  canceled.state.typed = 'oui';
+  canceled.nodes.deleteSelectedProducts.handlers.click();
+  assert.equal(canceled.state.calls.length,0);
+  let done;
+  const mock = bulkProducts((action,body) => { assert.equal(action,'purgeProducts'); assert.equal(body.confirmation,'SUPPRIMER'); return new Promise(resolve => { done=resolve; }); });
+  mock.nodes.deleteSelectedProducts.handlers.click();
+  mock.nodes.deleteSelectedProducts.handlers.click();
+  assert.equal(mock.state.calls.length,1);
+  assert.match(mock.state.confirms[0],/Fiche hors filtre/);
+  assert.match(mock.state.confirms[0],/irréversible/);
+  assert.equal(mock.nodes.clearProductSelection.disabled,true);
+  done({ deleted_ids:['one'],missing_ids:['two'] });
+  await settleBulk();
+  assert.equal(Object.keys(mock.context.productSelection).length,0);
+  assert.match(mock.nodes.productBulkStatus.textContent,/1 fiche\(s\) supprimée\(s\)/);
+  assert.equal(mock.state.loads,1);
+});
+test('une suppression refusée, incomplète ou tardive conserve la sélection sans faux succès', async () => {
+  for (const response of [()=>Promise.reject(new Error('Historique protégé')),()=>Promise.resolve({ deleted_ids:['one'],missing_ids:[] }),()=>Promise.resolve({ deleted_ids:['one'],missing_ids:['one'] })]) {
+    const mock = bulkProducts(response);
+    mock.nodes.deleteSelectedProducts.handlers.click();
+    await settleBulk();
+    assert.deepEqual(Object.keys(mock.context.productSelection),['one','two']);
+    assert.match(mock.nodes.productBulkStatus.textContent,/Suppression non confirmée/);
+    assert.equal(mock.state.loads,0);
+  }
+  let done;
+  const late = bulkProducts(()=>new Promise(resolve=>{ done=resolve; }));
+  late.nodes.deleteSelectedProducts.handlers.click();
+  late.state.token='';
+  done({ deleted_ids:['one','two'],missing_ids:[] });
+  await settleBulk();
+  assert.deepEqual(Object.keys(late.context.productSelection),['one','two']);
+  assert.equal(late.state.loads,0);
+});
 
 function colorPicker(response) {
   const nodes = {}, events = {};
@@ -326,6 +370,7 @@ function colorPicker(response) {
     getVal: id => node(id).value,
     setVal: (id, value) => { node(id).value = value; },
     strToList: s => s.split(',').map(v => v.trim()).filter(Boolean),
+    renderGalleryGrid() {},
     token: () => state.token,
     confirm: () => state.confirmed,
     toast: (...args) => state.toasts.push(args),
