@@ -54,15 +54,52 @@ test('la préparation ne fait que les RPC de contrôle, sans paiement, email ou 
   assert.equal((await mock.run('setPreparationQuantity', { order_id: orderId, item_id: itemId, quantity: 2.1, expected_quantity: 1 })).statusCode, 400);
   assert.equal(mock.calls.length, 2);
 });
+test('réinitialiser exige un identifiant et une confirmation et ne fait qu’une RPC privée', async () => {
+  const mock = apiMock({ data: { operation_id: operationId, archived_count: 2 } });
+  for (const body of [{}, { operation_id: operationId }, { operation_id: 'invalide', confirmation: 'REINITIALISER' }, { operation_id: operationId, confirmation: 'oui' }]) {
+    assert.equal((await mock.run('resetInventoryJournal', body)).statusCode, 400);
+  }
+  assert.equal(mock.calls.length, 0);
+  assert.equal((await mock.run('resetInventoryJournal', { operation_id: operationId, confirmation: 'REINITIALISER' })).statusCode, 200);
+  assert.equal(mock.calls[0].name, 'reset_inventory_journal');
+  assert.deepEqual(JSON.parse(JSON.stringify(mock.calls[0].args)), { p_operation_id: operationId, p_confirmation: 'REINITIALISER' });
+});
+test('la lecture du journal sépare courant et archives sans exposer les erreurs de base', async () => {
+  const mock = apiMock({ data: [] });
+  for (const archived of [false, true]) {
+    const response = await mock.run('listInventoryAdjustments', { archived, variant_id: variantId });
+    assert.equal(response.statusCode, 200);
+    assert.equal(JSON.parse(response.body).archived, archived);
+    assert.equal(mock.calls.at(-1).name, 'list_inventory_journal');
+    assert.deepEqual(JSON.parse(JSON.stringify(mock.calls.at(-1).args)), { p_variant_id: variantId, p_archived: archived });
+  }
+  assert.equal((await mock.run('listInventoryAdjustments', { archived: 'false' })).statusCode, 400);
+  assert.equal((await mock.run('listInventoryAdjustments', { variant_id: 'invalid' })).statusCode, 400);
+  for (const result of [{ error: { message: 'private-test-value' } }, { data: null }, new Error('private-test-value')]) {
+    const failure = await apiMock(result).run('listInventoryAdjustments', {});
+    assert.equal(failure.statusCode, 503);
+    assert(!failure.body.includes('private-test-value'));
+    const reset = await apiMock(result).run('resetInventoryJournal', { operation_id: operationId, confirmation: 'REINITIALISER' });
+    assert.equal(reset.statusCode, 503);
+    assert(!reset.body.includes('private-test-value'));
+  }
+});
 
-function inventoryEditor(adjust) {
+function inventoryEditor(adjust, reset) {
   const nodes = {}, listeners = {}, storage = new Map();
-  const state = { token:'fixture-token',calls:[],stock:18,present:true,confirms:[] };
+  const state = { token:'fixture-token',calls:[],resets:[],history:[],archives:[],stock:18,present:true,confirms:[],confirmed:true };
   const node = id => nodes[id] || (nodes[id] = { value:'',textContent:'',hidden:false,disabled:false,handlers:{},addEventListener(name,handler) { this.handlers[name]=handler; },querySelectorAll:()=>[],reset() {},focus() {},scrollIntoView() {} });
   node('inventoryFilter').value='active';
   const api = { token:()=>state.token,call:async (action,body) => {
     if (action==='listProducts') return { products:state.present?[{ name_fr:'Fixture locale',variants:[{ id:variantId,stock:state.stock,color:'Vin',size:'M' }] }]:[] };
-    if (action==='listInventoryAdjustments') return { adjustments:[] };
+    if (action==='listInventoryAdjustments') return { adjustments:body.archived ? state.archives : state.history };
+    if (action==='resetInventoryJournal') {
+      state.resets.push({ ...body });
+      if (reset) return reset(body,state);
+      const count=state.history.length;
+      state.archives=state.archives.concat(state.history);state.history=[];
+      return { result:{ operation_id:body.operation_id,archived_count:count } };
+    }
     assert.equal(action,'adjustInventory');
     state.calls.push({ ...body });
     if (adjust) return adjust(body,state);
@@ -70,7 +107,7 @@ function inventoryEditor(adjust) {
     state.stock=body.mode==='restock'?before+body.quantity:body.mode==='remove'?before-body.quantity:body.quantity;
     return { result:{ operation_id:body.operation_id,stock_before:before,stock_after:state.stock } };
   } };
-  const context = { window:{ HN_ADMIN:api,crypto:{ randomUUID } },document:{ getElementById:node,querySelector:node,addEventListener(name,handler) { listeners[name]=handler; } },sessionStorage:{ getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key) },confirm:message=>{ state.confirms.push(message); return true; } };
+  const context = { window:{ HN_ADMIN:api,crypto:{ randomUUID } },document:{ getElementById:node,querySelector:node,addEventListener(name,handler) { listeners[name]=handler; } },sessionStorage:{ getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key) },confirm:message=>{ state.confirms.push(message); return state.confirmed; } };
   const source=fs.readFileSync('public/js/admin-features.js','utf8');
   vm.runInNewContext(source.slice(source.indexOf("(function () {\n  'use strict';\n  var api = window.HN_ADMIN;")),context);
   return { nodes,state,storage,listeners,load:()=>node('refreshInventory').handlers.click(),pick:()=>node('inventoryVariant').handlers.change.call({ value:variantId }),submit:()=>node('inventoryForm').handlers.submit({ preventDefault() {} }),input(mode,value) { node('inventoryMode').value=mode; node('inventoryMode').handlers.change(); node('inventoryQuantity').value=String(value); node('inventoryQuantity').handlers.input(); node('inventoryReason').value='Déstockage local'; } };
@@ -129,6 +166,55 @@ test('ouvrir le gestionnaire sans variante précise efface un ancien choix sans 
   assert.equal(mock.state.calls.length,0);
   assert.equal(mock.nodes.saveInventory.disabled,true);
 });
+test('le bouton annule sans écrire puis vide le courant, laisse le stock intact et affiche les archives', async () => {
+  const mock=inventoryEditor();
+  mock.state.history=[{ id:operationId,created_at:'2026-10-08T12:00:00Z',mode:'restock',product_name:'Fixture locale',stock_before:9,stock_after:18,reason:'Test local' }];
+  mock.load();await settleInventory();
+  mock.state.confirmed=false;mock.nodes.resetInventoryJournal.handlers.click();await settleInventory();
+  assert.equal(mock.state.resets.length,0);
+  assert.equal(mock.state.history.length,1);
+  mock.state.confirmed=true;mock.nodes.resetInventoryJournal.handlers.click();await settleInventory();
+  assert.equal(mock.state.resets.length,1);
+  assert.equal(mock.state.stock,18);
+  assert.equal(mock.state.calls.length,0);
+  assert.match(mock.nodes.inventoryHistory.innerHTML,/Aucun ajustement dans le journal courant/);
+  assert.match(mock.nodes.inventoryJournalStatus.textContent,/1 opération\(s\) archivée/);
+  mock.nodes.inventoryHistoryView.value='archived';mock.nodes.inventoryHistoryView.handlers.change();await settleInventory();
+  assert.match(mock.nodes.inventoryHistory.innerHTML,/Fixture locale/);
+  mock.load();await settleInventory();assert.match(mock.nodes.inventoryHistory.innerHTML,/Fixture locale/);
+});
+test('réponse de remise à zéro perdue : même identifiant au réessai et stock bloqué jusqu’à confirmation', async () => {
+  let first=true;
+  const mock=inventoryEditor(null,async body=>{ if(first) {first=false;throw new Error('Réponse perdue');} return {result:{operation_id:body.operation_id,archived_count:2,already:true}}; });
+  mock.load();await settleInventory();mock.pick();mock.input('restock',9);
+  mock.nodes.resetInventoryJournal.handlers.click();await settleInventory();
+  assert.equal(mock.storage.size,1);
+  assert.equal(mock.nodes.saveInventory.disabled,true);
+  mock.submit();await settleInventory();assert.equal(mock.state.calls.length,0);
+  mock.nodes.resetInventoryJournal.handlers.click();await settleInventory();
+  assert.equal(mock.state.resets[0].operation_id,mock.state.resets[1].operation_id);
+  assert.equal(mock.state.confirms.length,1);
+  assert.equal(mock.storage.size,0);
+  assert.match(mock.nodes.inventoryJournalStatus.textContent,/déjà enregistrée/);
+  const bad=inventoryEditor(null,async()=>({ result:{operation_id:'wrong',archived_count:1} }));
+  bad.load();await settleInventory();bad.nodes.resetInventoryJournal.handlers.click();await settleInventory();
+  assert.equal(bad.storage.size,1);
+  assert.match(bad.nodes.inventoryJournalStatus.textContent,/Réponse incomplète/);
+});
+test('le journal ne peut pas être réinitialisé pendant un ajustement incertain et une déconnexion ignore la réponse', async () => {
+  const pending=inventoryEditor(async()=>{throw new Error('Réponse perdue');});
+  pending.load();await settleInventory();pending.pick();pending.input('restock',9);pending.submit();await settleInventory();
+  assert.equal(pending.nodes.resetInventoryJournal.disabled,true);
+  pending.nodes.resetInventoryJournal.handlers.click();assert.equal(pending.state.resets.length,0);
+  let release;
+  const mock=inventoryEditor(null,body=>new Promise(resolve=>{release=()=>resolve({result:{operation_id:body.operation_id,archived_count:2}});}));
+  mock.load();await settleInventory();mock.nodes.resetInventoryJournal.handlers.click();
+  assert.equal(mock.nodes.resetInventoryJournal.disabled,true);
+  mock.nodes.resetInventoryJournal.handlers.click();assert.equal(mock.state.resets.length,1);
+  mock.state.token='';mock.listeners['hn:admin-logout']();release();await settleInventory();
+  assert.equal(mock.nodes.inventoryJournalStatus.hidden,true);
+  assert.equal(mock.storage.size,0);
+});
 
 test('base locale : ajustements idempotents, comptages protégés et préparation persistante sans double stock', async () => {
   const db = new PGlite();
@@ -160,6 +246,65 @@ test('base locale : ajustements idempotents, comptages protégés et préparatio
     assert.equal((await db.query('select count(*)::integer as n from inventory_adjustments')).rows[0].n, 3);
     await db.query("update products set name_fr='Autre nom' where id=$1", [product]);
     assert.equal((await db.query('select product_name from inventory_adjustments where id=$1', [first])).rows[0].product_name, 'Veste');
+
+    const unchanged=(await db.query('select * from inventory_adjustments order by id')).rows;
+    const journalMigration=fs.readFileSync('supabase/migration_inventory_journal.sql','utf8');
+    await db.exec('alter default privileges in schema public grant all on tables to service_role');
+    await db.exec(journalMigration);await db.exec(journalMigration);
+    const journal=async archived=>(await db.query('select list_inventory_journal(null,$1) as entries',[archived])).rows[0].entries;
+    const reset=async id=>(await db.query("select reset_inventory_journal($1,'REINITIALISER') as result",[id])).rows[0].result;
+    assert.equal((await journal(false)).length,3);
+    assert.equal((await journal(true)).length,0);
+    await assert.rejects(db.query("select reset_inventory_journal($1,'oui')",[randomUUID()]),/inventory_journal_invalid/);
+    await assert.rejects(reset(null),/inventory_journal_invalid/);
+    const resetId=randomUUID();
+    await db.exec('set role service_role');
+    try {
+      assert.equal((await reset(resetId)).archived_count,3);
+      assert.equal((await journal(false)).length,0);
+      assert.equal((await journal(true)).length,3);
+      assert.equal((await reset(resetId)).already,true);
+      assert.equal((await reset(randomUUID())).archived_count,0);
+    } finally {await db.exec('reset role');}
+    assert.equal(await stock(),5);
+    assert.deepEqual((await db.query('select * from inventory_adjustments order by id')).rows,unchanged);
+    assert.equal((await adjust(first,'restock',3,2)).already,true);
+    assert.equal(await stock(),5);
+    const afterReset=randomUUID();
+    await adjust(afterReset,'count',5,5);
+    assert.equal((await reset(resetId)).archived_count,3);
+    assert.equal((await journal(false)).length,1);
+    assert.equal((await journal(false))[0].id,afterReset);
+    await db.exec('begin');
+    await reset(randomUUID());
+    assert.equal((await journal(false)).length,0);
+    await db.exec('rollback');
+    assert.equal((await journal(false)).length,1);
+    assert.equal((await db.query('select count(*)::integer as n from inventory_adjustments')).rows[0].n,4);
+    await db.query("insert into inventory_adjustments(id,variant_id,mode,quantity,expected_stock,stock_before,stock_after,reason,product_name,color,size,created_at) select gen_random_uuid(),$1,'count',5,5,5,5,'Fixture locale','Veste','Noir','M','2020-01-01'::timestamptz from generate_series(1,105)",[variant]);
+    assert.equal((await journal(false)).length,100);
+    const simultaneous=await Promise.all([reset(randomUUID()),reset(randomUUID())]);
+    assert.deepEqual(simultaneous.map(result=>result.archived_count).sort((a,b)=>a-b),[0,106]);
+    assert.equal((await journal(false)).length,0);
+    assert.equal((await journal(true)).length,100);
+    assert.equal((await db.query('select count(*)::integer as n from inventory_adjustments')).rows[0].n,109);
+    assert.equal(await stock(),5);
+    for(const table of ['inventory_journal_resets','inventory_journal_archives']) {
+      assert.equal((await db.query('select relrowsecurity as enabled from pg_class where oid=$1::regclass',[table])).rows[0].enabled,true);
+      assert.equal((await db.query("select has_table_privilege('service_role',$1,'delete') as allowed",[table])).rows[0].allowed,false);
+      for(const role of ['anon','authenticated']) {
+        assert.equal((await db.query("select has_table_privilege($1,$2,'select') as allowed",[role,table])).rows[0].allowed,false);
+        await db.exec('grant select,insert on '+table+' to '+role+';set role '+role);
+        try {
+          assert.equal((await db.query('select * from '+table)).rows.length,0);
+          await assert.rejects(db.query(table==='inventory_journal_resets'?'insert into inventory_journal_resets(id,archived_count) values($1,0)':'insert into inventory_journal_archives(adjustment_id,reset_id) values($1,$2)',table==='inventory_journal_resets'?[randomUUID()]:[afterReset,resetId]));
+        } finally {await db.exec('reset role');}
+      }
+    }
+    for(const fn of ['reset_inventory_journal(uuid,text)','list_inventory_journal(uuid,boolean)','inventory_journal_schema_version()']) {
+      assert.equal((await db.query('select prosecdef as definer from pg_proc where oid=$1::regprocedure',[fn])).rows[0].definer,false);
+      for(const role of ['anon','authenticated']) assert.equal((await db.query("select has_function_privilege($1,$2,'execute') as allowed",[role,fn])).rows[0].allowed,false);
+    }
 
     const order = randomUUID(), item = randomUUID();
     await db.query("insert into orders(id,order_number,email,customer_name,address1,city,state,postal_code,country,shipping_method,total_cents,currency) values($1,'HN-LOCAL','fixture@example.test','Local','Local','Paris','','75000','FR','standard',5000,'eur')", [order]);

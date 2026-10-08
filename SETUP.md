@@ -35,6 +35,7 @@ paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Func
      - `supabase/migration_admin_operations.sql` (contrôle des retours, politique figée par commande, coûts privés et marge estimée)
      - `supabase/migration_return_policy_editor.sql` (réglage futur de 14 à 365 jours, sans modification des données historiques)
      - `supabase/migration_catalog_cleanup.sql` (suppression protégée des fiches inutilisées et protection des références historiques)
+     - `supabase/migration_inventory_journal.sql` (réinitialisation du journal courant par archivage privé, sans modification du stock)
 3. Récupérez dans **Settings > API** :
    - `Project URL` → `SUPABASE_URL`
    - `service_role secret` → `SUPABASE_SERVICE_ROLE_KEY` (serveur, **jamais** dans le navigateur)
@@ -195,6 +196,22 @@ Invariants contrôlés : validation et quota serveur, RPC privée/RLS, sessions 
 Les photos peuvent être associées manuellement à un coloris de la fiche. La galerie JSON existante conserve les anciennes URL et accepte aussi `{ "src": "URL", "color": "Coloris" }` ; aucun nouveau stockage public ni changement des photos existantes n’est nécessaire. Le module partagé `public/js/product-media.js` valide URL, volume, doublons et coloris côté serveur et utilise la même sélection dans l’aperçu admin et la fiche FR/EN/AR. La photo principale existante reste visible même si la galerie était vide ; l’upload principal rejoint aussi la galerie. Les déplacements conservent l’association par URL ; une couleur retirée impose de corriger explicitement son association avant sauvegarde. L’enregistrement de la fiche reste nécessaire après un upload ou une association.
 
 Le choix du coloris affiche ses photos puis les vues générales, jamais une photo associée à un autre coloris. Si aucune photo n’est associée, un texte indique que les vues générales ne garantissent pas ce coloris ; si aucune vue générale n’existe non plus, l’image est masquée et le manque est explicite. Aucune recoloration artificielle ni association déduite d’un nom de fichier. La duplication conserve les associations, mais reste hors ligne et à stock zéro ; l’export TikTok conserve la validation de ses URL publiques HTTPS.
+
+### Réinitialisation du journal des ajustements
+
+« Réinitialiser le journal à zéro » demande confirmation puis archive atomiquement toutes les opérations déjà enregistrées, pas seulement les 100 affichées. Le journal courant devient vide ; « Archives » permet de consulter les 100 dernières lignes archivées. Les ajustements, identifiants, motifs, snapshots, stocks, commandes et protections de suppression des fiches restent intacts. Une nouvelle opération validée après la lecture transactionnelle du reset reste dans le journal courant, même si sa date est ancienne. Le reset ne réinitialise jamais les compteurs de stock.
+
+La nouvelle migration `supabase/migration_inventory_journal.sql` ajoute uniquement deux tables privées de classement et trois RPC privées, dont `inventory_journal_schema_version()` = 1. RLS sans politique publique, révocation des droits publics et RPC `SECURITY INVOKER` ; le rôle serveur peut lire et insérer, pas effacer l’historique. La RPC sérialise les resets, conserve leur identifiant et renvoie le même résultat après une réponse perdue : un réessai n’archive pas les opérations apparues entre-temps. L’interface conserve cet identifiant en session et bloque les ajustements locaux tant qu’une réinitialisation est incertaine, et réciproquement.
+
+Le build exige ce sixième marqueur en lecture seule. Aucun archivage n’a lieu à l’application de la migration. Accord distinct, cible confirmée, sauvegarde récupérable, restauration et répétition/rollback locaux sont obligatoires avant migration distante et publication ; ne pas rejouer les anciens lots. Les resets historiques globaux restent suspendus.
+
+Invariants vérifiés : validation côté serveur, session admin en en-tête et quota avant l’action ; données et RPC privées ; reset transactionnel sans stock et réessais idempotents ; lectures courant/archives séparées et bornées. Aucun changement de montant, remise, taxe, paiement, webhook, email ou affranchissement : ces invariants ne sont pas concernés par ce bouton.
+
+### Import de gros PNG et menu des tailles
+
+La compression locale charge temporairement les fichiers via une URL `blob:`. La CSP autorise ce schéma uniquement dans `img-src`, y compris lorsque le build remplace le domaine Storage ; ni `script-src` ni `connect-src` ne sont élargis. Un PNG valide dépassant 4 Mo doit pouvoir être décodé puis envoyé en copie WebP ≤ 4 Mo, sans altération de l’original. Les fichiers réellement illisibles, les signatures serveur invalides et les dimensions excessives restent refusés. Tester avec les vrais en-têtes CSP : un serveur local sans ces en-têtes ne reproduit pas le blocage.
+
+La fiche propose un menu pour ajouter plusieurs tailles (lettres, chiffres, tailles existantes du catalogue) et une saisie personnalisée. « Taille unique (One Size) » est explicite, jamais choisie par défaut. Les tailles existantes, y compris personnalisées, sont conservées ; doublons et virgules sont refusés dans un ajout. Les quantités initiales et codes saisis restent visibles lors de l’ajout d’une autre taille ; le stock des variantes existantes reste verrouillé. Retirer une taille existante demande confirmation : les variantes omises sont conservées hors ligne par la RPC habituelle. Aucun produit réel n’est modifié sans son enregistrement manuel.
 
 ### Staging isolé
 

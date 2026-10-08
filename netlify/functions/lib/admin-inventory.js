@@ -3,6 +3,7 @@ const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const validId = value => typeof value === 'string' && UUID.test(value);
 const quantity = value => Number.isInteger(value) && value >= 0 && value <= 1000000;
 const ERRORS = {
+  inventory_journal_invalid: [400, 'Confirmez la réinitialisation du journal avec un identifiant d’opération valide.'],
   inventory_invalid: [400, 'Renseignez une quantité entière et un motif de 3 à 300 caractères.'],
   inventory_operation_mismatch: [409, 'Cette opération a déjà été utilisée avec d’autres valeurs. Vérifiez le journal.'],
   inventory_variant_missing: [404, 'Variante introuvable.'],
@@ -18,14 +19,17 @@ const ERRORS = {
 async function inventoryAction(sb, action, body) {
   if (action === 'listInventoryAdjustments') {
     if (body.variant_id !== undefined && !validId(body.variant_id)) return json(400, { error: 'Variante invalide.' });
-    let query = sb.from('inventory_adjustments').select('id,variant_id,mode,quantity,stock_before,stock_after,reason,product_name,color,size,barcode,created_at').order('created_at', { ascending: false }).order('id', { ascending: false }).limit(100);
-    if (body.variant_id) query = query.eq('variant_id', body.variant_id);
-    const { data, error } = await query;
-    if (error) return json(503, { error: 'Journal indisponible. Vérifiez la migration admin_inventory avant publication.' });
-    return json(200, { adjustments: data || [], limit: 100 });
+    if (body.archived !== undefined && typeof body.archived !== 'boolean') return json(400, { error: 'Vue du journal invalide.' });
+    const { data, error } = await sb.rpc('list_inventory_journal', { p_variant_id: body.variant_id || null, p_archived: body.archived === true });
+    if (error || !Array.isArray(data)) return json(503, { error: 'Journal indisponible. Vérifiez la migration inventory_journal avant publication.' });
+    return json(200, { adjustments: data, limit: 100, archived: body.archived === true });
   }
   let rpc, args;
-  if (action === 'adjustInventory' || action === 'scanSetStock') {
+  if (action === 'resetInventoryJournal') {
+    if (!validId(body.operation_id) || body.confirmation !== 'REINITIALISER') return json(400, { error: 'Confirmez la réinitialisation du journal.' });
+    rpc = 'reset_inventory_journal';
+    args = { p_operation_id: body.operation_id, p_confirmation: body.confirmation };
+  } else if (action === 'adjustInventory' || action === 'scanSetStock') {
     const mode = action === 'scanSetStock' ? 'count' : body.mode;
     const qty = action === 'scanSetStock' ? body.qty : body.quantity;
     if (!validId(body.operation_id) || !validId(body.variant_id) || !['restock', 'remove', 'count'].includes(mode) || !quantity(qty) || (mode !== 'count' && qty === 0) || !quantity(body.expected_stock) || typeof body.reason !== 'string' || body.reason.trim().length < 3 || body.reason.trim().length > 300) {

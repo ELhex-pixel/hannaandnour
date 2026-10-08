@@ -395,6 +395,7 @@
   var editing = null;
   var galleryColors = Object.create(null);
   var editorRevision = 0;
+  var variantGridRevision = -1;
   var imageBusy = false;
   var galleryStop = false;
   var editorReturnFocus = null;
@@ -452,6 +453,7 @@
     setVal('f-badge', editing.badge || '');
     setVal('f-colors', (editing.colors || []).join(', '));
     setVal('f-sizes', (editing.sizes || []).join(', '));
+    document.getElementById('sizeCustom').value = '';
     setVal('f-fabrics', (editing.fabrics || []).join(', '));
     setVal('f-occasions', (editing.occasions || []).join(', '));
     setVal('f-features_en', (editing.features_en || []).join(', '));
@@ -478,6 +480,7 @@
 
     buildVariantGrid();
     renderColorsPicker();
+    renderSizesPicker();
     document.getElementById('productEditor').classList.add('open');
     document.body.style.overflow = 'hidden';
     document.getElementById('productEditor').scrollTop = 0;
@@ -499,6 +502,38 @@
     return val.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
   }
 
+  function sizeChoices() {
+    var choices = ['One Size', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', '6XL'];
+    for (var n = 32; n <= 60; n += 2) choices.push(String(n));
+    (productsAll || []).forEach(function (product) {
+      (product.sizes || []).concat((product.variants || []).map(function (variant) { return variant.size; })).forEach(function (size) {
+        if (size && choices.indexOf(size) < 0) choices.push(size);
+      });
+    });
+    strToList(getVal('f-sizes')).forEach(function (size) { if (choices.indexOf(size) < 0) choices.push(size); });
+    return choices;
+  }
+
+  function renderSizesPicker() {
+    var selected = strToList(getVal('f-sizes'));
+    document.getElementById('sizeChoice').innerHTML = '<option value="">Choisir une taille à ajouter…</option>' + sizeChoices().map(function (size) {
+      return '<option value="' + esc(size) + '"' + (selected.indexOf(size) >= 0 ? ' disabled' : '') + '>' + esc(size === 'One Size' ? 'Taille unique (One Size)' : size) + '</option>';
+    }).join('');
+    document.getElementById('sizeTags').innerHTML = selected.length ? selected.map(function (size, index) {
+      return '<span class="color-tag">' + esc(size === 'One Size' ? 'Taille unique (One Size)' : size) + '<button type="button" class="btn btn-secondary btn-small" data-remove-size="' + index + '" aria-label="Retirer la taille ' + esc(size) + '">×</button></span>';
+    }).join('') : '<span class="admin-muted">Aucune taille renseignée.</span>';
+  }
+
+  function addSize(value) {
+    var size = String(value || '').trim();
+    if (!size || size.length > 40 || /[,\x00-\x1f\x7f]/.test(size)) { toast('Saisissez une taille de 1 à 40 caractères, sans virgule.', 'err'); return; }
+    var selected = strToList(getVal('f-sizes'));
+    if (selected.some(function (current) { return current.toLowerCase() === size.toLowerCase(); })) { toast('Cette taille est déjà sélectionnée.', 'err'); renderSizesPicker(); return; }
+    selected.push(size);
+    setVal('f-sizes', selected.join(', '));
+    document.getElementById('sizeCustom').value = '';
+  }
+
   function colorCellHtml(color) {
     var hex = COLORS.hex(color);
     var unknown = !COLORS.has(color);
@@ -516,6 +551,11 @@
     var keep = {};
     (editing.variants || []).forEach(function (v) {
       keep[v.color + '||' + v.size] = { stock: v.stock, barcode: v.barcode || '' };
+    });
+    if (variantGridRevision === editorRevision) document.querySelectorAll('#variantGrid .variant-row').forEach(function (row) {
+      var color = row.querySelector('.v-color').value.trim(), size = row.querySelector('.v-size').value.trim();
+      var key = color + '||' + size, persisted = keep[key];
+      keep[key] = { stock: persisted ? persisted.stock : row.querySelector('.v-stock').value.trim(), barcode: row.querySelector('.v-barcode').value.trim() };
     });
 
     function stockFor(color, size) {
@@ -552,6 +592,7 @@
 
     document.getElementById('variantGrid').innerHTML = html ||
       '<p class="empty">Ajoutez des couleurs/tailles pour cr&eacute;er des lignes de stock.</p>';
+    variantGridRevision = editorRevision;
   }
 
   function collectVariants() {
@@ -890,6 +931,20 @@
     document.getElementById('f-colors').addEventListener('input', buildVariantGrid);
     document.getElementById('f-colors').addEventListener('input', renderGalleryGrid);
     document.getElementById('f-sizes').addEventListener('input', buildVariantGrid);
+    document.getElementById('f-sizes').addEventListener('input', renderSizesPicker);
+    document.getElementById('sizeChoice').addEventListener('change', function () { if (this.value) addSize(this.value); });
+    document.getElementById('addCustomSize').addEventListener('click', function () { addSize(document.getElementById('sizeCustom').value); });
+    document.getElementById('sizeCustom').addEventListener('keydown', function (event) { if (event.key === 'Enter') { event.preventDefault(); addSize(this.value); } });
+    document.getElementById('sizeTags').addEventListener('click', function (event) {
+      var button = event.target.closest('[data-remove-size]');
+      if (!button) return;
+      var selected = strToList(getVal('f-sizes')), index = Number(button.getAttribute('data-remove-size'));
+      if (!Number.isInteger(index) || index < 0 || index >= selected.length) return;
+      var size = selected[index];
+      if ((editing.variants || []).some(function (variant) { return variant.id && variant.size === size; }) && !confirm('Retirer la taille ' + size + ' de la fiche ?\nSes variantes existantes seront conservées hors ligne à l’enregistrement. Aucun stock ne sera effacé.')) return;
+      selected.splice(index, 1);
+      setVal('f-sizes', selected.join(', '));
+    });
     wireColorsPicker();
     document.getElementById('f-gallery').addEventListener('input', renderGalleryGrid);
     document.getElementById('f-image').addEventListener('change', function () {

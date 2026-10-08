@@ -80,7 +80,7 @@ async function build() {
   await fs.writeFile('dist/sitemap.xml', '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + urls.map(url => '<url><loc>' + url + '</loc></url>').join('') + '</urlset>');
   await fs.writeFile('dist/robots.txt', preview || process.env.STAGING_MODE === 'true' ? 'User-agent: *\nDisallow: /\n' : 'User-agent: *\nAllow: /\nSitemap: ' + origin + '/sitemap.xml\n');
   let headers = await fs.readFile('public/_headers', 'utf8');
-  if (process.env.SUPABASE_URL) headers = headers.replace(/img-src 'self' data: [^;]+;/, "img-src 'self' data: " + new URL(process.env.SUPABASE_URL).origin + ';');
+  if (process.env.SUPABASE_URL) headers = headers.replace(/img-src [^;]+;/, "img-src 'self' data: blob: " + new URL(process.env.SUPABASE_URL).origin + ';');
   await fs.writeFile('dist/_headers', headers + '\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n');
   console.log('Build terminé : pages FR/EN/AR, assets versionnés et images WebP dans dist/.');
 }

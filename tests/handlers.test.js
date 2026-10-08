@@ -309,7 +309,7 @@ test('la limite serveur reste de 4 Mo et le MIME déclaré ne remplace jamais la
   }
 });
 test('toutes les actions stock/préparation exigent la session et le débit avant le module', async () => {
-  for (const action of ['adjustInventory', 'listInventoryAdjustments', 'scanSetStock', 'setPreparationQuantity', 'completePreparation']) {
+  for (const action of ['adjustInventory', 'listInventoryAdjustments', 'resetInventoryJournal', 'scanSetStock', 'setPreparationQuantity', 'completePreparation']) {
     const denied = archiveAdmin({ requireAdmin: async () => ({ ok: false }) });
     assert.equal((await denied.handler(event({ action }))).statusCode, 401);
     assert.equal(denied.state.inventory.length, 0);

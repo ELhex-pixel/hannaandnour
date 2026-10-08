@@ -218,7 +218,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
     if (['scanSale','resetAll','resetStock'].includes(action)) return json(409, { error: 'Parcours suspendu pour préserver le stock et l’historique. Utilisez les ajustements justifiés dans Stock ; la caisse manuelle doit être remplacée par une transaction idempotente avant réactivation.' });
-    if (['listInventoryAdjustments', 'adjustInventory', 'scanSetStock', 'setPreparationQuantity', 'completePreparation'].includes(action)) {
+    if (['listInventoryAdjustments', 'resetInventoryJournal', 'adjustInventory', 'scanSetStock', 'setPreparationQuantity', 'completePreparation'].includes(action)) {
       const limited = await rateLimit(sb, event, 'admin-inventory', 120, 600, 'admin');
       if (limited) return limited;
       return await require('./lib/admin-inventory').adminInventory(sb, action, body);

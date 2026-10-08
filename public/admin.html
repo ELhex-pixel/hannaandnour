@@ -506,7 +506,17 @@
           <div class="field full"><p id="inventoryPreview" class="admin-operation-status" role="status">Choisissez une variante et une opération pour voir le résultat avant envoi.</p><p class="admin-muted">Le motif explique votre action, mais ne choisit pas l’opération. « Déstockage » avec Arrivage ajoute des unités : choisissez Retirer pour en enlever.</p><button type="submit" class="btn btn-primary" id="saveInventory">Confirmer l’ajustement</button></div>
         </form><p id="inventoryStatus" class="admin-operation-status" role="status" hidden></p>
       </div>
-      <div class="card"><h3>Journal des ajustements manuels</h3><p class="admin-muted">Les 100 dernières opérations de cette rubrique. Ce journal ne reconstruit pas les anciennes ventes ni le stock initial saisi dans les fiches produit.</p><div id="inventoryHistory"></div></div>
+      <div class="card">
+        <h3>Journal des ajustements manuels</h3>
+        <p class="admin-muted">Les 100 dernières opérations de la vue choisie. Réinitialiser vide le journal courant sans changer le stock : les anciennes lignes restent consultables dans les archives. Ce journal ne reconstruit pas les anciennes ventes ni le stock initial saisi dans les fiches produit.</p>
+        <div class="toolbar">
+          <div class="field"><label for="inventoryHistoryView">Vue du journal</label>
+          <select id="inventoryHistoryView"><option value="current">Journal courant</option><option value="archived">Archives</option></select></div>
+          <button type="button" class="btn btn-secondary" id="resetInventoryJournal">Réinitialiser le journal à zéro</button>
+        </div>
+        <p id="inventoryJournalStatus" class="admin-muted" role="status" hidden></p>
+        <div id="inventoryHistory"></div>
+      </div>
     </div>
 
     <div class="admin-panel" id="panel-preparation">
@@ -920,7 +930,17 @@
           </div>
           <input type="hidden" id="f-colors">
         </div>
-        <div class="field"><label>Tailles (virgules)</label><input id="f-sizes" placeholder="One Size, M, L"></div>
+        <div class="field">
+          <label for="sizeChoice">Tailles de cette fiche</label>
+          <input type="hidden" id="f-sizes">
+          <select id="sizeChoice"><option value="">Choisir une taille à ajouter…</option></select>
+          <div id="sizeTags" class="colors-tags" aria-live="polite"></div>
+          <div class="colors-add">
+            <input id="sizeCustom" maxlength="40" placeholder="Autre taille : 38/40, longueur…" aria-label="Taille personnalisée">
+            <button type="button" class="btn btn-secondary btn-small" id="addCustomSize">Ajouter</button>
+          </div>
+          <p class="admin-muted">Ajoutez une ou plusieurs tailles réellement disponibles. Aucune taille ni quantité n’est choisie automatiquement. Pour une taille unique, sélectionnez « Taille unique (One Size) ».</p>
+        </div>
         <div class="field"><label>Fabrics</label><input id="f-fabrics" placeholder="Silk, Cotton"></div>
         <div class="field"><label>Occasions</label><input id="f-occasions" placeholder="Daily, Events"></div>
         <div class="field"><label>Points forts (EN, virgules)</label><input id="f-features_en" placeholder="Soft, Breathable"></div>

@@ -289,9 +289,14 @@
   var rows = [], revision = 0, busy = false, snapshot = null, pending = null;
   var pendingKey = 'hn-admin-stock-operation';
   try { if (api.token && api.token()) pending = JSON.parse(sessionStorage.getItem(pendingKey) || 'null'); } catch (e) {}
+  var pendingReset = null, historyRevision = 0;
+  var resetKey = 'hn-admin-journal-reset';
+  try { if (api.token && api.token()) pendingReset = JSON.parse(sessionStorage.getItem(resetKey) || 'null'); } catch (e) {}
   function esc(value) { return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function say(message) { el('inventoryStatus').hidden = false; el('inventoryStatus').textContent = message; }
   function clearPending() { pending = null; try { sessionStorage.removeItem(pendingKey); } catch (e) {} }
+  function journalSay(message) { el('inventoryJournalStatus').hidden = false; el('inventoryJournalStatus').textContent = message; }
+  function clearReset() { pendingReset = null; try { sessionStorage.removeItem(resetKey); } catch (e) {} }
   function preview() {
     var mode = el('inventoryMode').value, value = el('inventoryQuantity').value, qty = Number(value);
     if (!snapshot || ['restock','remove','count'].indexOf(mode) < 0 || value === '') { el('inventoryPreview').textContent = 'Choisissez une variante, une opération et une quantité pour voir le résultat avant envoi.'; return false; }
@@ -302,9 +307,12 @@
     return true;
   }
   function lock(on) {
-    form.querySelectorAll('input,select,textarea').forEach(function (node) { node.disabled = on; });
-    el('saveInventory').disabled = busy || (!pending && !preview());
+    form.querySelectorAll('input,select,textarea').forEach(function (node) { node.disabled = on || !!pendingReset; });
+    el('saveInventory').disabled = busy || !!pendingReset || (!pending && !preview());
     el('saveInventory').textContent = pending ? 'Vérifier / réessayer la même opération' : 'Confirmer l’ajustement';
+    el('resetInventoryJournal').disabled = busy || !!pending;
+    el('resetInventoryJournal').textContent = pendingReset ? 'Vérifier / réessayer la réinitialisation' : 'Réinitialiser le journal à zéro';
+    el('inventoryHistoryView').disabled = busy;
   }
   function modeLabel() {
     var mode = el('inventoryMode').value;
@@ -338,10 +346,18 @@
       }).join('') + '</tbody></table>';
   }
   function renderHistory(adjustments) {
-    if (!adjustments.length) { el('inventoryHistory').innerHTML = '<p class="empty">Aucun ajustement manuel enregistré.</p>'; return; }
+    if (!adjustments.length) { el('inventoryHistory').innerHTML = '<p class="empty">' + (el('inventoryHistoryView').value === 'archived' ? 'Aucun ajustement archivé.' : 'Aucun ajustement dans le journal courant.') + '</p>'; return; }
     el('inventoryHistory').innerHTML = '<table class="admin-table"><thead><tr><th>Date / opération</th><th>Variante</th><th>Disponible avant → après</th><th>Motif</th></tr></thead><tbody>' + adjustments.map(function (entry) {
       return '<tr><td data-label="Opération">' + esc(new Date(entry.created_at).toLocaleString('fr-FR')) + '<br><small>' + esc({ restock: 'Arrivage', remove: 'Retrait', count: 'Comptage' }[entry.mode] || entry.mode) + ' · ' + esc(entry.id) + '</small></td><td data-label="Variante">' + esc([entry.product_name, entry.color, entry.size].filter(Boolean).join(' — ')) + '</td><td data-label="Avant → après">' + entry.stock_before + ' → ' + entry.stock_after + '</td><td data-label="Motif">' + esc(entry.reason) + '</td></tr>';
     }).join('') + '</tbody></table>';
+  }
+  function loadHistory() {
+    var request = ++historyRevision, owner = api.token(), archived = el('inventoryHistoryView').value === 'archived';
+    api.call('listInventoryAdjustments', { archived: archived }).then(function (res) {
+      if (request !== historyRevision || owner !== api.token()) return;
+      if (!Array.isArray(res.adjustments)) throw new Error('Journal non confirmé. Actualisez la rubrique.');
+      renderHistory(res.adjustments);
+    }).catch(function (error) { if (request === historyRevision && owner === api.token()) el('inventoryHistory').textContent = error.message; });
   }
   function load(selectId) {
     if (busy) return;
@@ -367,12 +383,12 @@
       modeLabel();
       lock(!!pending);
     }).catch(function (error) { if (request === revision && owner === api.token()) say(error.message); });
-    api.call('listInventoryAdjustments').then(function (res) { if (request === revision && owner === api.token()) renderHistory(res.adjustments || []); })
-      .catch(function (error) { if (request === revision && owner === api.token()) el('inventoryHistory').textContent = error.message; });
+    loadHistory();
+    if (pendingReset && el('inventoryJournalStatus').hidden) journalSay('Une réinitialisation reste à confirmer. Réessayez la même demande ; aucun stock ne sera modifié.');
   }
   form.addEventListener('submit', function (event) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || pendingReset) return;
     if (!pending) {
       if (!snapshot) { say('Choisissez une variante.'); return; }
       var qty = Number(el('inventoryQuantity').value), mode = el('inventoryMode').value, reason = el('inventoryReason').value.trim();
@@ -406,6 +422,39 @@
       if (!pending) load();
     });
   });
+  el('resetInventoryJournal').addEventListener('click', function () {
+    if (busy || pending) { journalSay('Confirmez d’abord l’ajustement de stock en cours.'); return; }
+    if (!pendingReset) {
+      if (!confirm('Réinitialiser le journal courant à zéro ?\n\nToutes les opérations déjà enregistrées seront archivées, pas supprimées, y compris celles au-delà des 100 lignes affichées.\nLe stock et les commandes restent inchangés. Les nouvelles opérations resteront visibles.')) return;
+      if (!window.crypto || !window.crypto.randomUUID) { journalSay('Utilisez un navigateur récent avec une connexion sécurisée. Aucune demande envoyée.'); return; }
+      pendingReset = { operation_id: window.crypto.randomUUID(), confirmation: 'REINITIALISER' };
+      try { sessionStorage.setItem(resetKey, JSON.stringify(pendingReset)); } catch (error) { pendingReset = null; journalSay('Impossible de conserver l’identifiant. Aucune demande envoyée.'); return; }
+    }
+    var owner = api.token(), operation = pendingReset.operation_id;
+    busy = true;
+    historyRevision++;
+    revision++;
+    lock(true);
+    journalSay('Réinitialisation du journal en cours… Aucun changement de stock.');
+    api.call('resetInventoryJournal', pendingReset).then(function (res) {
+      if (owner !== api.token() || !pendingReset || operation !== pendingReset.operation_id) return;
+      var result = res.result;
+      if (!result || result.operation_id !== operation || !Number.isInteger(result.archived_count) || result.archived_count < 0) throw new Error('Réponse incomplète : réinitialisation non confirmée.');
+      clearReset();
+      el('inventoryHistoryView').value = 'current';
+      journalSay((result.already ? 'Réinitialisation déjà enregistrée. ' : 'Journal réinitialisé. ') + result.archived_count + ' opération(s) archivée(s), consultables dans « Archives ». Stock inchangé.');
+    }).catch(function (error) {
+      if (owner !== api.token() || !pendingReset || operation !== pendingReset.operation_id) return;
+      if (error.code === 'inventory_journal_invalid') clearReset();
+      journalSay(error.message + (pendingReset ? ' Utilisez « Vérifier / réessayer la réinitialisation » : la même demande sera conservée.' : ' Aucune réinitialisation confirmée.'));
+    }).finally(function () {
+      if (owner !== api.token()) return;
+      busy = false;
+      lock(!!pending);
+      load();
+    });
+  });
+  el('inventoryHistoryView').addEventListener('change', function () { if (!busy) loadHistory(); });
   el('inventoryMode').addEventListener('change', modeLabel);
   el('inventoryQuantity').addEventListener('input', function () { lock(!!pending); });
   el('inventoryVariant').addEventListener('change', function () { if (!pending) pick(this.value); });
@@ -416,19 +465,21 @@
   el('inventoryList').addEventListener('click', function (event) {
     var button = event.target.closest('[data-inventory-variant]');
     if (!button) return;
-    if (pending || busy) { say('Confirmez d’abord l’opération en cours avant de changer de variante.'); return; }
+    if (pending || pendingReset || busy) { say('Confirmez d’abord l’opération en cours avant de changer de variante.'); return; }
     pick(button.getAttribute('data-inventory-variant'));
     form.scrollIntoView({ block: 'start' });
     el('inventoryQuantity').focus();
   });
   document.addEventListener('hn:inventory-variant', function (event) {
-    if (pending || busy) { say('Confirmez d’abord l’opération en cours avant de changer de variante.'); return; }
+    if (pending || pendingReset || busy) { say('Confirmez d’abord l’opération en cours avant de changer de variante.'); return; }
     load(event.detail);
     form.scrollIntoView({ block: 'start' });
   });
   document.addEventListener('hn:admin-logout', function () {
     revision++;
+    historyRevision++;
     rows = []; snapshot = null; pending = null; busy = false;
+    clearReset();
     try { sessionStorage.removeItem(pendingKey); } catch (e) {}
     form.reset();
     modeLabel();
@@ -437,6 +488,9 @@
     el('inventoryVariant').innerHTML = '<option value="">Choisir une variante</option>';
     el('inventoryStatus').textContent = '';
     el('inventoryStatus').hidden = true;
+    el('inventoryHistoryView').value = 'current';
+    el('inventoryJournalStatus').textContent = '';
+    el('inventoryJournalStatus').hidden = true;
   });
   modeLabel();
 })();

@@ -214,6 +214,69 @@ test('déconnexion, fermeture ou arrêt pendant la compression empêchent lectur
   }
 });
 
+function sizesPicker(initial = '') {
+  const nodes = {}, messages = [];
+  const node = id => nodes[id] || (nodes[id] = { value: '', innerHTML: '' });
+  node('f-sizes').value = initial;
+  const context = {
+    productsAll: [{ sizes: ['38/40'], variants: [{ size: 'Longue' }, { size: '' }] }],
+    document: { getElementById: node },
+    getVal: id => node(id).value,
+    setVal: (id, value) => { node(id).value = value; context.renderSizesPicker(); },
+    strToList: value => value.split(',').map(s => s.trim()).filter(Boolean),
+    esc: value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
+    toast: (...args) => messages.push(args)
+  };
+  const source = fs.readFileSync('public/js/admin.js', 'utf8');
+  vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('  function sizeChoices('), source.indexOf('  function colorCellHtml(')), context);
+  context.renderSizesPicker();
+  return { nodes, messages, context };
+}
+test('le menu de tailles propose lettres, chiffres et tailles existantes sans choix automatique', () => {
+  const mock = sizesPicker();
+  assert.equal(mock.nodes['f-sizes'].value, '');
+  assert.match(mock.nodes.sizeTags.innerHTML, /Aucune taille renseignée/);
+  for (const size of ['One Size','XXS','XS','M','6XL','32','60','38/40','Longue']) assert(Array.from(mock.context.sizeChoices()).includes(size));
+  assert(!Array.from(mock.context.sizeChoices()).includes(''));
+  mock.context.addSize('M');mock.context.addSize('38/40');mock.context.addSize('Longueur 145');
+  assert.equal(mock.nodes['f-sizes'].value,'M, 38/40, Longueur 145');
+  assert.match(mock.nodes.sizeChoice.innerHTML, /value="M" disabled/);
+  assert.match(mock.nodes.sizeTags.innerHTML, /Retirer la taille M/);
+});
+test('le menu conserve les tailles historiques, refuse doublons et valeurs invalides et échappe les libellés', () => {
+  const mock = sizesPicker('Taille ancienne, M');
+  assert(Array.from(mock.context.sizeChoices()).includes('Taille ancienne'));
+  mock.context.addSize('m');
+  assert.equal(mock.nodes['f-sizes'].value,'Taille ancienne, M');
+  for(const size of ['', 'a'.repeat(41), 'S,M', 'M\nL']) mock.context.addSize(size);
+  assert.equal(mock.nodes['f-sizes'].value,'Taille ancienne, M');
+  mock.context.addSize('<script>');
+  assert.match(mock.nodes.sizeTags.innerHTML,/&lt;script&gt;/);
+  assert(!mock.nodes.sizeTags.innerHTML.includes('<script>'));
+});
+test('ajouter une taille conserve les quantités initiales et codes saisis, sans altérer le stock existant ni une autre fiche', () => {
+  const grid = { innerHTML:'' };
+  const draft = (size,stock,barcode) => ({ querySelector: selector => ({ value: { '.v-color':'Vin','.v-size':size,'.v-stock':stock,'.v-barcode':barcode }[selector] }) });
+  const context = {
+    editing:{variants:[{id:'existing',color:'Vin',size:'M',stock:18,barcode:'OLD'}]},
+    editorRevision:1,variantGridRevision:1,
+    getVal:id=>id==='f-colors'?'Vin':'M, L, XL',
+    strToList:value=>value.split(',').map(s=>s.trim()),esc:value=>String(value),colorCellHtml:()=>'',
+    document:{getElementById:()=>grid,querySelectorAll:()=>[draft('M','999','EDITED'),draft('L','7','NEW')]}
+  };
+  const source=fs.readFileSync('public/js/admin.js','utf8');vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('  function buildVariantGrid('),source.indexOf('  function collectVariants(')),context);
+  context.buildVariantGrid();
+  assert.match(grid.innerHTML,/value="18" placeholder="0" readonly/);
+  assert(!grid.innerHTML.includes('value="999"'));
+  assert(grid.innerHTML.includes('value="EDITED"'));
+  assert(grid.innerHTML.includes('value="7" placeholder="0"'));
+  assert(grid.innerHTML.includes('value="NEW"'));
+  context.editorRevision=2;context.editing={variants:[]};context.buildVariantGrid();
+  assert(!grid.innerHTML.includes('value="7"'));assert(!grid.innerHTML.includes('value="NEW"'));
+});
+
 function bulkProducts(response) {
   const nodes = {};
   const state = { calls: [], confirms: [], allowed: true, typed: 'SUPPRIMER', token: 'fixture-token', loads: 0, toasts: [] };

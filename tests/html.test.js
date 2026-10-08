@@ -52,6 +52,25 @@ test('l’admin modernisé conserve les rubriques et isole les opérations sensi
   assert($('#inventoryMode').is('[required]'));
   assert.equal($('#inventoryMode option').first().attr('value'),'');
   assert.equal($('#inventoryPreview').attr('role'),'status');
+  assert.equal($('#sizeChoice').is('select'),true);
+  assert.equal($('#sizeChoice option').first().attr('value'),'');
+  assert.equal($('#f-sizes').attr('type'),'hidden');
+  assert.equal($('label[for="sizeChoice"]').length,1);
+  assert.equal($('#addCustomSize').attr('type'),'button');
+});
+test('la CSP autorise les images locales de compression sans ouvrir scripts ni connexions', () => {
+  const headers=fs.readFileSync('public/_headers','utf8');
+  const policy=headers.split('\n').find(line=>line.includes('Content-Security-Policy:'));
+  const directives=policy.split(': ').slice(1).join(': ').split(';').map(value=>value.trim());
+  assert(directives.includes("img-src 'self' data: blob: https://rqgoawbzbgzuvpxnzxsu.supabase.co"));
+  assert(directives.includes("script-src 'self'"));
+  assert(directives.includes("connect-src 'self'"));
+  assert(directives.filter(value=>value.includes('blob:')).every(value=>value.startsWith('img-src ')));
+  const build=fs.readFileSync('scripts/build.js','utf8');
+  const replacement=build.split('\n').find(line=>line.includes('headers = headers.replace'));
+  const generated=require('node:vm').runInNewContext('var headers='+JSON.stringify(headers)+';'+replacement+';headers',{ process:{env:{SUPABASE_URL:'https://images.example.test'}},URL });
+  assert(generated.includes("img-src 'self' data: blob: https://images.example.test;"));
+  assert(!generated.includes('rqgoawbzbgzuvpxnzxsu.supabase.co'));
 });
 test('l’admin occupe la largeur disponible sans marge extérieure', () => {
   const css = fs.readFileSync('public/css/styles.css', 'utf8');
