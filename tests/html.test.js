@@ -52,11 +52,10 @@ test('l’admin modernisé conserve les rubriques et isole les opérations sensi
   assert($('#inventoryMode').is('[required]'));
   assert.equal($('#inventoryMode option').first().attr('value'),'');
   assert.equal($('#inventoryPreview').attr('role'),'status');
-  assert.equal($('#sizeChoice').is('select'),true);
-  assert.equal($('#sizeChoice option').first().attr('value'),'');
+  assert.equal($('#sizeChoice').length,0);
   assert.equal($('#f-sizes').attr('type'),'hidden');
-  assert.equal($('label[for="sizeChoice"]').length,1);
-  assert.equal($('#addCustomSize').attr('type'),'button');
+  assert.equal($('#f-sizes').parents('#productStockSection').length,1);
+  for(const id of ['sizeTags','sizeCustom','addCustomSize']) assert.equal($('#'+id).length,0);
 });
 test('la CSP autorise les images locales de compression sans ouvrir scripts ni connexions', () => {
   const headers=fs.readFileSync('public/_headers','utf8');

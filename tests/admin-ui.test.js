@@ -222,7 +222,7 @@ function sizesPicker(initial = '') {
     productsAll: [{ sizes: ['38/40'], variants: [{ size: 'Longue' }, { size: '' }] }],
     document: { getElementById: node },
     getVal: id => node(id).value,
-    setVal: (id, value) => { node(id).value = value; context.renderSizesPicker(); },
+    setVal: (id, value) => { node(id).value = value; },
     strToList: value => value.split(',').map(s => s.trim()).filter(Boolean),
     esc: value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
     toast: (...args) => messages.push(args)
@@ -230,19 +230,18 @@ function sizesPicker(initial = '') {
   const source = fs.readFileSync('public/js/admin.js', 'utf8');
   vm.createContext(context);
   vm.runInContext(source.slice(source.indexOf('  function sizeChoices('), source.indexOf('  function colorCellHtml(')), context);
-  context.renderSizesPicker();
+  vm.runInContext(source.slice(source.indexOf('  function variantSizeHtml('),source.indexOf('  function buildVariantGrid(')),context);
   return { nodes, messages, context };
 }
 test('le menu de tailles propose lettres, chiffres et tailles existantes sans choix automatique', () => {
   const mock = sizesPicker();
   assert.equal(mock.nodes['f-sizes'].value, '');
-  assert.match(mock.nodes.sizeTags.innerHTML, /Aucune taille renseignée/);
+  assert(!mock.context.variantSizeHtml('').includes(' selected'));
   for (const size of ['One Size','XXS','XS','M','6XL','32','60','38/40','Longue']) assert(Array.from(mock.context.sizeChoices()).includes(size));
   assert(!Array.from(mock.context.sizeChoices()).includes(''));
   mock.context.addSize('M');mock.context.addSize('38/40');mock.context.addSize('Longueur 145');
   assert.equal(mock.nodes['f-sizes'].value,'M, 38/40, Longueur 145');
-  assert.match(mock.nodes.sizeChoice.innerHTML, /value="M" disabled/);
-  assert.match(mock.nodes.sizeTags.innerHTML, /Retirer la taille M/);
+  assert.match(mock.context.variantSizeHtml('M'), /value="M" selected/);
 });
 test('le menu conserve les tailles historiques, refuse doublons et valeurs invalides et échappe les libellés', () => {
   const mock = sizesPicker('Taille ancienne, M');
@@ -252,8 +251,19 @@ test('le menu conserve les tailles historiques, refuse doublons et valeurs inval
   for(const size of ['', 'a'.repeat(41), 'S,M', 'M\nL']) mock.context.addSize(size);
   assert.equal(mock.nodes['f-sizes'].value,'Taille ancienne, M');
   mock.context.addSize('<script>');
-  assert.match(mock.nodes.sizeTags.innerHTML,/&lt;script&gt;/);
-  assert(!mock.nodes.sizeTags.innerHTML.includes('<script>'));
+  assert.match(mock.context.variantSizeHtml('<script>'),/&lt;script&gt;/);
+  assert(!mock.context.variantSizeHtml('<script>').includes('<script>'));
+});
+test('chaque taille de variante est un vrai select avec toutes les propositions et sans taille implicite', () => {
+  const mock = sizesPicker('Sur mesure');
+  const source=fs.readFileSync('public/js/admin.js','utf8');
+  vm.runInContext(source.slice(source.indexOf('  function variantSizeHtml('),source.indexOf('  function buildVariantGrid(')),mock.context);
+  const blank=mock.context.variantSizeHtml('');
+  assert.match(blank, /^<select class="v-size"/);
+  assert.match(blank, /aria-label="Choisir la taille/);
+  assert(!blank.includes(' selected'));
+  for(const size of ['One Size','XXS','M','6XL','32','60','38/40','Sur mesure']) assert(blank.includes('value="'+size+'"'));
+  assert(mock.context.variantSizeHtml('Taille historique').includes('value="Taille historique" selected'));
 });
 test('ajouter une taille conserve les quantités initiales et codes saisis, sans altérer le stock existant ni une autre fiche', () => {
   const grid = { innerHTML:'' };
@@ -263,10 +273,11 @@ test('ajouter une taille conserve les quantités initiales et codes saisis, sans
     editorRevision:1,variantGridRevision:1,
     getVal:id=>id==='f-colors'?'Vin':'M, L, XL',
     strToList:value=>value.split(',').map(s=>s.trim()),esc:value=>String(value),colorCellHtml:()=>'',
+    sizeChoices:()=>['M','L','XL'],
     document:{getElementById:()=>grid,querySelectorAll:()=>[draft('M','999','EDITED'),draft('L','7','NEW')]}
   };
   const source=fs.readFileSync('public/js/admin.js','utf8');vm.createContext(context);
-  vm.runInContext(source.slice(source.indexOf('  function buildVariantGrid('),source.indexOf('  function collectVariants(')),context);
+  vm.runInContext(source.slice(source.indexOf('  function variantSizeHtml('),source.indexOf('  function collectVariants(')),context);
   context.buildVariantGrid();
   assert.match(grid.innerHTML,/value="18" placeholder="0" readonly/);
   assert(!grid.innerHTML.includes('value="999"'));
@@ -275,6 +286,44 @@ test('ajouter une taille conserve les quantités initiales et codes saisis, sans
   assert(grid.innerHTML.includes('value="NEW"'));
   context.editorRevision=2;context.editing={variants:[]};context.buildVariantGrid();
   assert(!grid.innerHTML.includes('value="7"'));assert(!grid.innerHTML.includes('value="NEW"'));
+});
+test('changer le menu d’une variante existante propose une autre ligne sans déplacer son identité ni stock', () => {
+  const messages=[],updates=[];
+  const row={querySelector:()=>({value:'Vin'}),getAttribute:()=>''};
+  const input={value:'M',closest:()=>row,selectedOptions:[]};
+  const context={editing:{variants:[{id:'existing',color:'Vin',size:'',stock:18}]},getVal:()=>'',strToList:value=>value.split(',').filter(Boolean),addSize:size=>updates.push(size),toast:(...args)=>messages.push(args),document:{querySelectorAll:()=>[]}};
+  const source=fs.readFileSync('public/js/admin.js','utf8');vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('  function changeVariantSize('),source.indexOf('  function normalizeColorName(')),context);
+  context.changeVariantSize(input);
+  assert.equal(input.value,'');assert.deepEqual(updates,['M']);
+  assert.equal(context.editing.variants[0].stock,18);assert.equal(context.editing.variants[0].size,'');
+  assert.match(messages[0][0],/stock restent inchangés/);
+});
+test('changer une nouvelle ligne ajoute la taille à la fiche et refuse une combinaison déjà affichée', () => {
+  const updates=[],messages=[];
+  const row={querySelector:()=>({value:'Gris'}),getAttribute:()=>''};
+  const input={value:'L',closest:()=>row,selectedOptions:[]};
+  const context={editing:{variants:[]},getVal:()=>'',strToList:value=>value.split(',').filter(Boolean),setVal:(...args)=>updates.push(args),toast:(...args)=>messages.push(args),document:{querySelectorAll:()=>[row]}};
+  const source=fs.readFileSync('public/js/admin.js','utf8');vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('  function changeVariantSize('),source.indexOf('  function normalizeColorName(')),context);
+  context.changeVariantSize(input);assert.deepEqual(updates,[['f-sizes','L']]);
+  const other={querySelector:selector=>({value:selector==='.v-color'?'Gris':'M'})};
+  context.document.querySelectorAll=()=>[row,other];input.value='M';context.changeVariantSize(input);
+  assert.equal(input.value,'');assert.equal(updates.length,1);assert.match(messages[0][0],/doublon/);
+});
+test('Autre taille permet une personnalisation explicite, sans changement après annulation ou saisie invalide', () => {
+  const updates=[],messages=[];
+  const row={querySelector:()=>({value:'Gris'}),getAttribute:()=>''};
+  const input={value:'',closest:()=>row,selectedOptions:[{hasAttribute:()=>true}],options:[],appendChild(option){this.options.push(option);}};
+  const context={editing:{variants:[]},prompt:()=>null,sizeChoices:()=>['M'],getVal:()=>'',strToList:value=>value.split(',').filter(Boolean),setVal:(...args)=>updates.push(args),toast:(...args)=>messages.push(args),document:{querySelectorAll:()=>[row],createElement:()=>({value:'',textContent:''})}};
+  const source=fs.readFileSync('public/js/admin.js','utf8');vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('  function changeVariantSize('),source.indexOf('  function normalizeColorName(')),context);
+  context.changeVariantSize(input);assert.equal(updates.length,0);
+  for(const value of ['','S,M','a'.repeat(41)]) {context.prompt=()=>value;context.changeVariantSize(input);}
+  assert.equal(updates.length,0);assert.equal(input.options.length,0);
+  context.prompt=()=> '38/40';context.changeVariantSize(input);
+  assert.deepEqual(updates,[['f-sizes','38/40']]);assert.equal(input.value,'38/40');
+  assert.equal(input.options[0].textContent,'38/40');
 });
 
 function bulkProducts(response) {

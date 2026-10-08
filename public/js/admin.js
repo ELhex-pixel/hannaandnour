@@ -453,7 +453,6 @@
     setVal('f-badge', editing.badge || '');
     setVal('f-colors', (editing.colors || []).join(', '));
     setVal('f-sizes', (editing.sizes || []).join(', '));
-    document.getElementById('sizeCustom').value = '';
     setVal('f-fabrics', (editing.fabrics || []).join(', '));
     setVal('f-occasions', (editing.occasions || []).join(', '));
     setVal('f-features_en', (editing.features_en || []).join(', '));
@@ -480,7 +479,6 @@
 
     buildVariantGrid();
     renderColorsPicker();
-    renderSizesPicker();
     document.getElementById('productEditor').classList.add('open');
     document.body.style.overflow = 'hidden';
     document.getElementById('productEditor').scrollTop = 0;
@@ -514,24 +512,13 @@
     return choices;
   }
 
-  function renderSizesPicker() {
-    var selected = strToList(getVal('f-sizes'));
-    document.getElementById('sizeChoice').innerHTML = '<option value="">Choisir une taille à ajouter…</option>' + sizeChoices().map(function (size) {
-      return '<option value="' + esc(size) + '"' + (selected.indexOf(size) >= 0 ? ' disabled' : '') + '>' + esc(size === 'One Size' ? 'Taille unique (One Size)' : size) + '</option>';
-    }).join('');
-    document.getElementById('sizeTags').innerHTML = selected.length ? selected.map(function (size, index) {
-      return '<span class="color-tag">' + esc(size === 'One Size' ? 'Taille unique (One Size)' : size) + '<button type="button" class="btn btn-secondary btn-small" data-remove-size="' + index + '" aria-label="Retirer la taille ' + esc(size) + '">×</button></span>';
-    }).join('') : '<span class="admin-muted">Aucune taille renseignée.</span>';
-  }
-
   function addSize(value) {
     var size = String(value || '').trim();
     if (!size || size.length > 40 || /[,\x00-\x1f\x7f]/.test(size)) { toast('Saisissez une taille de 1 à 40 caractères, sans virgule.', 'err'); return; }
     var selected = strToList(getVal('f-sizes'));
-    if (selected.some(function (current) { return current.toLowerCase() === size.toLowerCase(); })) { toast('Cette taille est déjà sélectionnée.', 'err'); renderSizesPicker(); return; }
+    if (selected.some(function (current) { return current.toLowerCase() === size.toLowerCase(); })) return;
     selected.push(size);
     setVal('f-sizes', selected.join(', '));
-    document.getElementById('sizeCustom').value = '';
   }
 
   function colorCellHtml(color) {
@@ -541,6 +528,14 @@
       '<span class="swatch' + (unknown ? ' unknown" title="Couleur inconnue du site' : '') + '" style="background:' + esc(hex) + ';"></span>' +
       '<input type="text" class="v-color" value="' + esc(color) + '" readonly>' +
       '</div>';
+  }
+
+  function variantSizeHtml(size) {
+    var choices = sizeChoices();
+    if (size && choices.indexOf(size) < 0) choices.push(size);
+    return '<select class="v-size" aria-label="Choisir la taille de cette variante"><option value="">Choisir une taille / non renseignée</option>' + choices.map(function (value) {
+      return '<option value="' + esc(value) + '"' + (value === size ? ' selected' : '') + '>' + esc(value === 'One Size' ? 'Taille unique (One Size)' : value) + '</option>';
+    }).join('') + '<option value="" data-custom-size="true">Autre taille…</option></select>';
   }
 
   function buildVariantGrid() {
@@ -577,12 +572,17 @@
         sList.forEach(function (s) { rows.push({ color: c, size: s }); });
       });
     }
+    if (sizes.length) Object.keys(keep).forEach(function (key) {
+      var parts = key.split('||'), color = parts[0], size = parts.slice(1).join('||');
+      if (size || (colors.length && colors.indexOf(color) < 0) || rows.some(function (row) { return row.color === color && row.size === ''; })) return;
+      if ((editing.variants || []).some(function (variant) { return variant.id && variant.color === color && variant.size === ''; }) || keep[key].stock !== '' || keep[key].barcode) rows.push({ color: color, size: '' });
+    });
 
     var html = rows.map(function (r, i) {
       var persisted = (editing.variants || []).filter(function (v) { return v.id && v.color === r.color && v.size === r.size; })[0];
-      return '<div class="variant-row" data-i="' + i + '">' +
+      return '<div class="variant-row" data-i="' + i + '" data-original-size="' + esc(r.size) + '">' +
         (r.color ? colorCellHtml(r.color) : '<input type="text" class="v-color" value="" placeholder="Couleur">') +
-        '<input type="text" class="v-size" value="' + esc(r.size) + '" placeholder="Taille" ' + (r.size ? 'readonly' : '') + '>' +
+        variantSizeHtml(r.size) +
         '<input type="number" class="v-stock" min="0" step="1" value="' + (stockFor(r.color, r.size) === '' ? '' : stockFor(r.color, r.size)) + '" placeholder="0"' + (persisted ? ' readonly aria-label="Stock existant, à ajuster dans la rubrique Stock"' : ' aria-label="Stock initial de la nouvelle variante"') + '>' +
         '<span style="font-size:12px;color:#8a7d66;">stock</span>' +
         '<input type="text" class="v-barcode" value="' + esc(barcodeFor(r.color, r.size)) + '" placeholder="Code-barres (auto)">' +
@@ -614,6 +614,41 @@
       });
     });
     return out;
+  }
+
+  function changeVariantSize(input) {
+    var row = input.closest('.variant-row'), color = row.querySelector('.v-color').value.trim();
+    var before = row.getAttribute('data-original-size'), chosen = input.value;
+    if (input.selectedOptions[0] && input.selectedOptions[0].hasAttribute('data-custom-size')) {
+      var custom = prompt('Quelle taille souhaitez-vous ajouter ? (1 à 40 caractères, sans virgule)', '');
+      input.value = before;
+      if (custom === null) return;
+      chosen = custom.trim();
+      if (!chosen || chosen.length > 40 || /[,\x00-\x1f\x7f]/.test(chosen)) { toast('Saisissez une taille de 1 à 40 caractères, sans virgule.', 'err'); return; }
+      var known = sizeChoices().filter(function (size) { return size.toLowerCase() === chosen.toLowerCase(); })[0];
+      chosen = known || chosen;
+      if (!Array.prototype.some.call(input.options, function (option) { return option.value === chosen; })) {
+        var option = document.createElement('option'); option.value = chosen; option.textContent = chosen; input.appendChild(option);
+      }
+      input.value = chosen;
+    }
+    if (chosen === before) return;
+    var persisted = (editing.variants || []).filter(function (variant) { return variant.id && variant.color === color && variant.size === before; })[0];
+    if (persisted) {
+      input.value = before;
+      if (!chosen) { toast('Cette variante est enregistrée : sa taille et son stock sont conservés. Choisissez une autre taille pour préparer une nouvelle variante.', 'err'); return; }
+      var selected = strToList(getVal('f-sizes'));
+      if (selected.indexOf(chosen) < 0) addSize(chosen);
+      toast('Taille ' + chosen + ' disponible dans une ligne distincte. La variante enregistrée et son stock restent inchangés ; renseignez séparément le stock initial de la nouvelle variante.', 'ok');
+      return;
+    }
+    var duplicate = Array.prototype.some.call(document.querySelectorAll('#variantGrid .variant-row'), function (other) { return other !== row && other.querySelector('.v-color').value.trim() === color && other.querySelector('.v-size').value === chosen; });
+    if (duplicate) { input.value = before; toast('Cette taille existe déjà pour ce coloris : utilisez sa ligne pour éviter un doublon.', 'err'); return; }
+    if (chosen) {
+      var sizes = strToList(getVal('f-sizes'));
+      if (sizes.indexOf(chosen) < 0) sizes.push(chosen);
+      setVal('f-sizes', sizes.join(', '));
+    } else buildVariantGrid();
   }
 
   /* ---------------- Sélecteur de couleurs ---------------- */
@@ -931,19 +966,9 @@
     document.getElementById('f-colors').addEventListener('input', buildVariantGrid);
     document.getElementById('f-colors').addEventListener('input', renderGalleryGrid);
     document.getElementById('f-sizes').addEventListener('input', buildVariantGrid);
-    document.getElementById('f-sizes').addEventListener('input', renderSizesPicker);
-    document.getElementById('sizeChoice').addEventListener('change', function () { if (this.value) addSize(this.value); });
-    document.getElementById('addCustomSize').addEventListener('click', function () { addSize(document.getElementById('sizeCustom').value); });
-    document.getElementById('sizeCustom').addEventListener('keydown', function (event) { if (event.key === 'Enter') { event.preventDefault(); addSize(this.value); } });
-    document.getElementById('sizeTags').addEventListener('click', function (event) {
-      var button = event.target.closest('[data-remove-size]');
-      if (!button) return;
-      var selected = strToList(getVal('f-sizes')), index = Number(button.getAttribute('data-remove-size'));
-      if (!Number.isInteger(index) || index < 0 || index >= selected.length) return;
-      var size = selected[index];
-      if ((editing.variants || []).some(function (variant) { return variant.id && variant.size === size; }) && !confirm('Retirer la taille ' + size + ' de la fiche ?\nSes variantes existantes seront conservées hors ligne à l’enregistrement. Aucun stock ne sera effacé.')) return;
-      selected.splice(index, 1);
-      setVal('f-sizes', selected.join(', '));
+    document.getElementById('variantGrid').addEventListener('change', function (event) {
+      var input = event.target.closest('.v-size');
+      if (input) changeVariantSize(input);
     });
     wireColorsPicker();
     document.getElementById('f-gallery').addEventListener('input', renderGalleryGrid);

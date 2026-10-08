@@ -79,7 +79,7 @@
 
   .variant-grid { display: grid; gap: 8px; margin-top: 8px; }
   .variant-row { display: grid; grid-template-columns: 130px 1fr 90px 60px 170px; gap: 8px; align-items: center; }
-  .variant-row input { padding: 6px 8px; border: 1px solid #E2D8C5; border-radius: 8px; }
+  .variant-row input, .variant-row select { padding: 6px 8px; border: 1px solid #E2D8C5; border-radius: 8px; min-width: 0; }
   .variant-row .v-adjust { grid-column: 1 / -1; justify-self: start; }
 
   .gallery-item { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; border: 1px solid #E7DECC; border-radius: 10px; padding: 6px; margin: 0 8px 8px 0; }
@@ -930,17 +930,6 @@
           </div>
           <input type="hidden" id="f-colors">
         </div>
-        <div class="field">
-          <label for="sizeChoice">Tailles de cette fiche</label>
-          <input type="hidden" id="f-sizes">
-          <select id="sizeChoice"><option value="">Choisir une taille à ajouter…</option></select>
-          <div id="sizeTags" class="colors-tags" aria-live="polite"></div>
-          <div class="colors-add">
-            <input id="sizeCustom" maxlength="40" placeholder="Autre taille : 38/40, longueur…" aria-label="Taille personnalisée">
-            <button type="button" class="btn btn-secondary btn-small" id="addCustomSize">Ajouter</button>
-          </div>
-          <p class="admin-muted">Ajoutez une ou plusieurs tailles réellement disponibles. Aucune taille ni quantité n’est choisie automatiquement. Pour une taille unique, sélectionnez « Taille unique (One Size) ».</p>
-        </div>
         <div class="field"><label>Fabrics</label><input id="f-fabrics" placeholder="Silk, Cotton"></div>
         <div class="field"><label>Occasions</label><input id="f-occasions" placeholder="Daily, Events"></div>
         <div class="field"><label>Points forts (EN, virgules)</label><input id="f-features_en" placeholder="Soft, Breathable"></div>
@@ -994,7 +983,8 @@
       </div>
 
       <div class="card" style="margin-top:16px;" id="productStockSection">
-        <h3>Quantités par taille et coloris</h3><p class="admin-muted">Pour une nouvelle variante, saisissez le disponible initial : 0 = épuisé, vide = stock non configuré. Le stock des variantes déjà enregistrées est en lecture seule ici : utilisez la rubrique Stock pour les arrivages et corrections avec motif.</p><button type="button" class="btn btn-secondary btn-small" id="editInventoryBtn">Gérer les arrivages et corrections</button>
+        <h3>Quantités par taille et coloris</h3><p class="admin-muted">Choisissez les tailles uniquement ici : lettres, chiffres, taille unique ou « Autre taille… » pour une taille personnalisée. Aucune taille n’est choisie automatiquement. Pour une nouvelle variante, saisissez le disponible initial : 0 = épuisé, vide = stock non configuré. Sur une variante déjà enregistrée, choisir une autre taille ouvre une ligne distincte, sans déplacer son stock ni son historique. Le stock existant reste en lecture seule ici : utilisez la rubrique Stock pour les arrivages et corrections avec motif.</p><button type="button" class="btn btn-secondary btn-small" id="editInventoryBtn">Gérer les arrivages et corrections</button>
+        <input type="hidden" id="f-sizes">
         <div id="variantGrid" class="variant-grid"></div>
       </div>
 
