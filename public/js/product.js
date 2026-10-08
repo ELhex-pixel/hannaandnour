@@ -19,18 +19,6 @@
   var KNOWN_REVIEW_COUNT = 0;
   var KNOWN_RATING = 0;
 
-  var SIZE_DIMS = {
-    'one size': [180, 70], '180cm x 70cm': [180, 70], '180 x 70': [180, 70],
-    'large': [200, 75], '200cm x 75cm': [200, 75],
-    'extra large': [220, 90], 'xl': [220, 90], '220cm x 90cm': [220, 90]
-  };
-  var SIZE_BEST_KEY = {
-    'one size': 'sgR1',
-    'large': 'sgR2',
-    'extra large': 'sgR3',
-    'xl': 'sgR3'
-  };
-
   function catKey(cat) {
     return HN.catKey(cat);
   }
@@ -280,20 +268,16 @@
     var btn = document.getElementById('sizeGuideBtn');
     var body = document.getElementById('sizeGuideBody');
     if (!btn || !body) return;
-    if (!Array.isArray(p.sizes) || !p.sizes.length) {
-      btn.style.display = 'none';
-      return;
-    }
     btn.style.display = '';
-    var rows = p.sizes.map(function (s) {
-      var key = String(s || '').toLowerCase().trim();
-      var dims = SIZE_DIMS[key];
-      var cells = dims
-        ? '<td>' + dims[0] + 'cm</td><td>' + dims[1] + 'cm</td>'
-        : '<td colspan="2">&mdash;</td>';
-      return '<tr><td>' + esc(s) + '</td>' + cells + '<td>' + tr(SIZE_BEST_KEY[key] || 'sgGeneric') + '</td></tr>';
-    }).join('');
-    body.innerHTML = rows;
+    var fit = localized(p, 'fit_en', 'fit_fr', 'fit_ar', p.fit_fr || p.fit_ar || '').trim();
+    var measurements = localized(p, 'measurements_en', 'measurements_fr', 'measurements_ar', p.measurements_fr || p.measurements_ar || '').trim();
+    var sizes = Array.isArray(p.sizes) && p.sizes.length ? p.sizes : productVariants(p).filter(function (variant) { return variant.active !== false; }).map(function (variant) { return variant.size || ''; });
+    sizes = sizes.filter(function (size, index, list) { return size && list.indexOf(size) === index; }).map(function (size) { return lower(size) === 'one size' ? tr('sizeOne') : size; });
+    body.removeAttribute('data-i18n');
+    body.textContent = fit || sizes.join(', ') || tr('sgUnspecified');
+    var section = document.getElementById('sizeGuideMeasurements'), text = document.getElementById('sizeGuideMeasurementsText');
+    if (section) section.hidden = !measurements;
+    if (text) text.textContent = measurements;
   }
 
   /* ---- Variants & stock ---- */

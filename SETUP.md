@@ -215,6 +215,12 @@ Les tailles se choisissent uniquement dans les lignes de « Quantités par taill
 
 Choisir une taille sur une nouvelle ligne conserve ses quantités/codes en brouillon et synchronise les tailles de la fiche ; une combinaison déjà affichée est refusée pour éviter un doublon. Choisir une autre taille sur une variante enregistrée conserve sa taille, son identifiant et son stock : une ligne distincte est proposée pour la nouvelle taille, sans copier son stock. Les variantes enregistrées sans taille restent visibles lorsque des tailles sont ajoutées, de même que les brouillons sans taille contenant une quantité ou un code. Ces contrôles d’interface complètent les protections de stock serveur ; aucune migration ni modification automatique de données n’est nécessaire. Sessions, quotas et RPC privées existants ne sont pas modifiés ; prix, paiements et effets commerciaux ne sont pas concernés par ce changement d’interface.
 
+### Guide des tailles modifiable
+
+Le guide client lit les champs existants `fit_fr/en/ar` (tailles conseillées ou ajustement) et `measurements_fr/en/ar` (mesures vérifiées facultatives), modifiables dans la fiche admin puis sauvegardés via `saveProduct`. Une indication libre comme « Du 36 au 46 » est un conseil de coupe, pas une nouvelle variante ni une quantité disponible. Aucun intervalle n’est attribué automatiquement aux produits. Les mesures ne s’affichent que lorsqu’elles sont renseignées ; « One Size » et « XL » ne déduisent plus de longueur, largeur ou usage de démonstration.
+
+Sans conseil enregistré, le guide reprend uniquement les tailles effectivement configurées, ou signale l’absence d’information. Les textes sont affichés via `textContent`, dans la langue renseignée avec repli sur un texte existant, sans traduction inventée. Enlever une mesure dans l’admin la masque après enregistrement et rechargement. Champs existants et bornés à 2 000 caractères côté serveur ; aucune migration, activation, modification de stock, paiement ni email n’est introduit. Les protections serveur, sessions et limites de débit restent inchangées.
+
 ### Staging isolé
 
 1. Créer un second projet Supabase et y exécuter le schéma et les migrations. Utiliser seulement des données de test, pas les données personnelles de production.

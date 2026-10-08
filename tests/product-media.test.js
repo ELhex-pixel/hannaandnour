@@ -5,6 +5,43 @@ const fs = require('node:fs');
 const media = require('../public/js/product-media');
 
 const beige='images/beige.jpg', vin='images/vin.jpg', general='images/detail.jpg';
+function sizeGuide(lang='fr') {
+  const nodes={},state={lang};
+  const node=id=>nodes[id]||(nodes[id]={textContent:'',innerHTML:'',style:{},hidden:false,attributes:{'data-i18n':'sgUnspecified'},removeAttribute(name){delete this.attributes[name];}});
+  const dict=require('../public/js/i18n');
+  const context={HN:{lang:()=>state.lang},document:{getElementById:node},tr:key=>dict[state.lang][key],productVariants:p=>p.variants||p.product_variants||[],lower:value=>String(value||'').toLowerCase().trim()};
+  const source=fs.readFileSync('public/js/product.js','utf8');vm.createContext(context);
+  vm.runInContext(source.slice(source.indexOf('  function localized('),source.indexOf('  function listLocalized('))+source.slice(source.indexOf('  function renderSizeGuide('),source.indexOf('  /* ---- Variants & stock ---- */')),context);
+  return {nodes,state,render:context.renderSizeGuide};
+}
+test('le guide n’invente ni mesures de One Size/XL ni usage conseillé quand les champs sont vides', () => {
+  const mock=sizeGuide();mock.render({sizes:['One Size','XL']});
+  assert.equal(mock.nodes.sizeGuideBody.textContent,'Taille unique, XL');
+  assert.equal(mock.nodes.sizeGuideMeasurements.hidden,true);
+  assert.equal(mock.nodes.sizeGuideMeasurementsText.textContent,'');
+  assert(!fs.readFileSync('public/js/product.js','utf8').includes('SIZE_DIMS'));
+});
+test('la plage conseillée se modifie indépendamment du stock et les mesures facultatives se masquent après retrait', () => {
+  const mock=sizeGuide(),product={sizes:['One Size'],variants:[{size:'One Size',stock:18,active:true}],fit_fr:'Du 36 au 46',measurements_fr:''};
+  mock.render(product);assert.equal(mock.nodes.sizeGuideBody.textContent,'Du 36 au 46');
+  assert.equal(mock.nodes.sizeGuideMeasurements.hidden,true);
+  product.fit_fr='Du 38 au 50';product.measurements_fr='Longueur mesurée : 125 cm';mock.render(product);
+  assert.equal(mock.nodes.sizeGuideBody.textContent,'Du 38 au 50');
+  assert.equal(mock.nodes.sizeGuideMeasurements.hidden,false);assert.equal(mock.nodes.sizeGuideMeasurementsText.textContent,product.measurements_fr);
+  product.measurements_fr='';mock.render(product);assert.equal(mock.nodes.sizeGuideMeasurements.hidden,true);
+  assert.deepEqual(product.sizes,['One Size']);assert.equal(product.variants[0].stock,18);
+});
+test('le guide FR/EN/AR respecte les textes enregistrés, les variantes réelles et refuse tout HTML actif', () => {
+  const mock=sizeGuide(),product={fit_fr:'Du 36 au 46',fit_en:'From 36 to 46',fit_ar:'من 36 إلى 46'};
+  for(const lang of ['fr','en','ar']) {mock.state.lang=lang;mock.render(product);assert.equal(mock.nodes.sizeGuideBody.textContent,product['fit_'+lang]);}
+  mock.render({fit_fr:'Du 36 au 46'});assert.equal(mock.nodes.sizeGuideBody.textContent,'Du 36 au 46');
+  mock.render({fit_ar:'<img src=x onerror=alert(1)>',measurements_ar:'<script>alert(1)</script>'});
+  assert.equal(mock.nodes.sizeGuideBody.textContent,'<img src=x onerror=alert(1)>');assert.equal(mock.nodes.sizeGuideBody.innerHTML,'');
+  assert.equal(mock.nodes.sizeGuideMeasurementsText.innerHTML,'');
+  mock.render({variants:[{size:'M',active:true},{size:'L',active:false},{size:'M',active:true},{size:'',active:true}]});assert.equal(mock.nodes.sizeGuideBody.textContent,'M');
+  mock.render({sizes:[],variants:[]});assert.equal(mock.nodes.sizeGuideBody.textContent,require('../public/js/i18n').ar.sgUnspecified);
+  assert.equal(mock.nodes.sizeGuideBody.attributes['data-i18n'],undefined);
+});
 test('les anciennes galeries et la photo principale seule restent lisibles sans inventer de coloris', () => {
   assert.deepEqual(media.entries({ image:beige,gallery:[] }),[{src:beige,color:''}]);
   assert.deepEqual(media.select({image:beige,gallery:[general,beige]},'Vin'),{images:[beige,general],matched:false,color:'Vin'});

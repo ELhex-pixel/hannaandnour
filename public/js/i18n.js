@@ -228,6 +228,7 @@
       sgR2: 'Full coverage, turban styles',
       sgR3: 'Layer styles, abaya coordination',
       sgGeneric: 'Everyday wear',
+      sgUnspecified: 'Size information has not yet been entered.',
       sgFooter: 'Not sure which size to choose? Our customer care team is happy to help you find your perfect fit. Contact us at care@hannanour.com',
 
       /* Collections */
@@ -677,6 +678,7 @@
       sgR2: 'Couverture complète, styles turban',
       sgR3: 'Styles superposés, coordination avec abaya',
       sgGeneric: 'Port quotidien',
+      sgUnspecified: 'Les indications de taille ne sont pas encore renseignées.',
       sgFooter: 'Vous hésitez sur la taille ? Notre équipe se fera un plaisir de vous aider à trouver la coupe parfaite. Contactez-nous à care@hannanour.com',
       whereFaithMeetsFashion: 'Là où la foi rencontre la mode',
       aboutP1: 'Hanna & Nour \u2014 alliant Hanna (la grâce) et Nour (la lumière) \u2014 est née d\'une conviction simple : la pudeur n\'est pas une limite, c\'est une libération. Nous existons pour renforcer les femmes qui choisissent de se couvrir, en leur offrant une mode qui honore leurs valeurs sans compromettre leur style.',
@@ -1114,6 +1116,7 @@
       sgR2: 'تغطية كاملة، أنماط العمامة',
       sgR3: 'أنماط الطبقية، التنسيق مع العباية',
       sgGeneric: 'الاستخدام اليومي',
+      sgUnspecified: 'لم يتم إدخال معلومات المقاس بعد.',
       sgFooter: 'غير متأكدة من المقاس المناسب؟ فريق خدمة العملاء لدينا سعيد بمساعدتك في إيجاد المقاس المثالي. تواصلي معنا على care@hannanour.com',
       whereFaithMeetsFashion: 'حيث يلتقي الإيمان بالموضة',
       aboutP1: 'هناء ونور — تجمع بين هناء (الرشاقة والفضل) ونور (الضياء) — وُلدت من قناعة بسيطة: الحياء ليس قيدًا بل تحررًا. نحن هنا لتمكين المرأة التي تختار الحشمة، لنمنحها موضة تكرم قيمها دون المساس بأناقتها.',

@@ -527,37 +527,10 @@
         <div class="filter-option active" style="margin-bottom: var(--spacing-md);">
           <p class="form-label" data-i18n="sgSelect">Sizes &amp; Recommended Fit</p>
         </div>
-        <div style="overflow-x: auto;">
-          <table class="size-table">
-            <thead>
-              <tr>
-                <th data-i18n="sgSize">Size</th>
-                <th data-i18n="sgLength">Length</th>
-                <th data-i18n="sgWidth">Width</th>
-                <th data-i18n="sgBest">Best For</th>
-              </tr>
-            </thead>
-            <tbody id="sizeGuideBody">
-              <tr>
-                <td data-i18n="sizeOne">One Size</td>
-                <td>180cm</td>
-                <td>70cm</td>
-                <td data-i18n="sgR1">Classic drape, everyday wear</td>
-              </tr>
-              <tr>
-                <td>Large</td>
-                <td>200cm</td>
-                <td>75cm</td>
-                <td data-i18n="sgR2">Full coverage, turban styles</td>
-              </tr>
-              <tr>
-                <td>Extra Large</td>
-                <td>220cm</td>
-                <td>90cm</td>
-                <td data-i18n="sgR3">Layer styles, abaya coordination</td>
-              </tr>
-            </tbody>
-          </table>
+        <p id="sizeGuideBody" style="white-space: pre-line;" data-i18n="sgUnspecified">Size information has not yet been entered.</p>
+        <div id="sizeGuideMeasurements" hidden>
+          <h3 data-i18n="productMeasurements">Verified measurements</h3>
+          <p id="sizeGuideMeasurementsText" style="white-space: pre-line;"></p>
         </div>
         <p style="margin-top: var(--spacing-xl); font-size: 0.875rem; color: var(--color-gray);" data-i18n="sgFooter">Not sure which size to choose? Our customer care team is happy to help you find your perfect fit. Contact us at care@hannanour.com</p>
       </div>

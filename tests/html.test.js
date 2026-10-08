@@ -104,6 +104,21 @@ test('le compte sépare les services et conserve les ancres, labels et identifia
     for (const lang of ['fr', 'en', 'ar']) assert(dict[lang][key], lang + ': ' + key);
   });
 });
+test('le guide des tailles ne contient aucune mesure ni recommandation de démonstration et possède ses champs admin', () => {
+  const $=cheerio.load(fs.readFileSync('public/product.html','utf8'));
+  const guide=$('#sizeGuideModal');
+  assert.equal(guide.find('table').length,0);
+  assert.doesNotMatch(guide.text(),/180cm|70cm|200cm|75cm|220cm|90cm|Classic drape/);
+  assert.equal($('#sizeGuideMeasurements').is('[hidden]'),true);
+  const admin=cheerio.load(fs.readFileSync('public/admin.html','utf8'));
+  assert.equal(admin('#productSizeGuideSection').length,1);
+  for(const field of ['fit','measurements']) for(const lang of ['fr','en','ar']) {
+    assert.equal(admin('#f-'+field+'_'+lang).attr('maxlength'),'2000');
+    assert.equal(admin('label[for="f-'+field+'_'+lang+'"]').length,1);
+  }
+  const dict=require('../public/js/i18n');
+  for(const lang of ['fr','en','ar']) assert(dict[lang].sgUnspecified);
+});
 test('le domaine et l’email de la boutique sont cohérents dans les sources publiées', () => {
   function files(dir) {
     return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
