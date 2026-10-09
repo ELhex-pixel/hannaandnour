@@ -5,6 +5,25 @@ const fs = require('node:fs');
 const media = require('../public/js/product-media');
 
 const beige='images/beige.jpg', vin='images/vin.jpg', general='images/detail.jpg';
+const publicPhoto='https://rqgoawbzbgzuvpxnzxsu.supabase.co/storage/v1/object/public/product-images/photo%20beige.png';
+test('la livraison légère conserve la source exacte, les proportions et trois largeurs bornées sans modifier la galerie', () => {
+  for(const width of [160,480,960]) {
+    const url=new URL(media.delivery(publicPhoto,width,true),'https://hannanour.com');
+    assert.equal(url.pathname,'/.netlify/images');assert.equal(url.searchParams.get('url'),publicPhoto);
+    assert.equal(url.searchParams.get('w'),String(width));assert.equal(url.searchParams.get('fit'),'contain');
+    assert.equal(url.searchParams.get('fm'),'webp');assert.equal(url.searchParams.get('q'),'82');
+    assert.equal(url.searchParams.has('h'),false);
+  }
+  assert.equal(new URL(media.delivery(publicPhoto,200000,true),'https://hannanour.com').searchParams.get('w'),'960');
+  const p={image:publicPhoto,gallery:[{src:publicPhoto,color:'Beige'}]};const original=JSON.stringify(p);
+  media.select(p,'Beige').images.map(src=>media.delivery(src,480,true));assert.equal(JSON.stringify(p),original);
+});
+test('le CDN ne reçoit que les photos publiques de la boutique, jamais une URL privée, signée, étrangère ou de développement', () => {
+  assert.equal(media.delivery(publicPhoto,480,false),publicPhoto);
+  for(const src of [beige,'http://127.0.0.1/photo.png','https://example.test/a.png',publicPhoto+'?token=private',publicPhoto+'#private',publicPhoto.replace('/public/','/sign/'),publicPhoto.replace('/product-images/','/private-returns/'),publicPhoto.replace('https://','http://'),publicPhoto.replace('https://','https://user:pass@')])assert.equal(media.delivery(src,480,true),src);
+  const toml=fs.readFileSync('netlify.toml','utf8');const match=toml.match(/remote_images = \['([^']+)'\]/);assert(match);
+  const allow=new RegExp(match[1]);assert(allow.test(publicPhoto));assert(!allow.test(publicPhoto+'?token=private'));assert(!allow.test(publicPhoto.replace('supabase.co','supabase.co.evil.test')));
+});
 function sizeGuide(lang='fr') {
   const nodes={},state={lang};
   const node=id=>nodes[id]||(nodes[id]={textContent:'',innerHTML:'',style:{},hidden:false,attributes:{'data-i18n':'sgUnspecified'},removeAttribute(name){delete this.attributes[name];}});

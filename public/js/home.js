@@ -45,7 +45,7 @@
       list = (products || []).filter(function (p) { return p.active !== false && p.is_bestseller; });
     }
     var html = '';
-    for (var j = 0; j < list.length; j++) html += HN.card(list[j]);
+    for (var j = 0; j < list.length; j++) html += HN.card(list[j], j);
     grid.innerHTML = html || '<p class="live-status" data-i18n="emptyCatalog">' + HN.tr('emptyCatalog') + '</p>';
     HN.loaded(grid);
     if (HN.updateWishlistHearts) HN.updateWishlistHearts();
@@ -58,7 +58,7 @@
     if (!home || !Array.isArray(home.collections) || !home.collections.length) { grid.textContent = ''; HN.loaded(grid); return; }
     var html = home.collections.map(function (c) {
       return '<a href="' + esc(c.url || 'collections.html') + '" class="collection-card">' +
-        '<img src="' + esc(c.image || 'images/hero.jpg') + '" alt="">' +
+        '<img src="' + esc(HN.image(c.image || 'images/hero.jpg', 480)) + '" alt="" loading="lazy" decoding="async">' +
         '<div class="collection-card-overlay">' +
         '<h3 class="collection-card-title">' + esc(c.title || '') + '</h3>' +
         '<p class="collection-card-desc">' + esc(c.subtitle || '') + '</p>' +
@@ -91,11 +91,17 @@
     var collections = document.querySelector('[data-feed="collections"]');
     HN.loading(grid, 'card', 4);
     HN.loading(collections, 'card', 3);
-    HN.requireConfig(force)
-      .then(function (cfg) {
-        cfg = cfg || {};
+    Promise.all([HN.requireConfig(force), HN.fetchProducts({ limit: 48 })])
+      .then(function (results) {
+        var cfg = results[0] || {}, items = results[1];
         var slugs = cfg.home && cfg.home.bestsellers;
-        var products = Array.isArray(slugs) && slugs.length ? HN.loadProductSlugs(slugs) : HN.fetchProducts({ bestseller: true, limit: 48 });
+        var products;
+        if (Array.isArray(slugs) && slugs.length) {
+          var missing = slugs.filter(function (slug) { return !items.some(function (item) { return item.slug === slug; }); });
+          products = missing.length ? HN.loadProductSlugs(missing).then(function (extra) { return items.concat(extra); }) : Promise.resolve(items);
+        } else {
+          products = items.length >= 48 ? HN.fetchProducts({ bestseller: true, limit: 48 }) : Promise.resolve(items);
+        }
         return products.then(function (items) { return { products: items, cfg: cfg }; });
       })
       .then(function (res) {

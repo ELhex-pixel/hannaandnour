@@ -9,6 +9,9 @@ const { preflight } = require('./preflight');
 function prepareLivePage($, file) {
   if (!['index.html', 'shop.html', 'product.html', 'cart.html', 'checkout.html'].includes(file)) return;
   $('body').attr('data-live-page', file);
+  $('body').attr('data-image-cdn', '');
+  $('script[src="js/product-media.js"]').remove();
+  $('script[src="js/store.js"]').before('<script src="js/product-media.js"></script>');
   const skeleton = (layout, count) => '<span class="live-status" role="status" data-i18n="liveLoading">Chargement…</span>' + Array.from({ length: count }, () => '<div class="live-skeleton-' + layout + '" aria-hidden="true"><div class="live-skeleton-image"></div><div class="live-skeleton-copy"><div class="live-skeleton-line"></div><div class="live-skeleton-line live-skeleton-short"></div></div></div>').join('');
   const placeholder = (selector, layout, count) => $(selector).attr('aria-busy', 'true').html(skeleton(layout, count));
   const amounts = selector => $(selector).removeAttr('data-i18n').html('<span class="live-amount" aria-hidden="true"></span>');

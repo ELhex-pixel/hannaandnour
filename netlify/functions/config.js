@@ -6,7 +6,7 @@
  * Values come from the `settings` table (admin-editable) and fall back to
  * Netlify env vars / defaults when unset.
  */
-const { json, getSupabase, isConfigured, getSetting, loadColorSwatches, defaultCatalog, intEnv, floatEnv } = require('./shared');
+const { json, getSupabase, isConfigured, loadColorSwatches, defaultCatalog } = require('./shared');
 const { settings: commerceSettings } = require('./lib/commerce');
 
 exports.handler = async function (event) {
@@ -22,74 +22,29 @@ exports.handler = async function (event) {
       return json(503, { error: 'Supabase is not configured' });
     }
     const sb = getSupabase();
-    const row = await getSetting(sb, 'shipping', null);
-
-    const settings = {
-      standard_cents: intEnv('SHIPPING_STANDARD_CENTS', 699),
-      express_cents: intEnv('SHIPPING_EXPRESS_CENTS', 1200),
-      nextday_cents: intEnv('SHIPPING_NEXTDAY_CENTS', 2500),
-      pickup_cents: 0,
-      free_threshold_cents: intEnv('FREE_SHIPPING_THRESHOLD_CENTS', 7500),
-      tax_rate: floatEnv('TAX_RATE', 0.07),
-      returns_days: 30,
-      pickup_enabled: true
-    };
-    if (row) Object.assign(settings, row);
-
-    let catalog = defaultCatalog();
-    try {
-      const cat = await getSetting(sb, 'catalog', null);
-      if (cat && Array.isArray(cat.colors)) catalog = { colors: cat.colors };
-    } catch (e) { /* keep default */ }
-
-    let currency = { code: 'usd', symbol: '$' };
-    try {
-      const cur = await getSetting(sb, 'currency', null);
-      const code = String(cur && cur.code || '').toLowerCase();
-      if (code === 'usd' || code === 'eur') {
-        currency = { code, symbol: code === 'eur' ? '\u20AC' : '$' };
-      }
-    } catch (e) { /* keep default */ }
-
+    const [configuration, color_swatches, demo] = await Promise.all([
+      sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy', 'catalog', 'reviews', 'home', 'story']),
+      loadColorSwatches(sb),
+      Promise.resolve(sb.from('demo_reviews').select('rating').eq('active', true)).catch(() => ({ error: true }))
+    ]);
+    if (configuration.error) throw configuration.error;
+    const rows = configuration.data || [];
+    const value = key => rows.find(row => row.key === key)?.value;
+    const cat = value('catalog');
+    const catalog = cat && Array.isArray(cat.colors) ? { colors: cat.colors } : defaultCatalog();
     let reviews = { show_demo: false, demo: { count: 0, sum: 0 } };
-    try {
-      const rv = await getSetting(sb, 'reviews', null);
-      if (rv && typeof rv === 'object' && rv !== null) {
-        reviews = Object.assign({ show_demo: false, demo: { count: 0, sum: 0 } }, rv);
-        if (!reviews.demo || typeof reviews.demo !== 'object') reviews.demo = { count: 0, sum: 0 };
-      }
-    } catch (e) { /* keep default */ }
-
-    // Active demo reviews summary (used by the product cards when the
-    // illustration is ON so their count/stars match the product page).
-    try {
-      const { data: demo, error: demoError } = await sb
-        .from('demo_reviews')
-        .select('rating')
-        .eq('active', true);
-      if (!demoError) {
-        const list = demo || [];
-        let sum = 0;
-        list.forEach((r) => { sum += parseInt(r.rating, 10) || 0; });
-        reviews.demo = { count: list.length, sum };
-      }
-    } catch (e) { /* migration not applied yet: demo stays 0 */ }
-
-    let home = null;
-    try {
-      home = await getSetting(sb, 'home', null);
-    } catch (e) { /* keep default */ }
-
-    let story = null;
-    try {
-      story = await getSetting(sb, 'story', null);
-    } catch (e) { /* keep default */ }
-
-    const authoritative = await commerceSettings(sb);
-    const color_swatches = await loadColorSwatches(sb);
-    return json(200, { settings: { ...settings, ...authoritative.shipping, returns_days: authoritative.return_policy.days }, return_policy: authoritative.return_policy, catalog, currency: authoritative.currency, reviews, home, story, color_swatches });
+    const rv = value('reviews');
+    if (rv && typeof rv === 'object') {
+      reviews = Object.assign({ show_demo: false, demo: { count: 0, sum: 0 } }, rv);
+      if (!reviews.demo || typeof reviews.demo !== 'object') reviews.demo = { count: 0, sum: 0 };
+    }
+    if (!demo.error) {
+      const list = demo.data || [];
+      reviews.demo = { count: list.length, sum: list.reduce((sum, row) => sum + (parseInt(row.rating, 10) || 0), 0) };
+    }
+    const authoritative = await commerceSettings(sb, rows);
+    return json(200, { settings: { ...authoritative.shipping, returns_days: authoritative.return_policy.days }, return_policy: authoritative.return_policy, catalog, currency: authoritative.currency, reviews, home: value('home') ?? null, story: value('story') ?? null, color_swatches });
   } catch (err) {
-    console.error('config.js error:', err);
-    return json(500, { error: err.message || 'Internal error' });
+    return json(500, { error: 'Configuration temporarily unavailable' });
   }
 };

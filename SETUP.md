@@ -231,6 +231,18 @@ Le panier attend la configuration et les fiches sélectionnées avant d’affich
 
 Contrôles commerce : règles et calculs serveur/client conservés, prix reçus du navigateur toujours revalidés côté serveur, allocations de remise et protections des paiements inchangées. Aucun schéma, accès aux tables, rôle, session, webhook, stock, réservation ou envoi d’email modifié. Les quotas existants continuent de protéger les devis ; Réessayer ne crée ni commande ni session Stripe. Tests de données fictives uniquement, avec panne, attente, catalogue vide, fiche introuvable et FR/EN/AR ordinateur/mobile.
 
+### Chargements en parallèle et photos légères
+
+Diagnostic public en lecture seule du 9 octobre 2026, avant optimisation : HTML boutique environ 0,28–0,41 s, configuration 2,21–3,62 s, produits 0,99–1,63 s, première photo PNG 2 009 710 octets. Ces mesures ponctuelles ne sont pas une garantie de temps de réponse : réseau et démarrage des fonctions varient.
+
+La configuration groupe ses sept clés publiques en une seule lecture et réutilise ces lignes dans `commerce.settings`, la même source de règles que le paiement. Les teintes et les avis d’illustration se lisent en parallèle ; neuf lectures successives sont remplacées par trois lectures concurrentes. Aucun cache de prix, stock, livraison ou politique de retours n’est ajouté. Une panne obligatoire échoue avec un message générique, sans données techniques privées ; les avis facultatifs conservent leur repli.
+
+Configuration et données démarrent ensemble sur les cinq pages. L’affichage et les actions attendent toujours les deux réponses valides ; le devis de paiement reste calculé et reconfirmé côté serveur. Une restauration de panier explicite conserve son ordre de traitement. Sur l’accueil, la première page de catalogue est préchargée avec une limite de 48 fiches ; seuls les produits curatés manquants ou la sélection de meilleures ventes hors de cette page nécessitent une lecture complémentaire. Le `pageshow` initial ne relit plus une configuration déjà demandée ; retours BFCache, focus, changement d’onglet et notification de politique restent rafraîchis.
+
+Les photos publiques du seul bucket `product-images` utilisent le CDN images natif Netlify existant, en WebP qualité 82 et largeur bornée à 160, 480 ou 960 pixels, avec `fit=contain` sans hauteur imposée. Les petites vues et miniatures ne téléchargent plus la photo de pleine taille ; les premières cartes sont chargées sans différé et les suivantes différées. En panne du CDN, l’image revient à sa source originale. Les URL privées, signées, contenant des paramètres, étrangères ou de développement ne sont jamais envoyées à ce CDN. Aucune clé, session ou autorisation n’est transmise.
+
+Originaux Storage, galerie et associations photo/coloris, panier enregistré, prix, stocks et historique restent inchangés : seules les URL d’affichage produisent des copies dérivées. Aucun abonnement, plan d’hébergement ou contrat n’est changé. Aucun nouveau schéma, droit SQL, session ou webhook ; quotas et réservations restent identiques. Tests locaux avec vraies conversions d’images fictives, réponses inversées, pannes/réessais, repli de photo et FR/EN/AR ordinateur/mobile.
+
 ### Staging isolé
 
 1. Créer un second projet Supabase et y exécuter le schéma et les migrations. Utiliser seulement des données de test, pas les données personnelles de production.

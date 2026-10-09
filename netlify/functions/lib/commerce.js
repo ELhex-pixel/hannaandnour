@@ -2,9 +2,13 @@ const rules = require('../../../public/js/commerce');
 const { intEnv, floatEnv } = require('../shared');
 const { returnPolicy } = require('./return-policy');
 
-async function settings(sb) {
-  const { data, error } = await sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy']);
-  if (error) throw error;
+async function settings(sb, rows) {
+  let data = rows;
+  if (data === undefined) {
+    const response = await sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy']);
+    if (response.error) throw response.error;
+    data = response.data;
+  }
   const shipping = (data || []).find(row => row.key === 'shipping')?.value || {};
   const currency = (data || []).find(row => row.key === 'currency')?.value || {};
   const code = ['eur', 'usd'].includes(currency.code) ? currency.code : process.env.STRIPE_PRICE_CURRENCY === 'eur' ? 'eur' : 'usd';

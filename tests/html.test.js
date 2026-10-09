@@ -125,6 +125,10 @@ test('les cinq pages publiées commencent par des blocs neutres sans fiches, pan
     const $ = cheerio.load(fs.readFileSync('public/'+file,'utf8'));
     prepareLivePage($,file);
     assert.equal($('body').attr('data-live-page'),file);
+    assert($('body').is('[data-image-cdn]'));
+    const scripts=$('script[src]').map((_,node)=>$(node).attr('src')).get();
+    assert.equal(scripts.filter(src=>src==='js/product-media.js').length,1);
+    assert(scripts.indexOf('js/product-media.js')<scripts.indexOf('js/store.js'));
     assert($('[aria-busy="true"]').length > 0,file);
     assert($('.live-skeleton-card, .live-skeleton-row').length > 0,file);
     assert.equal($('.product-card, .cart-item').length,0,file);

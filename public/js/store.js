@@ -114,6 +114,11 @@
     return CURRENCY_SYMBOL + v.toFixed(2);
   }
 
+  function imageUrl(value, width) {
+    var enabled = document.body && document.body.hasAttribute('data-image-cdn');
+    return window.HN_MEDIA ? window.HN_MEDIA.delivery(value, width, enabled) : value;
+  }
+
   // Loads the admin-editable /api/config (currency symbol, shipping, tax) once
   // and reuses the cached copy when offline. Pages that call loadProducts are
   // gated on this so prices render with the right symbol.
@@ -324,24 +329,19 @@
 
   function loadProducts(force) {
     if (!force && productsPromise) return productsPromise;
-    var cfg = requireConfig();
-    productsPromise = cfg.then(function () {
-      return request(apiUrl('products'))
-        .then(function (data) {
-          if (!Array.isArray(data.products)) throw new Error(tr('liveLoadError'));
-          productsList = data.products;
-          try {
-            // Bound the cache so an oversized catalog never fills localStorage.
-            if (JSON.stringify(productsList).length < 1500000) {
-              writeLS(PROD_CACHE_KEY, productsList);
-            }
-          } catch (e) { /* oversized payload: keep in-memory only */ }
-          return productsList;
-        });
-    }).catch(function (err) {
-      productsPromise = null;
-      throw err;
-    });
+    productsPromise = Promise.all([requireConfig(), request(apiUrl('products'))])
+      .then(function (results) {
+        var data = results[1];
+        if (!Array.isArray(data.products)) throw new Error(tr('liveLoadError'));
+        productsList = data.products;
+        try {
+          if (JSON.stringify(productsList).length < 1500000) writeLS(PROD_CACHE_KEY, productsList);
+        } catch (e) {}
+        return productsList;
+      }).catch(function (err) {
+        productsPromise = null;
+        throw err;
+      });
     return productsPromise;
   }
 
@@ -421,9 +421,12 @@
 
   // Canonical product card used by shop.js, the home page feeds and anywhere
   // else the API catalog is rendered. Keep markup in sync with shop static cards.
-  function buildCard(p) {
+  function buildCard(p, index) {
     var link = 'product.html?slug=' + encodeURIComponent(p.slug);
     var name = productName(p);
+    var originalImage = p.image || 'images/hero.jpg';
+    var image = imageUrl(originalImage, 480);
+    var responsive = image !== originalImage ? ' srcset="' + escAttr(image) + ' 480w, ' + escAttr(imageUrl(originalImage, 960)) + ' 960w" sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"' : '';
     var price = money(p.price_cents);
     var original = p.compare_at_price_cents ? money(p.compare_at_price_cents) : null;
     var badge = badgeFor(p);
@@ -440,7 +443,7 @@
     return '' +
       '<div class="product-card" data-slug="' + escAttr(p.slug) + '" data-category="' + escAttr(p.category) + '" data-price-cents="' + (p.price_cents || 0) + '" data-rating="' + (p.rating || 0) + '">' +
       '  <a href="' + link + '" class="product-card-image" style="display:block;">' +
-      '    <img src="' + escAttr(p.image || 'images/hero.jpg') + '" alt="' + escAttr(name) + '" loading="lazy">' +
+      '    <img src="' + escAttr(image) + '"' + responsive + ' alt="' + escAttr(name) + '" loading="' + (index >= 4 ? 'lazy' : 'eager') + '" decoding="async">' +
       (badge ? '    <span class="product-badge">' + escAttr(badge) + '</span>' : '') +
       '  </a>' +
       '  <button class="product-wishlist" aria-label="' + escAttr(tr('wishAdd')) + '"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>' +
@@ -633,13 +636,23 @@
   /* ---------------- Init ---------------- */
 
   function init() {
+    document.addEventListener('error', function (event) {
+      var image = event.target;
+      if (!image || image.tagName !== 'IMG' || !window.HN_MEDIA) return;
+      try {
+        var url = new URL(image.currentSrc || image.src, window.location.origin);
+        var source = url.searchParams.get('url');
+        if (url.origin !== window.location.origin || url.pathname !== '/.netlify/images' || window.HN_MEDIA.delivery(source, 960, true) === source) return;
+        image.removeAttribute('srcset'); image.src = source;
+      } catch (e) {}
+    }, true);
     refreshBadge();
     updateWishlistHearts();
     // Load admin config first (currency symbol) so prices render correctly.
     loadConfig();
     function refreshCurrentConfig() { if (!document.hidden) loadConfig(true); }
     window.addEventListener('focus', refreshCurrentConfig);
-    window.addEventListener('pageshow', refreshCurrentConfig);
+    window.addEventListener('pageshow', function (event) { if (event.persisted) refreshCurrentConfig(); });
     window.addEventListener('storage', function (event) { if (event.key === 'hn-return-policy-version') refreshCurrentConfig(); });
     document.addEventListener('visibilitychange', refreshCurrentConfig);
     // Load promo codes so the header announce and cart preview use live codes.
@@ -668,6 +681,7 @@
     loadError: loadError,
     tr: tr,
     money: money,
+    image: imageUrl,
     lang: currentLang,
     productName: productName,
     loadProducts: loadProducts,

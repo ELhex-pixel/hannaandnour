@@ -4,6 +4,15 @@
 })(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
   function norm(value) { return String(value == null ? '' : value).trim().normalize('NFKC').toLowerCase(); }
+  function delivery(value, width, enabled) {
+    if (!enabled || typeof value !== 'string') return value;
+    try {
+      var url = new URL(value);
+      if (url.origin !== 'https://rqgoawbzbgzuvpxnzxsu.supabase.co' || !url.pathname.startsWith('/storage/v1/object/public/product-images/') || url.username || url.password || url.search || url.hash) return value;
+      var size = [160, 480, 960].indexOf(width) >= 0 ? width : 960;
+      return '/.netlify/images?url=' + encodeURIComponent(url.href) + '&w=' + size + '&fit=contain&fm=webp&q=82';
+    } catch (e) { return value; }
+  }
   function validUrl(value) {
     if (typeof value !== 'string' || !value || value.length > 2000 || /[\x00-\x1f\x7f\\]/.test(value)) return false;
     if (/^\/?images\//.test(value)) return value.split('/').indexOf('..') < 0;
@@ -50,5 +59,5 @@
     if (list.length > 100) throw new Error('La galerie doit contenir au maximum 100 photos, principale comprise.');
     return list;
   }
-  return { norm: norm, entries: entries, select: select, clean: clean, validUrl: validUrl };
+  return { norm: norm, entries: entries, select: select, clean: clean, validUrl: validUrl, delivery: delivery };
 });

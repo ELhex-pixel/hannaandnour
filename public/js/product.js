@@ -77,7 +77,8 @@
     if (main) {
       main.style.filter = '';
       main.hidden = !images.length;
-      if (images.length) main.src = images[0]; else main.removeAttribute('src');
+      if (images.length) main.src = HN.image(images[0], 960); else main.removeAttribute('src');
+      main.setAttribute('fetchpriority', 'high'); main.decoding = 'async';
       main.alt = HN.productName(p) + (selection.matched && color ? ' — ' + COLORS.label(color, HN.lang()) : '');
     }
     var notice = document.getElementById('productPhotoColorNotice');
@@ -90,8 +91,8 @@
     if (thumbs) {
       var html = '';
       for (var i = 0; i < images.length; i++) {
-        html += '<div class="product-thumbnail' + (i === 0 ? ' active' : '') + '" data-img="' + esc(images[i]) + '">' +
-          '<img src="' + esc(images[i]) + '" alt="' + esc(HN.productName(p)) + '"></div>';
+        html += '<div class="product-thumbnail' + (i === 0 ? ' active' : '') + '" data-img="' + esc(HN.image(images[i], 960)) + '">' +
+          '<img src="' + esc(HN.image(images[i], 160)) + '" alt="' + esc(HN.productName(p)) + '" loading="lazy" decoding="async"></div>';
       }
       thumbs.innerHTML = html;
     }
@@ -747,10 +748,11 @@
     if (infoEl) infoEl.setAttribute('data-slug', slug);
     HN.updateWishlistHearts();
 
-    HN.requireConfig(force).then(function (cfg) {
+    Promise.all([HN.requireConfig(force), HN.fetchProducts({ slug: slug })]).then(function (results) {
+      var cfg = results[0];
       RETURNS_DAYS = HN.returnDays();
       if (cfg && cfg.reviews) DEMO_ON = !!cfg.reviews.show_demo;
-      return HN.fetchProducts({ slug: slug });
+      return results[1];
     })
       .then(function (products) {
         var p = null;

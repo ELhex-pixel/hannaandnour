@@ -122,22 +122,23 @@
     setFilterControls();
   }
 
-  function buildCard(p) {
-    return HN.card(p);
+  function buildCard(p, index) {
+    return HN.card(p, index);
   }
 
   function loadItems(force) {
-    return HN.requireConfig(force).then(function () {
+    state.configuration = HN.requireConfig(force).then(function (config) {
       state.ready = true;
-      HN.request(HN.api('products') + '?facets=true').then(function (facets) {
-        if (!Array.isArray(facets.sizes) || !Array.isArray(facets.occasions)) return;
-        state.facets = facets; buildFilterOptions();
-      }).catch(function () { state.facets = null; });
+      return config;
     });
+    HN.request(HN.api('products') + '?facets=true').then(function (facets) {
+      if (!Array.isArray(facets.sizes) || !Array.isArray(facets.occasions)) return;
+      state.facets = facets; buildFilterOptions();
+    }).catch(function () { state.facets = null; });
   }
 
   function render() {
-    if (!grid || !state.ready) return;
+    if (!grid || !state.configuration) return;
     renderRemote();
   }
 
@@ -158,8 +159,9 @@
     HN.loading(grid, 'card', PAGE_SIZE);
     if (resultsEl) resultsEl.textContent = '';
     if (loadMoreBtn) loadMoreBtn.disabled = true;
-    HN.request(HN.api('products') + '?' + params.toString())
-      .then(function (data) {
+    Promise.all([HN.request(HN.api('products') + '?' + params.toString()), state.configuration])
+      .then(function (results) {
+        var data = results[0];
         if (revision !== remoteRevision) return;
         if (!Array.isArray(data.products)) throw new Error(tr('liveLoadError'));
         var seen = {};
@@ -177,7 +179,7 @@
       }).catch(function () {
         if (revision !== remoteRevision) return;
         if (loadMoreBtn) loadMoreBtn.hidden = true;
-        HN.loadError(grid, render);
+        HN.loadError(grid, state.ready ? render : function () { init(true); });
       });
   }
 
@@ -320,14 +322,8 @@
     state.ready = false;
     HN.loading(grid, 'card', PAGE_SIZE);
     if (loadMoreBtn) loadMoreBtn.hidden = true;
-    loadItems(force)
-      .then(function () {
-        buildFilterOptions();
-        render();
-      })
-      .catch(function () {
-        HN.loadError(grid, function () { init(true); });
-      });
+    loadItems(force);
+    render();
   }
 
   wireFilters();

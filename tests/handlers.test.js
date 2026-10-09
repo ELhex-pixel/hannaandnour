@@ -342,3 +342,49 @@ test('les anciennes ventes et remises à zéro sont suspendues sans accès au st
     assert.equal(mock.state.inventory.length,0);
   }
 });
+
+function publicConfig(rows, fail = '', optionalDemoError = false) {
+  const exports = {}, state = { reads: [], release: null }, gate = new Promise(resolve => { state.release = resolve; });
+  const sb = { from(table) {
+    const query = {
+      select(fields) { state.reads.push({ table, fields }); return this; },
+      in(field, keys) { assert.equal(field,'key'); state.keys=Array.from(keys); return this; },
+      eq(field,value) { assert.equal(field,'active'); assert.equal(value,true); return this; },
+      then(resolve,reject) { return gate.then(() => ({ data: table==='settings'?rows:[{rating:5},{rating:4}], error: fail===table||table==='demo_reviews'&&optionalDemoError ? new Error('must-not-expose-private-diagnostics') : null })).then(resolve,reject); }
+    };
+    return query;
+  } };
+  const shared = { json:require('../netlify/functions/shared').json, getSupabase:()=>sb, isConfigured:()=>true, defaultCatalog:()=>({colors:[]}), loadColorSwatches:async()=> { state.reads.push({table:'swatches'});await gate;if(fail==='swatches')throw new Error('must-not-expose-private-diagnostics');return [{name:'Beige maison',hex:'#ABCDEF'}]; } };
+  vm.runInNewContext(fs.readFileSync('netlify/functions/config.js','utf8'), { exports, require:name=>name==='./shared'?shared:require('../netlify/functions/lib/commerce') });
+  return { handler:exports.handler, state, sb };
+}
+test('la configuration lit trois sources en parallèle, sans double lecture monétaire ni paramètres privés',async () => {
+  const rows=[
+    {key:'shipping',value:{standard_cents:299,express_cents:700,tax_rate:0,returns_days:30,pickup_enabled:false}},
+    {key:'currency',value:{code:'eur'}},
+    {key:'return_policy',value:{version:'fixture',days:14,withdrawal_payer:'customer'}},
+    {key:'catalog',value:{colors:['Beige']}}, {key:'reviews',value:{show_demo:false}},
+    {key:'home',value:{bestsellers:['reel']}}, {key:'story',value:{title:'Histoire locale'}}
+  ];
+  const mock=publicConfig(rows), promise=mock.handler({httpMethod:'GET'});
+  await Promise.resolve();await Promise.resolve();
+  assert.equal(mock.state.reads.length,3);
+  assert.deepEqual(mock.state.keys,['shipping','currency','return_policy','catalog','reviews','home','story']);
+  mock.state.release();const response=await promise, body=JSON.parse(response.body);
+  assert.equal(response.statusCode,200);assert.equal(response.headers['Cache-Control'],'no-store');
+  const authoritative=await require('../netlify/functions/lib/commerce').settings({from(){throw new Error('Une quatrième lecture est interdite');}},rows);
+  assert.deepEqual(body.currency,authoritative.currency);
+  assert.deepEqual(body.settings,{...authoritative.shipping,returns_days:14});
+  assert.deepEqual(body.return_policy,authoritative.return_policy);
+  assert.deepEqual(body.reviews,{show_demo:false,demo:{count:2,sum:9}});
+  assert.deepEqual(body.home,{bestsellers:['reel']});assert.deepEqual(body.catalog,{colors:['Beige']});
+  assert.equal(mock.state.reads.length,3);
+});
+test('les pannes de configuration ou de teintes échouent sans fuite, les avis facultatifs gardent leur repli',async () => {
+  for(const fail of ['settings','swatches']) {
+    const mock=publicConfig([],fail);mock.state.release();const response=await mock.handler({httpMethod:'GET'});
+    assert.equal(response.statusCode,500);assert.doesNotMatch(response.body,/private|diagnostics/);
+  }
+  const mock=publicConfig([], '', true);mock.state.release();const response=await mock.handler({httpMethod:'GET'});
+  assert.equal(response.statusCode,200);assert.deepEqual(JSON.parse(response.body).reviews,{show_demo:false,demo:{count:0,sum:0}});
+});

@@ -100,7 +100,7 @@
       var it = items[i];
       html +=
         '<div class="cart-item" data-index="' + i + '">' +
-         '  <div class="cart-item-image"><img src="' + esc(it.image || 'images/hero.jpg') + '" alt="' + esc(localizedName(it)) + '"></div>' +
+          '  <div class="cart-item-image"><img src="' + esc(HN.image(it.image || 'images/hero.jpg', 160)) + '" alt="' + esc(localizedName(it)) + '" decoding="async"></div>' +
         '  <div class="cart-item-info">' +
         '    <a href="product.html?slug=' + encodeURIComponent(it.slug) + '"><h2 class="cart-item-title">' + esc(localizedName(it)) + '</h2></a>' +
         '    <span class="cart-item-variant">' + esc(variantText(it)) + '</span>' +
@@ -260,10 +260,13 @@
     var link = summaryBox && summaryBox.querySelector('.cart-checkout a');
     if (link) { link.style.pointerEvents = 'none'; link.setAttribute('aria-disabled', 'true'); link.setAttribute('tabindex', '-1'); }
     var apply = document.getElementById('applyPromo'); if (apply) apply.disabled = true;
-    HN.requireConfig(force).then(applyConfig).then(restoreFromUrl).then(function () {
+    function selectedProducts() {
       var slugs = HN.cart.list().map(function (item) { return item.slug; });
       return slugs.length ? HN.loadProductSlugs(slugs) : [];
-    }).then(function () {
+    }
+    var configuration = HN.requireConfig(force).then(applyConfig);
+    var products = /[?&]restore=([0-9a-f]{40,64})/.test(window.location.search || '') ? configuration.then(restoreFromUrl).then(selectedProducts) : selectedProducts();
+    Promise.all([configuration, products]).then(function () {
       ready = true;
       if (apply) apply.disabled = false;
       renderItems();

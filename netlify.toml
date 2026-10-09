@@ -10,6 +10,9 @@
   NODE_VERSION = "22"
   AWS_LAMBDA_JS_RUNTIME = "nodejs22.x"
 
+[images]
+  remote_images = ['^https://rqgoawbzbgzuvpxnzxsu\.supabase\.co/storage/v1/object/public/product-images/[^?#]+$']
+
 # Clean URLs: /shop -> shop.html, etc.
 [[redirects]]
   from = "/shop"

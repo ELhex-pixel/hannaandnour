@@ -390,3 +390,24 @@ test('l’ajout rapide sans produit chargé n’invente plus ni article ni prix 
   mock.HN.quickAdd({closest:()=>({getAttribute:()=> 'silk-hijab'})});
   assert.equal(mock.HN.cart.list().length,0);assert.equal(mock.context.window.location.href,'product.html?slug=silk-hijab');
 });
+test('catalogue et configuration démarrent en parallèle, mais aucun produit n’est publié en mémoire avant les deux réponses',async () => {
+  const requests=[], gates=new Map();
+  const mock=liveStore(url=>{requests.push(url);return new Promise(resolve=>gates.set(url,resolve));});
+  const promise=mock.HN.loadProducts();
+  assert.deepEqual(requests,['/api/config','/api/products']);
+  gates.get('/api/products')({ok:true,json:async()=>({products:[{slug:'reel',price_cents:4200}]})});
+  await Promise.resolve();await Promise.resolve();assert.equal(mock.HN.products().length,0);
+  gates.get('/api/config')({ok:true,json:async()=>liveConfig});
+  const products=await promise;assert.equal(products[0].slug,'reel');assert.equal(mock.HN.symbol(),'€');
+});
+test('le retour depuis le cache navigateur relit la politique, mais pageshow initial ne double pas la configuration',async () => {
+  const requests=[], listeners={};
+  const mock=liveStore(async url=>{requests.push(url);return {ok:true,json:async()=>url.endsWith('/config')?liveConfig:{promos:[]}};});
+  mock.context.document.body={hasAttribute:()=>true};mock.context.document.hidden=false;
+  mock.context.window.addEventListener=(name,handler)=>{listeners[name]=handler;};
+  const source=fs.readFileSync('public/js/store.js','utf8');
+  vm.runInContext(source.slice(source.indexOf('  function init()'),source.indexOf("  if (document.readyState === 'loading')"))+';init();',vm.createContext(Object.assign(mock.context,{refreshBadge(){},updateWishlistHearts(){},loadConfig:mock.HN.loadConfig,loadPromos:mock.HN.loadPromos,loadProducts:mock.HN.loadProducts})));
+  await mock.HN.loadConfig();assert.equal(requests.filter(url=>url.endsWith('/config')).length,1);
+  listeners.pageshow({persisted:false});await Promise.resolve();assert.equal(requests.filter(url=>url.endsWith('/config')).length,1);
+  listeners.pageshow({persisted:true});await mock.HN.loadConfig();assert.equal(requests.filter(url=>url.endsWith('/config')).length,2);
+});

@@ -80,16 +80,16 @@
     showPendingQuote();
     var btn = document.getElementById('placeOrderBtn');
     if (btn) { btn.disabled = true; btn.textContent = tr('processing'); }
-    return HN.request(HN.api('checkout'), {
+    return Promise.all([HN.request(HN.api('checkout'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'quote', items: HN.cart.list(), shipping_method: state.method, promo: getPromo() })
-    })
-      .then(function (data) { if (revision === state.revision) acceptQuote(data); })
+    }), state.configuration])
+      .then(function (results) { if (revision === state.revision) acceptQuote(results[0]); })
       .catch(function (err) {
         if (revision !== state.revision) return;
         if (btn) { btn.textContent = tr('quoteUnavailable'); btn.disabled = true; }
-        HN.loadError(document.querySelector('.checkout-items'), refreshQuote, 'quoteUnavailable');
-        var apply = document.getElementById('applyDiscount'); if (apply) apply.disabled = false;
+        HN.loadError(document.querySelector('.checkout-items'), state.loaded ? refreshQuote : function () { init(true); }, 'quoteUnavailable');
+        var apply = document.getElementById('applyDiscount'); if (apply) apply.disabled = !state.loaded;
         window.hnToast && hnToast(tr('checkoutError'), err.message || tr('quoteUnavailable'), 'error');
       });
   }
@@ -140,7 +140,7 @@
       var it = items[i];
       var variant = [it.color, it.size].filter(Boolean).join(' \u2022 ');
       html += '<div style="display: flex; gap: var(--spacing-md); align-items: center;">' +
-        '<img src="' + esc(it.image || 'images/hero.jpg') + '" alt="" style="width: 60px; height: 80px; object-fit: cover; border-radius: var(--radius-sm);">' +
+        '<img src="' + esc(HN.image(it.image || 'images/hero.jpg', 160)) + '" alt="" decoding="async" style="width: 60px; height: 80px; object-fit: cover; border-radius: var(--radius-sm);">' +
         '<div style="flex: 1;"><p style="font-size: 0.9375rem; font-weight: 600;">' + esc(localizedName(it)) + '</p>' +
         (variant ? '<p style="font-size: 0.875rem; color: var(--color-gray);">' + esc(variant) + ' \u2022 Qty: ' + (it.qty || 1) + '</p>' : '') +
         '</div><span>' + formatMoney(it.priceCents) + '</span></div>';
@@ -373,8 +373,9 @@
     }
 
     showPendingQuote();
+    state.loaded = false;
     var button = document.getElementById('placeOrderBtn'); if (button) button.disabled = true;
-    HN.requireConfig(force)
+    state.configuration = HN.requireConfig(force)
       .then(function (data) {
         if (data && data.settings) {
           state.settings = {};
@@ -395,8 +396,8 @@
         }
         renderShippingMethodPrices();
         updateDeliveryUI();
-        refreshQuote();
-      }).catch(function () { HN.loadError(document.querySelector('.checkout-items'), function () { init(true); }); });
+      });
+    refreshQuote();
   }
 
   document.addEventListener('langchange', function () { if (state.loaded) renderShippingMethodPrices(); renderSummary(); renderReturnPolicy(); });
