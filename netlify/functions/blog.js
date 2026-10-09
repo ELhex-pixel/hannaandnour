@@ -4,6 +4,7 @@
  * Open the post page at blog-post.html?slug=<slug>.
  */
 const { json, getSupabase, isConfigured } = require('./shared');
+const { publicRead, queryResult } = require('./lib/public-read');
 
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
@@ -19,35 +20,14 @@ exports.handler = async function (event) {
     }
     const sb = getSupabase();
     const slug = String((event.queryStringParameters || {}).slug || '').trim();
-
-    if (slug) {
-      try {
-        const { data, error } = await sb
-          .from('blog_posts')
-          .select('*')
-          .eq('slug', slug)
-          .eq('active', true)
-          .maybeSingle();
-        if (error) throw error;
-        return json(200, { post: data || null });
-      } catch (err) {
-        return json(200, { post: null });
-      }
-    }
-
-    try {
-      const { data, error } = await sb
-        .from('blog_posts')
-        .select('*')
-        .eq('active', true)
-        .order('published_at', { ascending: false });
-      if (error) throw error;
-      return json(200, { posts: data || [] });
-    } catch (err) {
-      return json(200, { posts: [], note: 'Table blog_posts indisponible' });
-    }
+    if (slug && !require('../../public/js/content').validSlug(slug)) return json(400, { error: 'Invalid article slug' });
+    const { data } = await publicRead('blog', async signal => {
+      let query = sb.from('blog_posts').select('slug,title,category,excerpt,body,image,author,read_minutes,published_at').eq('active', true);
+      query = slug ? query.eq('slug', slug).maybeSingle() : query.order('published_at', { ascending: false });
+      return queryResult(await query.abortSignal(signal));
+    }, { log: entry => console.warn(JSON.stringify(entry)) });
+    return json(200, slug ? { post: data || null } : { posts: data || [] });
   } catch (err) {
-    console.error('blog.js error:', err);
-    return json(500, { error: err.message || 'Internal error' });
+    return json(err.transient ? 503 : 500, { error: 'Articles temporarily unavailable' });
   }
 };

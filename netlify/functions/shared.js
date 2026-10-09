@@ -222,9 +222,15 @@ async function saveSetting(sb, key, value) {
   return value;
 }
 
-async function loadColorSwatches(sb) {
-  const { data, error } = await sb.from('settings').select('key,value').like('key', 'product-color:%').order('key').limit(1001);
-  if (error || (data || []).length > 1000) throw new Error('Les teintes ne sont pas disponibles actuellement.');
+async function loadColorSwatches(sb, signal) {
+  let query = sb.from('settings').select('key,value').like('key', 'product-color:%').order('key').limit(1001);
+  if (signal) query = query.abortSignal(signal);
+  const { data, error, status } = await query;
+  if (error || (data || []).length > 1000) {
+    const failure = new Error('Les teintes ne sont pas disponibles actuellement.');
+    if (error) failure.cause = { ...error, status };
+    throw failure;
+  }
   const colors = require('../../public/js/colors');
   return (data || []).map(row => {
     const swatch = row.value && colors.cleanSwatch(row.value.name, row.value.hex);

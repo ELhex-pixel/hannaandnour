@@ -5,6 +5,8 @@ const cheerio = require('cheerio');
 const sharp = require('sharp');
 const translations = require('../public/js/i18n');
 const { preflight } = require('./preflight');
+const { loadPublicContent, cleanPublicLinks, renderContent, staticMetadata } = require('./seo');
+const content = require('../public/js/content');
 
 function prepareNetlifyImages(source) {
   const section = source.match(/^\[images\]\s*\n([\s\S]*?)(?=^\[|$(?![\s\S]))/m);
@@ -72,6 +74,8 @@ async function build() {
   if (preview && process.env.STAGING_MODE !== 'true') throw new Error('Preview désactivée : configurez un environnement staging isolé avant de déployer.');
   if ((preview || process.env.STAGING_MODE === 'true') && (!process.env.EXPECTED_STAGING_SUPABASE_URL || !process.env.PRODUCTION_SUPABASE_URL || process.env.SUPABASE_URL === process.env.PRODUCTION_SUPABASE_URL || process.env.SUPABASE_URL !== process.env.EXPECTED_STAGING_SUPABASE_URL || !String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_test_'))) throw new Error('Le staging exige sa propre base Supabase, une PRODUCTION_SUPABASE_URL distincte et une clé Stripe test.');
   await preflight();
+  const sb = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY ? require('../netlify/functions/shared').getSupabase() : null;
+  const catalog = await loadPublicContent(sb);
   const imageConfig = prepareNetlifyImages(await fs.readFile('netlify.toml', 'utf8'));
   await fs.mkdir('.netlify/v1', { recursive: true });
   await fs.writeFile('.netlify/v1/config.json', JSON.stringify(imageConfig));
@@ -99,7 +103,7 @@ async function build() {
     optimized['/images/' + file] = '/images/' + name;
   }
   const files = (await fs.readdir('public')).filter(file => file.endsWith('.html'));
-  const privatePages = new Set(['admin.html', 'print.html', 'account.html', 'cart.html', 'checkout.html', 'reset.html', 'review.html', 'success.html', '404.html']);
+  const privatePages = new Set(['admin.html', 'print.html', 'account.html', 'cart.html', 'checkout.html', 'reset.html', 'review.html', 'success.html', '404.html', 'product.html', 'blog-post.html']);
   const urls = [];
   for (const file of files) {
     const source = await fs.readFile(path.join('public', file), 'utf8');
@@ -107,10 +111,19 @@ async function build() {
       const language = lang || 'fr';
       const $ = cheerio.load(source);
       prepareLivePage($, file);
+      cleanPublicLinks($);
+      $('body').attr('data-site-origin', new URL(origin).origin);
+      if (preview || process.env.STAGING_MODE === 'true') $('body').attr('data-preview', '');
+      if ($('script[src="js/store.js"]').length && !$('script[src="js/content.js"]').length) $('script[src="js/store.js"]').before('<script src="js/content.js"></script>');
       $('base').remove();
       $('head').prepend('<base href="/">');
       $('html').attr('lang', language).attr('dir', language === 'ar' ? 'rtl' : 'ltr');
       $('[data-i18n]').each((_, node) => { const key = $(node).attr('data-i18n'); if (translations[language][key]) $(node).text(translations[language][key]); });
+      if (file === 'blog.html' && sb) {
+        $('.blog-grid').html(catalog.posts.slice(0, 6).map(post => content.postCardHTML(post, language, key => translations[language][key])).join(''));
+        if (!catalog.posts.length) $('.blog-grid').append($('<p data-i18n="blogEmpty">').text(translations[language].blogEmpty));
+        $('#blogMoreBtn').css('display', catalog.posts.length <= 6 ? 'none' : '');
+      }
       for (const attribute of ['placeholder', 'aria-label']) $('[data-i18n-' + attribute + ']').each((_, node) => { const key = $(node).attr('data-i18n-' + attribute); if (translations[language][key]) $(node).attr(attribute, translations[language][key]); });
       $('[src], [href]').each((_, node) => {
         for (const attribute of ['src', 'href']) {
@@ -134,6 +147,7 @@ async function build() {
       if (file === 'index.html') $('title').text('Hanna & Nour | ' + names[language]);
       const title = $('h1').first().text().trim();
       if (title && file !== 'index.html') $('title').text(title + ' | Hanna & Nour');
+      staticMetadata($, origin, file, language);
       $('meta[property="og:locale"]').attr('content', { fr: 'fr_FR', en: 'en_US', ar: 'ar_AR' }[language]);
       $('meta[property="og:url"]').attr('content', origin + '/' + language + '/' + file);
       $('meta[property="og:title"]').attr('content', $('title').text());
@@ -142,12 +156,28 @@ async function build() {
       await fs.writeFile(path.join(folder, file), $.html());
     }
   }
-  await fs.writeFile('dist/sitemap.xml', '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + urls.map(url => '<url><loc>' + url + '</loc></url>').join('') + '</urlset>');
+  for (const lang of ['fr', 'en', 'ar']) {
+    for (const [kind, rows, template, directory] of [['product', catalog.products, 'product.html', 'products'], ['post', catalog.posts, 'blog-post.html', 'articles']]) {
+      const folder = path.join('dist', lang, directory);
+      // These folders contain generated public snapshots only, never source data.
+      await fs.rm(folder, { recursive: true, force: true });
+      await fs.mkdir(folder, { recursive: true });
+      const source = await fs.readFile(path.join('dist', lang, template), 'utf8');
+      for (const row of rows) {
+        const $ = cheerio.load(source);
+        const url = renderContent($, origin, kind, row, lang);
+        if (!preview && process.env.STAGING_MODE !== 'true') { $('meta[name="robots"]').attr('content', 'index, follow'); urls.push(url); }
+        await fs.writeFile(path.join(folder, row.slug + '.html'), $.html());
+      }
+    }
+  }
+  await fs.writeFile('dist/sitemap.xml', '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + urls.map(url => '<url><loc>' + content.esc(url) + '</loc></url>').join('') + '</urlset>');
   await fs.writeFile('dist/robots.txt', preview || process.env.STAGING_MODE === 'true' ? 'User-agent: *\nDisallow: /\n' : 'User-agent: *\nAllow: /\nSitemap: ' + origin + '/sitemap.xml\n');
   let headers = await fs.readFile('public/_headers', 'utf8');
   if (process.env.SUPABASE_URL) headers = headers.replace(/img-src [^;]+;/, "img-src 'self' data: blob: " + new URL(process.env.SUPABASE_URL).origin + ';');
   await fs.writeFile('dist/_headers', headers + '\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n');
   console.log('Build terminé : pages FR/EN/AR, assets versionnés et images WebP dans dist/.');
+  console.log(sb ? `Pré-rendu public : ${catalog.products.length} produits et ${catalog.posts.length} articles, en trois langues.` : 'Build local sans base : pré-rendu du catalogue disponible lors du build configuré.');
 }
 module.exports = { prepareLivePage, prepareNetlifyImages };
 if (require.main === module) build().catch(error => { console.error(error.message); process.exitCode = 1; });

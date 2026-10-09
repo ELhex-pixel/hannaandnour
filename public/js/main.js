@@ -286,7 +286,7 @@
     }
     box.innerHTML = list.map(function (p) {
       const name = window.HN.productName(p);
-      const url = 'product.html?slug=' + encodeURIComponent(p.slug);
+      const url = window.HN && window.HN.productUrl ? window.HN.productUrl(p.slug) : 'product.html?slug=' + encodeURIComponent(p.slug);
       return '<a class="search-result" href="' + url + '">' +
         '  <img class="search-result-img" src="' + escapeSearch(p.image || 'images/hero.jpg') + '" alt="' + escapeSearch(name) + '" loading="lazy">' +
         '  <div class="search-result-body">' +

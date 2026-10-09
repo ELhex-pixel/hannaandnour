@@ -141,6 +141,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/blog"
+  to = "/.netlify/functions/blog"
+  status = 200
+
+[[redirects]]
   from = "/api/stripe-webhook"
   to = "/.netlify/functions/stripe-webhook"
   status = 200
@@ -163,6 +168,37 @@
 [[redirects]]
   from = "/print"
   to = "/print.html"
+  status = 200
+
+# Public slug routes. Generated files take precedence over these fallbacks.
+[[redirects]]
+  from = "/fr/products/*"
+  to = "/fr/product.html"
+  status = 200
+
+[[redirects]]
+  from = "/en/products/*"
+  to = "/en/product.html"
+  status = 200
+
+[[redirects]]
+  from = "/ar/products/*"
+  to = "/ar/product.html"
+  status = 200
+
+[[redirects]]
+  from = "/fr/articles/*"
+  to = "/fr/blog-post.html"
+  status = 200
+
+[[redirects]]
+  from = "/en/articles/*"
+  to = "/en/blog-post.html"
+  status = 200
+
+[[redirects]]
+  from = "/ar/articles/*"
+  to = "/ar/blog-post.html"
   status = 200
 
 # 404 page

@@ -1392,6 +1392,27 @@
   Object.assign(DICT.ar, {
     accountSpace: 'مساحتك الشخصية', accountIntro: 'طلباتك ومفضلاتك وطلبات الخدمة، كلها في مكان واحد.', accountBrand: 'حنا ونور، إلى جانبك', accountNavigation: 'التنقل في الحساب', accountGuestNav: 'طلبات الضيف', accountHelpTitle: 'هل تحتاجين إلى مساعدة؟', accountHelpLink: 'تواصلي مع فريقنا', accountMember: 'بك', accountWelcomeHelp: 'راجعي مشترياتك وأديري طلباتك بكل سهولة.', accountOrdersHelp: 'راجعي مشترياتك وحالة توصيلها.', accountWishlistHelp: 'احتفظي بقطعك المفضلة لزيارتك القادمة.', accountDiscover: 'اكتشفي المتجر', accountReturnsEmpty: 'لا توجد طلبات شراء أو إرجاع لعرضها حالياً.', accountServiceError: 'تعذر إكمال هذا الإجراء. حاولي مجدداً بعد قليل.', accountCodeInvalid: 'أدخلي الرمز المكوّن من 6 أرقام الذي وصلك عبر البريد الإلكتروني.', accountCodeError: 'تعذر التحقق من الرمز. تأكدي منه أو اطلبي رمزاً جديداً.'
   });
+  Object.assign(DICT.fr, {
+    backToBlog: 'Retour au blog', discoverCollection: 'Découvrir la collection', postNotFound: 'Article introuvable.', postLoadError: 'Impossible de charger cet article. Réessayez.', blogEmpty: 'Aucun article publié pour le moment.',
+    sizeGuideIntro: 'Les tailles et les mesures dépendent de chaque produit.', sizeGuideChoose: 'Consultez la fiche du produit', sizeGuideChooseText: 'Ouvrez le guide des tailles sur la fiche pour retrouver les conseils de coupe et les mesures renseignées pour cet article.',
+    sizeGuideStock: 'Vérifiez la variante disponible', sizeGuideStockText: 'Sélectionnez le coloris puis la taille souhaitée. Les tailles proposées correspondent aux variantes configurées ; leur disponibilité est vérifiée séparément.',
+    sizeGuideHelp: 'Besoin de conseils ?', sizeGuideHelpText: 'Si les mesures manquent ou si vous hésitez, contactez-nous avec le nom du produit et votre question.',
+    seoShopDescription: 'Découvrez les vêtements et accessoires de mode modeste Hanna & Nour. Consultez les fiches pour les coloris, tailles et disponibilités.', seoBlogDescription: 'Conseils de style et articles du blog Hanna & Nour.', seoSizeDescription: 'Comment consulter les tailles, conseils de coupe et mesures des produits Hanna & Nour.', seoProductDescription: 'Consultez la fiche de ce produit Hanna & Nour.', seoPostDescription: 'Lisez les articles du blog Hanna & Nour.'
+  });
+  Object.assign(DICT.en, {
+    backToBlog: 'Back to the blog', discoverCollection: 'Explore the collection', postNotFound: 'Article not found.', postLoadError: 'This article could not be loaded. Please try again.', blogEmpty: 'No articles have been published yet.',
+    sizeGuideIntro: 'Sizes and measurements depend on each product.', sizeGuideChoose: 'Check the product page', sizeGuideChooseText: 'Open the size guide on the product page to see the fit advice and measurements provided for that item.',
+    sizeGuideStock: 'Check the available variant', sizeGuideStockText: 'Select your color and size. The listed sizes match configured variants; availability is checked separately.',
+    sizeGuideHelp: 'Need advice?', sizeGuideHelpText: 'If measurements are missing or you are unsure, contact us with the product name and your question.',
+    seoShopDescription: 'Explore Hanna & Nour modest clothing and accessories. Check each product for colors, sizes and availability.', seoBlogDescription: 'Style advice and articles from the Hanna & Nour blog.', seoSizeDescription: 'How to find sizes, fit advice and measurements for Hanna & Nour products.', seoProductDescription: 'View this Hanna & Nour product.', seoPostDescription: 'Read articles from the Hanna & Nour blog.'
+  });
+  Object.assign(DICT.ar, {
+    backToBlog: 'العودة إلى المدونة', discoverCollection: 'اكتشفي المجموعة', postNotFound: 'المقال غير موجود.', postLoadError: 'تعذر تحميل المقال. حاولي مجدداً.', blogEmpty: 'لا توجد مقالات منشورة حالياً.',
+    sizeGuideIntro: 'تختلف المقاسات والقياسات حسب كل منتج.', sizeGuideChoose: 'راجعي صفحة المنتج', sizeGuideChooseText: 'افتحي دليل المقاسات في صفحة المنتج للاطلاع على نصائح القصة والقياسات المسجلة لهذا المنتج.',
+    sizeGuideStock: 'تحققي من الخيار المتاح', sizeGuideStockText: 'اختاري اللون ثم المقاس. المقاسات المعروضة تطابق الخيارات المسجلة، ويُتحقق من توفرها بشكل منفصل.',
+    sizeGuideHelp: 'هل تحتاجين إلى نصيحة؟', sizeGuideHelpText: 'إذا لم تتوفر القياسات أو كنت مترددة، تواصلي معنا مع اسم المنتج وسؤالك.',
+    seoShopDescription: 'اكتشفي الملابس والإكسسوارات المحتشمة من حنا ونور. راجعي كل منتج لمعرفة الألوان والمقاسات والتوفر.', seoBlogDescription: 'نصائح تنسيق ومقالات مدونة حنا ونور.', seoSizeDescription: 'كيفية الاطلاع على المقاسات ونصائح القصة وقياسات منتجات حنا ونور.', seoProductDescription: 'راجعي صفحة هذا المنتج من حنا ونور.', seoPostDescription: 'اقرئي مقالات مدونة حنا ونور.'
+  });
   if (typeof module === 'object' && module.exports) { module.exports = DICT; return; }
   var pathLang = window.location.pathname.split('/')[1];
   var lang = SUPPORTED.indexOf(pathLang) >= 0 ? pathLang : localStorage.getItem('hn-lang');

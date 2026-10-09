@@ -58,6 +58,7 @@
   }
 
   function getSlug() {
+    if (window.HN_CONTENT) return window.HN_CONTENT.slug(window.location);
     var params = new URLSearchParams(window.location.search);
     return (params.get('slug') || '').trim();
   }
@@ -177,6 +178,8 @@
 
   function injectProductSchema(p) {
     var head = document.getElementsByTagName('head')[0];
+    var meta = window.HN_CONTENT ? window.HN_CONTENT.metadata(document.body.getAttribute('data-site-origin') || window.location.origin, 'product', p, HN.lang()) : null;
+    if (meta) window.HN_CONTENT.applyMetadata(document, meta, 'product');
     var old = document.getElementById('product-jsonld');
     if (old && old.parentNode) old.parentNode.removeChild(old);
 
@@ -190,7 +193,7 @@
       brand: { '@type': 'Brand', name: 'Hanna & Nour' },
       offers: {
         '@type': 'Offer',
-        url: window.location.origin + '/' + HN.lang() + '/product.html?slug=' + encodeURIComponent(p.slug),
+        url: meta ? meta.url : window.location.origin + '/' + HN.lang() + '/product.html?slug=' + encodeURIComponent(p.slug),
         priceCurrency: ((typeof HN.currency === 'function' ? HN.currency() : '') || 'USD').toUpperCase(),
         price: ((parseInt(p.price_cents, 10) || 0) / 100).toFixed(2),
         availability: productVariants(p).length && !productVariants(p).some(function (v) { return variantStock(v) > 0; }) ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock'
@@ -200,7 +203,9 @@
     if (canonical) canonical.href = schema.offers.url;
     var description = document.querySelector('meta[name="description"]');
     if (description) description.content = schema.description.slice(0, 160);
-    document.querySelectorAll('link[hreflang]').forEach(function (link) { var lang = link.hreflang === 'x-default' ? 'fr' : link.hreflang; link.href = window.location.origin + '/' + lang + '/product.html?slug=' + encodeURIComponent(p.slug); });
+    if (!meta) document.querySelectorAll('link[hreflang]').forEach(function (link) { var lang = link.hreflang === 'x-default' ? 'fr' : link.hreflang; link.href = window.location.origin + '/' + lang + '/product.html?slug=' + encodeURIComponent(p.slug); });
+    var robots = document.querySelector('meta[name="robots"]');
+    if (robots && !document.body.hasAttribute('data-preview')) robots.content = 'index, follow';
 
     var script = document.createElement('script');
     script.type = 'application/ld+json';
@@ -735,6 +740,8 @@
 
   function init(force) {
     var slug = getSlug();
+    var summary = document.querySelector('[data-seo-summary]');
+    if (summary && summary.parentNode) summary.parentNode.removeChild(summary);
     var loading = document.getElementById('productLoading');
     if (!loading) { loading = document.createElement('div'); loading.id = 'productLoading'; document.querySelector('.product-detail').before(loading); }
     loading.hidden = false;
@@ -759,7 +766,13 @@
         for (var i = 0; i < products.length; i++) {
           if (products[i].slug === slug) { p = products[i]; break; }
         }
-        if (!p) { HN.loadError(loading, function () { init(true); }, 'productNotFound'); return; }
+        if (!p) {
+          var robots = document.querySelector('meta[name="robots"]');
+          if (robots) robots.content = 'noindex, follow';
+          var schema = document.getElementById('product-jsonld');
+          if (schema && schema.parentNode) schema.parentNode.removeChild(schema);
+          HN.loadError(loading, function () { init(true); }, 'productNotFound'); return;
+        }
         current = p;
         if (HN.track) HN.track('product_view', slug);
         renderInfo(p);

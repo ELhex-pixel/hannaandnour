@@ -8,6 +8,7 @@
  */
 const { json, getSupabase, isConfigured, loadColorSwatches, defaultCatalog } = require('./shared');
 const { settings: commerceSettings } = require('./lib/commerce');
+const { publicRead, queryResult } = require('./lib/public-read');
 
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
@@ -22,10 +23,17 @@ exports.handler = async function (event) {
       return json(503, { error: 'Supabase is not configured' });
     }
     const sb = getSupabase();
+    const options = { log: entry => console.warn(JSON.stringify(entry)) };
     const [configuration, color_swatches, demo] = await Promise.all([
-      sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy', 'catalog', 'reviews', 'home', 'story']),
-      loadColorSwatches(sb),
-      Promise.resolve(sb.from('demo_reviews').select('rating').eq('active', true)).catch(() => ({ error: true }))
+      publicRead('configuration', async signal => {
+        const query = sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy', 'catalog', 'reviews', 'home', 'story']);
+        return queryResult(await query.abortSignal(signal));
+      }, options),
+      publicRead('color_swatches', signal => loadColorSwatches(sb, signal), options),
+      publicRead('demo_reviews', async signal => {
+        const query = sb.from('demo_reviews').select('rating').eq('active', true);
+        return queryResult(await query.abortSignal(signal));
+      }, options).catch(() => ({ error: true }))
     ]);
     if (configuration.error) throw configuration.error;
     const rows = configuration.data || [];
@@ -45,6 +53,8 @@ exports.handler = async function (event) {
     const authoritative = await commerceSettings(sb, rows);
     return json(200, { settings: { ...authoritative.shipping, returns_days: authoritative.return_policy.days }, return_policy: authoritative.return_policy, catalog, currency: authoritative.currency, reviews, home: value('home') ?? null, story: value('story') ?? null, color_swatches });
   } catch (err) {
-    return json(500, { error: 'Configuration temporarily unavailable' });
+    const response = json(err.transient ? 503 : 500, { error: 'Configuration temporarily unavailable' });
+    if (err.transient) response.headers['Retry-After'] = '1';
+    return response;
   }
 };

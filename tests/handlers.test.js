@@ -350,12 +350,13 @@ function publicConfig(rows, fail = '', optionalDemoError = false) {
       select(fields) { state.reads.push({ table, fields }); return this; },
       in(field, keys) { assert.equal(field,'key'); state.keys=Array.from(keys); return this; },
       eq(field,value) { assert.equal(field,'active'); assert.equal(value,true); return this; },
+      abortSignal() { return this; },
       then(resolve,reject) { return gate.then(() => ({ data: table==='settings'?rows:[{rating:5},{rating:4}], error: fail===table||table==='demo_reviews'&&optionalDemoError ? new Error('must-not-expose-private-diagnostics') : null })).then(resolve,reject); }
     };
     return query;
   } };
   const shared = { json:require('../netlify/functions/shared').json, getSupabase:()=>sb, isConfigured:()=>true, defaultCatalog:()=>({colors:[]}), loadColorSwatches:async()=> { state.reads.push({table:'swatches'});await gate;if(fail==='swatches')throw new Error('must-not-expose-private-diagnostics');return [{name:'Beige maison',hex:'#ABCDEF'}]; } };
-  vm.runInNewContext(fs.readFileSync('netlify/functions/config.js','utf8'), { exports, require:name=>name==='./shared'?shared:require('../netlify/functions/lib/commerce') });
+  vm.runInNewContext(fs.readFileSync('netlify/functions/config.js','utf8'), { exports, console: { warn() {} }, require:name=>name==='./shared'?shared:require('../netlify/functions/'+name) });
   return { handler:exports.handler, state, sb };
 }
 test('la configuration lit trois sources en parallèle, sans double lecture monétaire ni paramètres privés',async () => {

@@ -119,6 +119,10 @@
     return window.HN_MEDIA ? window.HN_MEDIA.delivery(value, width, enabled) : value;
   }
 
+  function productUrl(slug) {
+    return window.HN_CONTENT && window.location.protocol !== 'file:' ? window.HN_CONTENT.path('product', slug, currentLang()) : 'product.html?slug=' + encodeURIComponent(slug);
+  }
+
   // Loads the admin-editable /api/config (currency symbol, shipping, tax) once
   // and reuses the cached copy when offline. Pages that call loadProducts are
   // gated on this so prices render with the right symbol.
@@ -422,7 +426,7 @@
   // Canonical product card used by shop.js, the home page feeds and anywhere
   // else the API catalog is rendered. Keep markup in sync with shop static cards.
   function buildCard(p, index) {
-    var link = 'product.html?slug=' + encodeURIComponent(p.slug);
+    var link = productUrl(p.slug);
     var name = productName(p);
     var originalImage = p.image || 'images/hero.jpg';
     var image = imageUrl(originalImage, 480);
@@ -594,14 +598,14 @@
     var slug = card ? card.getAttribute('data-slug') : (btn ? btn.getAttribute('data-slug') : null);
     var product = productsList.filter(function (p) { return p.slug === slug && p.active !== false; })[0];
     if (!product) {
-      if (slug) window.location.href = 'product.html?slug=' + encodeURIComponent(slug);
+      if (slug) window.location.href = productUrl(slug);
       return;
     }
 
     // Products with managed variant stock need a color/size selection: the
     // one-tap button cannot pick a valid variant, so open the product page.
     if (product.product_variants && product.product_variants.length) {
-      window.location.href = 'product.html?slug=' + encodeURIComponent(product.slug);
+      window.location.href = productUrl(product.slug);
       return;
     }
 
@@ -684,6 +688,7 @@
     image: imageUrl,
     lang: currentLang,
     productName: productName,
+    productUrl: productUrl,
     loadProducts: loadProducts,
     fetchProducts: fetchProducts,
     loadProductSlugs: loadProductSlugs,
