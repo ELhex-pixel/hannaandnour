@@ -111,3 +111,18 @@ test('les nouvelles routes publiques précèdent le 404 et conservent un gabarit
   }
   assert(routes.includes('from = "/api/blog"'));
 });
+test('les nouvelles règles sont aussi livrées dans _redirects, sans écraser les pages générées', () => {
+  const source = fs.readFileSync('public/_redirects', 'utf8');
+  const rules = source.split(/\r?\n/).filter(line => line.trim() && !line.trim().startsWith('#')).map(line => line.trim().split(/\s+/));
+  const expected = [['/api/blog', '/.netlify/functions/blog']];
+  for (const lang of ['fr', 'en', 'ar']) {
+    expected.push(['/' + lang + '/products/*', '/' + lang + '/product.html']);
+    expected.push(['/' + lang + '/articles/*', '/' + lang + '/blog-post.html']);
+  }
+  for (const [from, to] of expected) {
+    const matches = rules.filter(rule => rule[0] === from);
+    assert.equal(matches.length, 1);
+    assert.deepEqual(matches[0], [from, to, '200']);
+  }
+  assert(!rules.some(rule => rule[0] === '/*' || rule[2].includes('!')));
+});

@@ -1,0 +1,9 @@
+# Keep the new routes in the published artifact, ahead of the existing 404 rule.
+# Static generated pages retain precedence (no forced rewrite).
+/api/blog /.netlify/functions/blog 200
+/fr/products/* /fr/product.html 200
+/en/products/* /en/product.html 200
+/ar/products/* /ar/product.html 200
+/fr/articles/* /fr/blog-post.html 200
+/en/articles/* /en/blog-post.html 200
+/ar/articles/* /ar/blog-post.html 200
