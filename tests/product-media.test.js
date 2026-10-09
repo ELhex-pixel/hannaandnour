@@ -21,7 +21,7 @@ test('la livraison légère conserve la source exacte, les proportions et trois 
 test('le CDN ne reçoit que les photos publiques de la boutique, jamais une URL privée, signée, étrangère ou de développement', () => {
   assert.equal(media.delivery(publicPhoto,480,false),publicPhoto);
   for(const src of [beige,'http://127.0.0.1/photo.png','https://example.test/a.png',publicPhoto+'?token=private',publicPhoto+'#private',publicPhoto.replace('/public/','/sign/'),publicPhoto.replace('/product-images/','/private-returns/'),publicPhoto.replace('https://','http://'),publicPhoto.replace('https://','https://user:pass@')])assert.equal(media.delivery(src,480,true),src);
-  const toml=fs.readFileSync('netlify.toml','utf8');const match=toml.match(/remote_images = \['([^']+)'\]/);assert(match);
+  const toml=fs.readFileSync('netlify.toml','utf8');const match=toml.match(/remote_images = \["([^"]+)"\]/);assert(match);
   const allow=new RegExp(match[1]);assert(allow.test(publicPhoto));assert(!allow.test(publicPhoto+'?token=private'));assert(!allow.test(publicPhoto.replace('supabase.co','supabase.co.evil.test')));
 });
 function sizeGuide(lang='fr') {
