@@ -18,6 +18,18 @@ function prepareNetlifyImages(source) {
   return { images: { remote_images } };
 }
 
+function prepareNetlifyRoutes(source) {
+  const redirects = source.split(/\r?\n/).filter(line => line.trim() && !line.trim().startsWith('#')).map(line => {
+    const fields = line.trim().split(/\s+/);
+    if (fields.length !== 3 || !/^\/[\w/*.-]+$/.test(fields[0]) || !/^\/[\w/.-]+$/.test(fields[1]) || fields[2] !== '200' || fields[0] === '/*') throw new Error('Règle publique de routage invalide.');
+    return { from: fields[0], to: fields[1], status: 200, force: false };
+  });
+  if (!redirects.length) throw new Error('Règles publiques de routage absentes.');
+  // Framework API priority applies only to these specific new paths. No forced
+  // rewrite: static snapshots still win and existing commerce routes stay intact.
+  return { 'redirects!': redirects };
+}
+
 function prepareLivePage($, file) {
   if (!['index.html', 'shop.html', 'product.html', 'cart.html', 'checkout.html'].includes(file)) return;
   $('body').attr('data-live-page', file);
@@ -77,8 +89,9 @@ async function build() {
   const sb = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY ? require('../netlify/functions/shared').getSupabase() : null;
   const catalog = await loadPublicContent(sb);
   const imageConfig = prepareNetlifyImages(await fs.readFile('netlify.toml', 'utf8'));
+  const routeConfig = prepareNetlifyRoutes(await fs.readFile('public/_redirects', 'utf8'));
   await fs.mkdir('.netlify/v1', { recursive: true });
-  await fs.writeFile('.netlify/v1/config.json', JSON.stringify(imageConfig));
+  await fs.writeFile('.netlify/v1/config.json', JSON.stringify({ ...imageConfig, ...routeConfig }));
   const origin = (preview ? process.env.DEPLOY_PRIME_URL : process.env.SITE_URL) || 'https://hannanour.com';
   await fs.mkdir('dist', { recursive: true });
   await fs.cp('public', 'dist', { recursive: true });
@@ -179,5 +192,5 @@ async function build() {
   console.log('Build terminé : pages FR/EN/AR, assets versionnés et images WebP dans dist/.');
   console.log(sb ? `Pré-rendu public : ${catalog.products.length} produits et ${catalog.posts.length} articles, en trois langues.` : 'Build local sans base : pré-rendu du catalogue disponible lors du build configuré.');
 }
-module.exports = { prepareLivePage, prepareNetlifyImages };
+module.exports = { prepareLivePage, prepareNetlifyImages, prepareNetlifyRoutes };
 if (require.main === module) build().catch(error => { console.error(error.message); process.exitCode = 1; });

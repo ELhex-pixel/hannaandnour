@@ -126,3 +126,14 @@ test('les nouvelles règles sont aussi livrées dans _redirects, sans écraser l
   }
   assert(!rules.some(rule => rule[0] === '/*' || rule[2].includes('!')));
 });
+test('le manifeste transmet les routes avant un ancien 404, sans forcer ni élargir les accès', () => {
+  const { prepareNetlifyRoutes } = require('../scripts/build');
+  const source = fs.readFileSync('public/_redirects', 'utf8');
+  const config = prepareNetlifyRoutes(source);
+  assert.deepEqual(Object.keys(config), ['redirects!']);
+  assert.equal(config['redirects!'].length, 7);
+  assert(config['redirects!'].every(rule => rule.status === 200 && rule.force === false));
+  assert.deepEqual(config['redirects!'][0], { from: '/api/blog', to: '/.netlify/functions/blog', status: 200, force: false });
+  assert.deepEqual(prepareNetlifyRoutes(source.replace(/\n/g, '\r\n')), config);
+  for (const invalid of ['/* /index.html 200', '/api/blog https://external.test 200', '/api/blog /.netlify/functions/blog 200!', '# empty']) assert.throws(() => prepareNetlifyRoutes(invalid));
+});
