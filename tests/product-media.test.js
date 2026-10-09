@@ -6,6 +6,20 @@ const media = require('../public/js/product-media');
 
 const beige='images/beige.jpg', vin='images/vin.jpg', general='images/detail.jpg';
 const publicPhoto='https://rqgoawbzbgzuvpxnzxsu.supabase.co/storage/v1/object/public/product-images/photo%20beige.png';
+test('le build transmet explicitement au manifeste Netlify les seules autorisations images du TOML', () => {
+  const { prepareNetlifyImages } = require('../scripts/build');
+  const source=fs.readFileSync('netlify.toml','utf8');
+  const config=prepareNetlifyImages(source);
+  assert.deepEqual(Object.keys(config),['images']);
+  assert.deepEqual(Object.keys(config.images),['remote_images']);
+  assert.equal(config.images.remote_images.length,1);
+  const pattern=new RegExp(config.images.remote_images[0]);
+  assert(pattern.test(publicPhoto));
+  for(const url of [publicPhoto+'?token=private',publicPhoto.replace('/public/','/sign/'),publicPhoto.replace('/product-images/','/private-returns/'),publicPhoto.replace('supabase.co','supabase.co.evil.test'),publicPhoto.replace('https://','https://user:pass@')])assert(!pattern.test(url));
+  assert.throws(()=>prepareNetlifyImages('[build]\npublish = "dist"'));
+  assert.throws(()=>prepareNetlifyImages('[images]\nremote_images = []\n'));
+  assert.deepEqual(prepareNetlifyImages(source.replace(/\n/g,'\r\n')),config);
+});
 test('la livraison légère conserve la source exacte, les proportions et trois largeurs bornées sans modifier la galerie', () => {
   for(const width of [160,480,960]) {
     const url=new URL(media.delivery(publicPhoto,width,true),'https://hannanour.com');

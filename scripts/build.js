@@ -6,6 +6,16 @@ const sharp = require('sharp');
 const translations = require('../public/js/i18n');
 const { preflight } = require('./preflight');
 
+function prepareNetlifyImages(source) {
+  const section = source.match(/^\[images\]\s*\n([\s\S]*?)(?=^\[|$(?![\s\S]))/m);
+  const match = section && section[1].match(/^\s*remote_images\s*=\s*(\[[^\r\n]*\])\s*$/m);
+  if (!match) throw new Error('Configuration du CDN images absente');
+  const remote_images = JSON.parse(match[1]);
+  if (!Array.isArray(remote_images) || !remote_images.length || remote_images.some(pattern => typeof pattern !== 'string')) throw new Error('Configuration du CDN images invalide');
+  remote_images.forEach(pattern => new RegExp(pattern));
+  return { images: { remote_images } };
+}
+
 function prepareLivePage($, file) {
   if (!['index.html', 'shop.html', 'product.html', 'cart.html', 'checkout.html'].includes(file)) return;
   $('body').attr('data-live-page', file);
@@ -62,6 +72,9 @@ async function build() {
   if (preview && process.env.STAGING_MODE !== 'true') throw new Error('Preview désactivée : configurez un environnement staging isolé avant de déployer.');
   if ((preview || process.env.STAGING_MODE === 'true') && (!process.env.EXPECTED_STAGING_SUPABASE_URL || !process.env.PRODUCTION_SUPABASE_URL || process.env.SUPABASE_URL === process.env.PRODUCTION_SUPABASE_URL || process.env.SUPABASE_URL !== process.env.EXPECTED_STAGING_SUPABASE_URL || !String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_test_'))) throw new Error('Le staging exige sa propre base Supabase, une PRODUCTION_SUPABASE_URL distincte et une clé Stripe test.');
   await preflight();
+  const imageConfig = prepareNetlifyImages(await fs.readFile('netlify.toml', 'utf8'));
+  await fs.mkdir('.netlify/v1', { recursive: true });
+  await fs.writeFile('.netlify/v1/config.json', JSON.stringify(imageConfig));
   const origin = (preview ? process.env.DEPLOY_PRIME_URL : process.env.SITE_URL) || 'https://hannanour.com';
   await fs.mkdir('dist', { recursive: true });
   await fs.cp('public', 'dist', { recursive: true });
@@ -136,5 +149,5 @@ async function build() {
   await fs.writeFile('dist/_headers', headers + '\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n');
   console.log('Build terminé : pages FR/EN/AR, assets versionnés et images WebP dans dist/.');
 }
-module.exports = { prepareLivePage };
+module.exports = { prepareLivePage, prepareNetlifyImages };
 if (require.main === module) build().catch(error => { console.error(error.message); process.exitCode = 1; });

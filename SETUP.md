@@ -241,6 +241,8 @@ Configuration et données démarrent ensemble sur les cinq pages. L’affichage 
 
 Les photos publiques du seul bucket `product-images` utilisent le CDN images natif Netlify existant, en WebP qualité 82 et largeur bornée à 160, 480 ou 960 pixels, avec `fit=contain` sans hauteur imposée. Les petites vues et miniatures ne téléchargent plus la photo de pleine taille ; les premières cartes sont chargées sans différé et les suivantes différées. En panne du CDN, l’image revient à sa source originale. Les URL privées, signées, contenant des paramètres, étrangères ou de développement ne sont jamais envoyées à ce CDN. Aucune clé, session ou autorisation n’est transmise.
 
+Le build transmet aussi la section `[images]` du TOML à `.netlify/v1/config.json` via l’API de fichiers officielle Netlify. Le manifeste du déploiement initial conservait l’ancienne configuration sans liste de photos autorisées, malgré les nouveaux fichiers applicatifs ; les copies étaient refusées HTTP 400. Ce fichier généré contient uniquement les autorisations images déjà définies dans le TOML, sans élargissement de domaine, secrets, nouvelle fonction, changement de droits SQL ou contrat. Le dossier `.netlify/` reste privé, ignoré par Git et hors de `dist/`.
+
 Originaux Storage, galerie et associations photo/coloris, panier enregistré, prix, stocks et historique restent inchangés : seules les URL d’affichage produisent des copies dérivées. Aucun abonnement, plan d’hébergement ou contrat n’est changé. Aucun nouveau schéma, droit SQL, session ou webhook ; quotas et réservations restent identiques. Tests locaux avec vraies conversions d’images fictives, réponses inversées, pannes/réessais, repli de photo et FR/EN/AR ordinateur/mobile.
 
 ### Staging isolé
