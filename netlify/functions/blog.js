@@ -26,7 +26,8 @@ exports.handler = async function (event) {
       query = slug ? query.eq('slug', slug).maybeSingle() : query.order('published_at', { ascending: false });
       return queryResult(await query.abortSignal(signal));
     }, { log: entry => console.warn(JSON.stringify(entry)) });
-    return json(200, slug ? { post: data || null } : { posts: data || [] });
+    const { generalPost } = require('./lib/brand-copy');
+    return json(200, slug ? { post: data ? generalPost(data) : null } : { posts: (data || []).map(generalPost) });
   } catch (err) {
     return json(err.transient ? 503 : 500, { error: 'Articles temporarily unavailable' });
   }

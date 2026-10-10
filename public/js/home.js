@@ -62,7 +62,7 @@
         '<div class="collection-card-overlay">' +
         '<h3 class="collection-card-title">' + esc(c.title || '') + '</h3>' +
         '<p class="collection-card-desc">' + esc(c.subtitle || '') + '</p>' +
-        '<span class="collection-card-more">Voir plus</span>' +
+        '<span class="collection-card-more">' + esc(HN.tr('eidExplore')) + '</span>' +
         '</div></a>';
     }).join('');
     grid.innerHTML = html;
@@ -77,7 +77,7 @@
     var html = demoReviews.slice(0, 3).map(function (r) {
       return '<div class="testimonial-card">' +
         '<div class="testimonial-stars">' + fiveStars() + '</div>' +
-        '<p class="testimonial-text">' + esc(r.body) + '</p>' +
+        '<p class="testimonial-text">' + esc(window.HN_CONTENT ? window.HN_CONTENT.localized(r, 'body', HN.lang()) : r.body) + '</p>' +
         '<div class="testimonial-author">' +
         '<div class="testimonial-avatar">' + esc((r.author_name || '?').charAt(0).toUpperCase()) + '</div>' +
         '<div><p class="testimonial-name">' + esc(r.author_name) + '</p>' +

@@ -210,7 +210,7 @@ async function requireUser(sb, token) {
 async function getSetting(sb, key, fallback) {
   try {
     const { data, error } = await sb.from('settings').select('value').eq('key', key).maybeSingle();
-    if (!error && data && data.value != null) return data.value;
+    if (!error && data && data.value != null) return key === 'story' ? require('./lib/brand-copy').generalStory(data.value) : data.value;
   } catch (e) { /* ignore */ }
   return fallback;
 }

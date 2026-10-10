@@ -1,6 +1,7 @@
 const content = require('../public/js/content');
 const translations = require('../public/js/i18n');
 const { publicRead, queryResult } = require('../netlify/functions/lib/public-read');
+const { generalPost } = require('../netlify/functions/lib/brand-copy');
 
 // Explicit public fields only: no prices, stock, customer data or private costs.
 const fields = {
@@ -25,7 +26,7 @@ async function loadPublicContent(sb) {
   }
   const [products, posts] = await Promise.all([read('products'), read('blog_posts')]);
   posts.sort((a, b) => (Date.parse(b.published_at) || 0) - (Date.parse(a.published_at) || 0) || a.slug.localeCompare(b.slug));
-  return { products, posts };
+  return { products, posts: posts.map(generalPost) };
 }
 
 function cleanPublicLinks($) {
@@ -61,9 +62,16 @@ function metadata($, meta, kind) {
 }
 
 function staticMetadata($, origin, file, lang) {
-  const descriptionKeys = { 'index.html': 'heroDesc', 'shop.html': 'seoShopDescription', 'blog.html': 'seoBlogDescription', 'size-guide.html': 'seoSizeDescription', 'product.html': 'seoProductDescription', 'blog-post.html': 'seoPostDescription' };
+  const descriptionKeys = { 'index.html': 'heroDesc', 'about.html': 'aboutP1', 'collections.html': 'seoShopDescription', 'shop.html': 'seoShopDescription', 'blog.html': 'seoBlogDescription', 'size-guide.html': 'seoSizeDescription', 'product.html': 'seoProductDescription', 'blog-post.html': 'seoPostDescription' };
   if (descriptionKeys[file]) $('meta[name="description"]').attr('content', translations[lang][descriptionKeys[file]]);
   const values = { title: $('title').text(), description: $('meta[name="description"]').attr('content') || '', url: new URL('/' + lang + '/' + file, origin).href, type: 'website' };
+  if (file === 'index.html') {
+    $('script[type="application/ld+json"]').each((_, node) => {
+      const graph = JSON.parse($(node).text());
+      for (const entry of graph['@graph'] || []) if (entry['@type'] === 'WebSite') { entry.description = values.description; entry.inLanguage = lang; }
+      $(node).text(JSON.stringify(graph).replace(/</g, '\\u003c'));
+    });
+  }
   for (const [key, value] of Object.entries(values)) {
     let meta = $('meta[property="og:' + key + '"]');
     if (!meta.length) meta = $('<meta>').attr('property', 'og:' + key).appendTo('head');

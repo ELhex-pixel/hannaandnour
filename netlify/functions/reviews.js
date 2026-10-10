@@ -110,7 +110,7 @@ exports.handler = async function (event) {
             .order('sort_order', { ascending: true })
             .order('created_at', { ascending: true });
           if (demoError) throw demoError;
-          return json(200, { reviews: demo || [] });
+          return json(200, { reviews: (demo || []).map(require('./lib/brand-copy').generalDemo) });
         } catch (demoErr) {
           // Migration not applied yet: treat as "no demo reviews" instead of 500.
           return json(200, { reviews: [] });

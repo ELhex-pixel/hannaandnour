@@ -13,7 +13,7 @@ function blog(response) {
   };
   const shared = { json: require('../netlify/functions/shared').json, isConfigured: () => true, getSupabase: () => ({ from: table => { assert.equal(table, 'blog_posts'); return query; } }) };
   vm.runInNewContext(fs.readFileSync('netlify/functions/blog.js', 'utf8'), {
-    exports, console: { warn() {} }, require: name => name === './shared' ? shared : name === './lib/public-read' ? require('../netlify/functions/lib/public-read') : require('../public/js/content')
+    exports, console: { warn() {} }, require: name => name === './shared' ? shared : name === './lib/public-read' ? require('../netlify/functions/lib/public-read') : name === './lib/brand-copy' ? require('../netlify/functions/lib/brand-copy') : require('../public/js/content')
   });
   return { handler: exports.handler, state };
 }

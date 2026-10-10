@@ -722,7 +722,7 @@ case 'deleteMessage': {
             .order('sort_order', { ascending: true })
             .order('created_at', { ascending: true });
           if (error) throw error;
-          return json(200, { reviews: data || [] });
+          return json(200, { reviews: (data || []).map(require('./lib/brand-copy').generalDemo) });
         } catch (err) {
           return json(200, { reviews: [], note: 'Table demo_reviews indisponible' });
         }
@@ -771,7 +771,7 @@ case 'deleteMessage': {
           .select('*')
           .order('published_at', { ascending: false });
         if (error) throw error;
-        return json(200, { posts: data || [] });
+        return json(200, { posts: (data || []).map(require('./lib/brand-copy').generalPost) });
       }
 
       case 'savePost': {

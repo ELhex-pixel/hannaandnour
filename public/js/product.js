@@ -474,7 +474,7 @@
         '<div><p class="review-name">' + esc(r.author_name) + '</p>' +
         '<p class="review-date">' + (badge ? badge + ' &bull; ' : '') + esc(r.location || '') + '</p></div></div>' +
         '<span class="stars">' + stars(r.rating) + '</span></div>' +
-        '<p class="review-text">' + esc(r.body) + '</p></div>';
+        '<p class="review-text">' + esc(localized(r, 'body_en', 'body_fr', 'body_ar', r.body)) + '</p></div>';
     }
 
     function fetchDemo() {

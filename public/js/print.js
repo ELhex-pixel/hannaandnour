@@ -32,7 +32,7 @@
 
   var STORE = {
     name: 'Hanna & Nour',
-    tagline: 'Modest Fashion for the Modern Woman',
+    tagline: 'Style, confort et élégance',
     email: 'care@hannanour.com',
     site: 'https://hannanour.com'
   };

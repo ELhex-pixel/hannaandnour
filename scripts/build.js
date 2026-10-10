@@ -156,7 +156,7 @@ async function build() {
         $('head').append('<link rel="alternate" hreflang="x-default" href="' + origin + '/fr/' + file + '">');
         if (lang) urls.push(origin + '/' + lang + '/' + file);
       }
-      const names = { en: 'Modest fashion', fr: 'Mode modeste', ar: 'أزياء محتشمة' };
+      const names = { en: translations.en.brandTitle, fr: translations.fr.brandTitle, ar: translations.ar.brandTitle };
       if (file === 'index.html') $('title').text('Hanna & Nour | ' + names[language]);
       const title = $('h1').first().text().trim();
       if (title && file !== 'index.html') $('title').text(title + ' | Hanna & Nour');

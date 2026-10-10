@@ -331,10 +331,10 @@ const RULES = [
     },
     reply: (ctx) => {
       const text = ctx.lang === 'fr'
-        ? 'Hanna & Nour, c\u2019est la mode modeste \u00e9l\u00e9gante pour femme : hijabs (soie, mousseline, coton premium), abayas, tenues de pri\u00e8re, robes et accessoires. D\u00e9couvrez nos collections !'
+        ? 'Hanna & Nour propose des vêtements et accessoires qui allient confort, élégance et simplicité. Découvrez les pièces et les collections disponibles dans notre boutique !'
         : ctx.lang === 'en'
-          ? 'Hanna & Nour is elegant modest fashion for women: hijabs (silk, chiffon, premium cotton), abayas, prayer wear, dresses and accessories. Explore our collections!'
-          : 'حنا ونور هي أزياء محتشمة أنيقة للمرأة: حجابات (حرير، شيفون، قطن فاخر)، عباءات، ثياب صلاة، فساتين وإكسسوارات. اكتشفي مجموعاتنا!';
+          ? 'Hanna & Nour offers clothing and accessories that bring together comfort, elegance and simplicity. Explore the pieces and collections available in our shop!'
+          : 'تقدم حنا ونور ملابس وإكسسوارات تجمع الراحة والأناقة والبساطة. يمكن تصفح القطع والمجموعات المتوفرة في المتجر!';
       return { text, links: [link(ctx.lang === 'fr' ? 'Boutique' : ctx.lang === 'en' ? 'Shop' : 'المتجر', 'shop.html'), link(ctx.lang === 'fr' ? 'Collections' : ctx.lang === 'en' ? 'Collections' : 'المجموعات', 'collections.html')] };
     }
   },
@@ -528,7 +528,7 @@ function systemPrompt(ctx) {
   const promo = ctx.promo ? 'Code ' + ctx.promo.code + ' = ' + ctx.promo.percent_off + '% de réduction.' : 'Aucun code actif pour le moment.';
   const products = ctx.products.map((p) => (ctx.lang === 'fr' ? p.name_fr : p.name_en) + ' — ' + moneyStr(p.price_cents, cur, ctx.lang)).join(' ; ') || 'N/A';
   const lines = [
-    'Tu es l\u2019assistant de la boutique en ligne Hanna & Nour (mode modeste pour femme : hijabs, abayas, tenues de prière, robes, accessoires). Site : hannanour.com. Paiement sécurisé via Stripe (Visa, Mastercard, Amex, PayPal, Apple Pay, Klarna).',
+    'Tu es l\u2019assistant de la boutique en ligne Hanna & Nour : vêtements et accessoires, style, confort et élégance. Présente la marque de façon générale, sans présumer la religion ou le genre de la personne. Site : hannanour.com. Paiement sécurisé via Stripe (Visa, Mastercard, Amex, PayPal, Apple Pay, Klarna).',
     'Livraison : standard ' + std + ' (5–7 j ouvrés), express ' + exp + ' (2–3 j), lendemain avant 21h ' + next + (s.pickup_enabled ? ', retrait gratuit en boutique.' : '.'),
     'Livraison gratuite dès ' + free + '.',
     'Retours sous ' + days + ' jours : ' + CONTACT_EMAIL + '.',

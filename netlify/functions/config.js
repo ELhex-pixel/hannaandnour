@@ -9,6 +9,7 @@
 const { json, getSupabase, isConfigured, loadColorSwatches, defaultCatalog } = require('./shared');
 const { settings: commerceSettings } = require('./lib/commerce');
 const { publicRead, queryResult } = require('./lib/public-read');
+const { generalStory } = require('./lib/brand-copy');
 
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
@@ -51,7 +52,7 @@ exports.handler = async function (event) {
       reviews.demo = { count: list.length, sum: list.reduce((sum, row) => sum + (parseInt(row.rating, 10) || 0), 0) };
     }
     const authoritative = await commerceSettings(sb, rows);
-    return json(200, { settings: { ...authoritative.shipping, returns_days: authoritative.return_policy.days }, return_policy: authoritative.return_policy, catalog, currency: authoritative.currency, reviews, home: value('home') ?? null, story: value('story') ?? null, color_swatches });
+    return json(200, { settings: { ...authoritative.shipping, returns_days: authoritative.return_policy.days }, return_policy: authoritative.return_policy, catalog, currency: authoritative.currency, reviews, home: value('home') ?? null, story: generalStory(value('story') ?? null), color_swatches });
   } catch (err) {
     const response = json(err.transient ? 503 : 500, { error: 'Configuration temporarily unavailable' });
     if (err.transient) response.headers['Retry-After'] = '1';
