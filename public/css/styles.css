@@ -2411,6 +2411,27 @@ body[data-menu-open="true"] .nav-mobile {
   margin: 0 0 1.2em;
 }
 
+.admin-refund-panel label {
+  display: block;
+  margin: 12px 0;
+}
+
+.admin-refund-panel input[type="number"] {
+  width: 100px;
+  margin-inline-start: 8px;
+}
+
+.admin-refund-panel textarea {
+  display: block;
+  width: 100%;
+  min-height: 80px;
+  margin-top: 6px;
+}
+
+.admin-refund-panel button {
+  margin: 4px;
+}
+
 .blog-post-fallback {
   max-width: 780px;
   margin: 0 auto;

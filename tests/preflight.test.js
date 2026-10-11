@@ -20,7 +20,12 @@ test('un schéma incomplet bloque la publication même si le marqueur existe', a
 test('un schéma à jour autorise la publication après des lectures seules', async () => {
   const tables = [];
   await preflight(env, { rpc: async () => ({ data: 1 }), from: table => { tables.push(table); return { select: () => ({ limit: async count => { assert.equal(count, 0); return { error: null }; } }) }; } });
-  assert.deepEqual(tables, ['orders', 'order_items', 'return_requests', 'order_returns', 'variant_costs', 'variant_cost_history', 'order_item_costs', 'products', 'inventory_adjustments', 'inventory_journal_resets', 'inventory_journal_archives']);
+  assert.deepEqual(tables, ['orders', 'order_items', 'return_requests', 'order_returns', 'variant_costs', 'variant_cost_history', 'order_item_costs', 'products', 'inventory_adjustments', 'inventory_journal_resets', 'inventory_journal_archives', 'order_refund_operations']);
+});
+test('les remboursements exigent leur journal privé avant publication, sans migration automatique', async () => {
+  const calls=[];
+  await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='admin_refunds_schema_version'?{error:{}}:{data:1};}}),/migration_partial_refunds/);
+  assert.equal(calls.at(-1),'admin_refunds_schema_version');
 });
 test('le marqueur du lot stock/préparation est obligatoire avant publication', async () => {
   const calls = [];

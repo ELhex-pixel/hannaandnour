@@ -126,7 +126,7 @@ function archiveAdmin(overrides = {}, databaseError = false, returnedIds = null)
   };
   vm.runInNewContext(fs.readFileSync('netlify/functions/admin.js', 'utf8'), {
     exports, process: { env: {} }, Buffer, console: { error() {} },
-    require: name => name === './shared' ? shared : name === './lib/return-policy' ? require('../netlify/functions/lib/return-policy') : name === '../../public/js/product-media' ? require('../public/js/product-media') : name === './lib/product-assistant' ? {categories:['abaya','hijab']} : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
+    require: name => name === './shared' ? shared : name === './lib/return-policy' ? require('../netlify/functions/lib/return-policy') : name === '../../public/js/product-media' ? require('../public/js/product-media') : name === './lib/product-assistant' ? {categories:['abaya','hijab']} : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales','./lib/admin-refunds'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales','adminRefunds'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
   });
   return { handler: exports.handler, state };
 }
@@ -340,6 +340,13 @@ test('les anciennes ventes et remises à zéro sont suspendues sans accès au st
     assert.equal((await mock.handler(event({ action }))).statusCode,409);
     assert.equal(mock.state.tables.length,0);
     assert.equal(mock.state.inventory.length,0);
+  }
+});
+test('toutes les actions de remboursement exigent la session et la limite avant le module financier',async()=>{
+  for(const action of ['getOrderRefunds','quoteOrderRefund','refundOrderPartial','resumeOrderRefund','refundOrder']){
+    const denied=archiveAdmin({requireAdmin:async()=>({ok:false})});assert.equal((await denied.handler(event({action}))).statusCode,401);assert.equal(denied.state.inventory.length,0);
+    const limited=archiveAdmin({rateLimit:async()=>({statusCode:429})});assert.equal((await limited.handler(event({action}))).statusCode,429);assert.equal(limited.state.inventory.length,0);
+    const allowed=archiveAdmin();assert.equal((await allowed.handler(event({action}))).statusCode,200);assert.deepEqual(allowed.state.inventory,[action]);assert.equal(allowed.state.limits,1);
   }
 });
 

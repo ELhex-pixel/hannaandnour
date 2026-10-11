@@ -248,6 +248,15 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
       if (limited) return limited;
       return await require('./lib/admin-sales').adminSales(sb, body);
     }
+    if (['getOrderRefunds','quoteOrderRefund','refundOrderPartial','resumeOrderRefund','refundOrder'].includes(action)) {
+      const limited = await rateLimit(sb,event,'admin-refunds',30,600,'admin');
+      if (limited) return limited;
+      return await require('./lib/admin-refunds').adminRefunds(sb,action,body);
+    }
+    if (action === 'cancelOrder') {
+      const limited = await rateLimit(sb,event,'admin-refunds',30,600,'admin');
+      if (limited) return limited;
+    }
     if (action === 'describeProduct') {
       const limited = await rateLimit(sb, event, 'product-vision', 30, 3600, 'admin');
       if (limited) return limited;
@@ -856,53 +865,6 @@ case 'deleteMessage': {
         return json(200, { ok: true });
       }
 
-      case 'refundOrder': {
-        const oid = String(body.id || '').trim();
-        if (!oid) return json(400, { error: 'Missing id' });
-        if (!process.env.STRIPE_SECRET_KEY) return json(503, { error: 'Stripe is not configured' });
-        const { data: order, error: oErr } = await sb
-          .from('orders')
-          .select('*, order_items(*)')
-          .eq('id', oid)
-          .maybeSingle();
-        if (oErr) throw oErr;
-        if (!order) return json(404, { error: 'Commande introuvable' });
-        if (order.status === 'refunded') { await restockOrder(sb, order); return json(200, { ok: true, already: true }); }
-        if (order.status !== 'paid') return json(400, { error: 'Seules les commandes payées peuvent être remboursées' });
-
-        const ref = await stripeRefund(order);
-        if (!ref.ok && ref.error !== 'Stripe is not configured') {
-          return json(400, { error: ref.error });
-        }
-
-        // Guarded update: only a still-paid order may become refunded, so two
-        // refunds racing each other cannot double-restock or double-email.
-        const { data: refunded, error: updErr } = await sb.from('orders')
-          .update({ status: 'refunded', refunded_cents: order.total_cents })
-          .eq('id', order.id)
-          .eq('status', 'paid')
-          .select('id');
-        if (updErr) throw updErr;
-        if (!refunded || refunded.length === 0) {
-          return json(200, { ok: true, already: true });
-        }
-
-        await restockOrder(sb, order);
-
-        try {
-          const { sendEmail } = require('./shared');
-          await sendEmail({
-            to: order.email,
-            subject: 'Remboursement de votre commande ' + order.order_number + ' \u2014 Hanna & Nour',
-            html: buildRefundEmail(order)
-          });
-        } catch (mailErr) {
-          console.error('Refund email failed:', mailErr.message);
-        }
-
-        return json(200, { ok: true, refunded: ref.ok });
-      }
-
       case 'cancelOrder': {
         const oid = String(body.id || '').trim();
         if (!oid) return json(400, { error: 'Missing id' });
@@ -924,7 +886,7 @@ case 'deleteMessage': {
           const { error: policyError } = await sb.from('orders').update({ refund_restock: false }).eq('id', order.id).eq('status', 'paid');
           if (policyError) throw policyError;
         }
-        const ref = await stripeRefund(order);
+        const ref = await stripeRefund(sb,order);
         if (!ref.ok) return json(502, { error: 'Remboursement impossible : annulation non effectuée' });
 
         // Guarded update: two cancels (or a refund race) cannot double-act.
@@ -1576,29 +1538,11 @@ async function recomputeRating(sb, productId) {
 }
 
 // Full Stripe refund for a paid order. Returns { ok, already, error }.
-async function stripeRefund(order) {
-  if (!process.env.STRIPE_SECRET_KEY) return { ok: false, error: 'Stripe is not configured' };
-  let paymentIntent = order.payment_intent_id || null;
-  if (!paymentIntent && order.stripe_session_id) {
-    const sess = await STRIPE().checkout.sessions.retrieve(order.stripe_session_id);
-    paymentIntent = sess && sess.payment_intent;
-  }
-  if (!paymentIntent) {
-    const pi = await STRIPE().paymentIntents.search({ query: 'metadata["order_id"]:"' + order.id + '"' });
-    if (pi && pi.data && pi.data.length) paymentIntent = pi.data[0].id;
-  }
-  if (!paymentIntent) return { ok: false, error: 'Aucun paiement associ\u00e9 \u00e0 cette commande' };
+async function stripeRefund(sb,order) {
   try {
-    const refund = await STRIPE().refunds.create({ payment_intent: paymentIntent }, { idempotencyKey: 'refund-' + order.id });
-    if (refund.status !== 'succeeded') return { ok: false, error: 'Remboursement non confirmé. Vérifiez son statut dans Stripe avant de réessayer.' };
-    return { ok: true };
+    return await require('./lib/admin-refunds').fullRefund(sb,order,{email:false});
   } catch (err) {
-    if (err.code === 'charge_already_refunded') {
-      const intent = await STRIPE().paymentIntents.retrieve(paymentIntent, { expand: ['latest_charge'] });
-      const charge = intent.latest_charge;
-      if (charge && charge.refunded && charge.amount_refunded === order.total_cents && charge.currency === order.currency) return { ok: true, already: true };
-    }
-    return { ok: false, error: 'Remboursement impossible. Vérifiez le paiement dans Stripe.' };
+    return { ok:false,error:'Remboursement non confirmé. Vérifiez ou reprenez l’opération avant de réessayer.' };
   }
 }
 
@@ -1606,15 +1550,6 @@ async function stripeRefund(order) {
 async function restockOrder(sb, order) {
   const { error } = await sb.rpc('restock_order', { p_order_id: order.id });
   if (error) throw error;
-}
-
-function buildRefundEmail(order) {
-  return '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
-    'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande a été remboursée</h2>' +
-    '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ', le remboursement intégral de votre commande ' +
-    '<strong>' + esc(order.order_number) + '</strong> a bien été effectué (montant restitué sur votre moyen de paiement).</p>' +
-    '<p style="font-size:14px;color:#221f1a;">Si la commande avait déjà été expédiée, vous pouvez la conserver ou la retourner selon nos conditions.</p>' +
-    '<p style="font-size:12px;color:#8a7d66;">Merci de votre confiance.</p></div></div>';
 }
 
 function buildCancelEmail(order, reason, comment, refunded) {

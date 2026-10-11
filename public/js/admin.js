@@ -1185,7 +1185,8 @@
       '<td data-label="Client">' + esc(o.customer_name) + '<br><small style="color:#8a7d66;">' + esc(o.email) + '</small></td>' +
       '<td data-label="Articles">' + count + '</td>' +
       '<td data-label="Total">' + money(o.total_cents, o.currency) + '</td>' +
-      '<td data-label="Paiement"><span class="' + payClass(o.status) + '">' + statusLabel(o.status) + '</span></td>' +
+      '<td data-label="Paiement"><span class="' + payClass(o.status) + '">' + statusLabel(o.status) + '</span>' +
+      (o.refunded_cents>0&&o.refunded_cents<o.total_cents?'<br><small>Remboursement partiel : '+money(o.refunded_cents,o.currency)+'</small>':'')+'</td>' +
       '<td data-label="Exp\u00e9dition"><span class="badge ' + shipClass(o.shipping_status) + '">' + shipLabel(o.shipping_status) + '</span>' +
       (o.tracking_number ? '<br><small style="color:#8a7d66;">' + esc(o.tracking_number) + '</small>' : '') + '</td>' +
       '<td data-label=""><span style="white-space:nowrap;"><button class="btn btn-secondary btn-small view-order" data-id="' + o.id + '">Voir</button> ' +
@@ -1252,6 +1253,7 @@
 
   function openOrder(o) {
     document.getElementById('orderModalTitle').textContent = 'Commande ' + o.order_number;
+    document.getElementById('orderModalBody').setAttribute('data-order-id',o.id);
     var addressBlock = o.delivery_type === 'pickup'
       ? '<p><strong>Retrait :</strong> ' + esc(o.pickup_point || '-') + '</p>'
       : '<p>' + esc(o.address1) + (o.address2 ? ' ' + esc(o.address2) : '') + '<br>' +
@@ -1272,13 +1274,15 @@
       (o.discount_cents > 0 ? '<tr><td>Remise</td><td>-' + money(o.discount_cents, o.currency) + '</td></tr>' : '') +
       '<tr><td>Livraison</td><td>' + money(o.shipping_cents, o.currency) + '</td></tr>' +
       (o.tax_cents > 0 ? '<tr><td>Taxe</td><td>' + money(o.tax_cents, o.currency) + '</td></tr>' : '') +
-      '<tr><td><strong>Total</strong></td><td><strong>' + money(o.total_cents, o.currency) + '</strong></td></tr></table>' +
+      '<tr><td><strong>Total payé</strong></td><td><strong>' + money(o.total_cents, o.currency) + '</strong></td></tr>' +
+      (o.refunded_cents > 0 ? '<tr><td>Remboursements confirmés</td><td>' + money(o.refunded_cents,o.currency) + '</td></tr><tr><td>Solde remboursable</td><td>' + money(Math.max(0,o.total_cents-o.refunded_cents),o.currency) + '</td></tr>' : '') + '</table>' +
       (canReturn ? returnFormHtml() : '') +
       (o.status === 'paid' ? '<div class="order-actions">' +
         '<button class="btn btn-secondary btn-small" data-act="markShipped">Marquer expédiée</button>' +
         '<button class="btn btn-secondary btn-small" data-act="markDelivered">Marquer livr&eacute;e</button>' +
         '<button class="btn btn-secondary btn-small" data-act="revert">R&eacute;initialiser</button>' +
-        '<button class="btn btn-danger btn-small" data-act="refund">Rembourser (complet)</button>' +
+        '<button class="btn btn-secondary btn-small" data-act="partialRefund">Rembourser des articles</button>' +
+        '<button class="btn btn-danger btn-small" data-act="refund">Rembourser le solde</button>' +
         '<button class="btn btn-danger btn-small" data-act="deleteOrder">Supprimer la commande</button>' +
         '<button class="btn btn-danger btn-small" data-act="cancelOrder">Annuler la commande</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printInvoice">Facture</button>' +
@@ -1309,11 +1313,24 @@
     body.querySelectorAll('[data-act]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var act = btn.getAttribute('data-act');
+        if (act === 'partialRefund') {
+          window.HN_ADMIN_REFUNDS.open(o,function(message){return afterUpdate(o.id,message);});
+          return;
+        }
         if (act === 'refund') {
-          if (!confirm('Rembourser intégralement cette commande ?\nAprès expédition, aucun article ne revient automatiquement en stock : contrôlez son retour séparément. Le client sera notifié par email si l’envoi réussit.')) return;
+          if (!confirm('Rembourser le solde de ' + money(Math.max(0,o.total_cents-(o.refunded_cents||0)),o.currency) + ' ?\nAprès un remboursement partiel ou une expédition, le stock est à contrôler séparément.')) return;
+          if (btn.disabled) return;
+          var refundOwner=token();btn.disabled=true;
+          function activeRefund(){return refundOwner===token() && document.getElementById('orderModal').classList.contains('open') && document.getElementById('orderModalBody').getAttribute('data-order-id')===o.id;}
           call('refundOrder', { id: o.id })
-            .then(function () { return afterUpdate(o.id, 'Commande remboursée'); })
-            .catch(function (e) { toast(e.message, 'err'); });
+            .then(function (res) {
+              if(!activeRefund())return;
+              if(res.ok===true&&res.status==='succeeded')return afterUpdate(o.id,'Solde remboursé');
+              toast(res.status==='failed'?'Remboursement échoué dans Stripe':'Remboursement en attente : vérifiez la même opération','err');
+              window.HN_ADMIN_REFUNDS.open(o,function(message){return afterUpdate(o.id,message);});
+            })
+            .catch(function (e) { if(activeRefund())toast(e.message, 'err'); })
+            .finally(function(){if(activeRefund()&&btn.isConnected)btn.disabled=false;});
           return;
         }
         if (act === 'deleteOrder') {

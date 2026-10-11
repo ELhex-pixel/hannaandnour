@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Hanna &amp; Nour — Étapes importantes à finaliser</title>
+  <style>
+    @page { size: A4; margin: 17mm 18mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #242424; font: 11pt/1.5 "Segoe UI", Arial, sans-serif; }
+    section { break-after: page; }
+    section:last-child { break-after: auto; }
+    header { border-bottom: 2px solid #b78a4a; padding-bottom: 12px; margin-bottom: 22px; }
+    .brand { font-size: 21pt; font-weight: 700; }
+    .muted { color: #666; font-size: 9pt; }
+    .number { color: #9a6b29; font-size: 12pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+    h1 { font-size: 22pt; line-height: 1.15; margin: 8px 0 16px; }
+    h2 { font-size: 13pt; margin: 21px 0 8px; }
+    p { margin: 8px 0; }
+    .state { background: #f7f3ea; border-left: 4px solid #b78a4a; padding: 12px 15px; margin: 14px 0; }
+    ul { list-style: none; margin: 10px 0; padding: 0; }
+    li { padding: 0 0 10px 23px; position: relative; break-inside: avoid; }
+    li::before { content: ""; display: block; position: absolute; left: 0; top: 5px; width: 11px; height: 11px; border: 1px solid #555; }
+    .done { background: #f1f6f0; padding: 12px 15px; border-left: 4px solid #557851; margin-top: 18px; }
+    .notes { margin-top: 24px; border-top: 1px solid #ddd; padding-top: 10px; color: #777; font-size: 9pt; }
+    .line { height: 24px; border-bottom: 1px solid #ddd; }
+    footer { margin-top: 18px; font-size: 9pt; color: #666; }
+  </style>
+</head>
+<body>
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Feuille de route • 10 octobre 2026 • Points 2, 3, 5, 6 et 7</div></header>
+    <div class="number">Étape 2 / Avis clients</div>
+    <h1>Préparer les avis de la boutique</h1>
+    <p><strong>Objectif :</strong> présenter les expériences réelles des clients lors de l’ouverture commerciale.</p>
+    <div class="state"><strong>État actuel :</strong> le mode de démonstration est activé. Cinq avis fictifs étaient présents lors de la dernière vérification. Les nouveaux titres sont « Vos avis » et « Ce que vous en pensez ».</div>
+    <h2>Actions importantes</h2>
+    <ul>
+      <li>Ouvrir l’onglet Avis de l’administration et distinguer les avis clients des avis de démonstration.</li>
+      <li>Désactiver l’affichage des avis démo avant l’ouverture commerciale.</li>
+      <li>Conserver les avis clients authentiques et leur texte d’origine ; publier après modération.</li>
+      <li>Vérifier l’invitation à laisser un avis après livraison, sur une commande de test.</li>
+      <li>Contrôler l’affichage des notes et compteurs sur l’accueil, les cartes et les fiches produits.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> aucun avis de démonstration n’est présenté comme un avis client et les notes affichées correspondent aux avis effectivement approuvés.</div>
+    <div class="notes">Notes / date de validation<div class="line"></div><div class="line"></div></div>
+    <footer>1 / 5 — Document de préparation. Les cases servent au suivi ; elles ne certifient pas un test déjà effectué.</footer>
+  </section>
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Étapes importantes à finaliser</div></header>
+    <div class="number">Étape 3 / Livraison</div>
+    <h1>Compléter Mondial Relay</h1>
+    <p><strong>Objectif :</strong> permettre au client de choisir un relais valide, puis préparer et suivre réellement l’expédition.</p>
+    <div class="state"><strong>État actuel :</strong> le diagnostic Sendcloud et la recherche de relais existent dans l’admin. Le choix officiel au paiement, les étiquettes et le suivi automatique restent à intégrer.</div>
+    <h2>Actions importantes</h2>
+    <ul>
+      <li>Valider la connexion Sendcloud, le contrat Mondial Relay et l’adresse d’expédition.</li>
+      <li>Ajouter le sélecteur de relais au checkout avec adresse et identifiant du relais choisi.</li>
+      <li>Revalider côté serveur le relais et son éligibilité pour la commande avant confirmation.</li>
+      <li>Définir les pays desservis, les délais annoncés, les poids/dimensions et les tarifs réellement applicables.</li>
+      <li>Intégrer la création des étiquettes avec prévention des achats en double.</li>
+      <li>Intégrer les événements transporteur et contrôler les changements de suivi et les notifications client.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> une commande de test conserve le bon relais, une étiquette correspond au colis et les statuts de livraison sont correctement rapprochés.</div>
+    <p class="muted">Un diagnostic de connexion ne valide ni le tarif d’affranchissement ni l’éligibilité d’un colis. Les essais externes seront réalisés au moment convenu, dans l’environnement adapté.</p>
+    <div class="notes">Notes / date de validation<div class="line"></div><div class="line"></div></div>
+    <footer>2 / 5</footer>
+  </section>
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Étapes importantes à finaliser</div></header>
+    <div class="number">Étape 5 / TikTok Shop</div>
+    <h1>Décider de la synchronisation</h1>
+    <p><strong>Objectif :</strong> garder des stocks et des commandes cohérents si les mêmes produits sont vendus sur les deux boutiques.</p>
+    <div class="state"><strong>État actuel :</strong> l’export XLSX pour TikTok Shop France est disponible. L’import est manuel ; il ne synchronise pas automatiquement les stocks, annonces ou commandes.</div>
+    <h2>Actions importantes</h2>
+    <ul>
+      <li>Confirmer si TikTok Shop sera effectivement utilisé. Si non, cette étape peut être reportée.</li>
+      <li>Valider l’import avec le modèle officiel de la catégorie dans Seller Center.</li>
+      <li>Contrôler les références des variantes, prix en euros, informations requises et photos.</li>
+      <li>Choisir une allocation de stock séparée ou une intégration API de synchronisation.</li>
+      <li>Si une intégration API est retenue, rapprocher commandes, annulations et retours avec des traitements idempotents.</li>
+      <li>Tester une vente concurrente des deux canaux et la reprise après une interruption.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> les pièces disponibles sur les deux canaux ne peuvent pas être vendues au-delà du stock réellement alloué, et les commandes sont rapprochées sans duplication.</div>
+    <p class="muted">L’export d’un fichier ne réserve pas de stock et ne met pas à jour une annonce déjà publiée. La fiscalité et les exigences TikTok sont à vérifier avec les informations réelles de l’activité.</p>
+    <div class="notes">Notes / date de validation<div class="line"></div><div class="line"></div></div>
+    <footer>3 / 5</footer>
+  </section>
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Étapes importantes à finaliser</div></header>
+    <div class="number">Étape 6 / Contenus</div>
+    <h1>Finaliser les informations réelles</h1>
+    <p><strong>Objectif :</strong> publier des fiches utiles, des contenus cohérents et les coordonnées officielles de la boutique.</p>
+    <div class="state"><strong>État actuel :</strong> les textes de présentation sont généraux et disponibles en français, anglais et arabe. Les contenus de démonstration et les informations propres à l’activité restent à relire.</div>
+    <h2>Actions importantes</h2>
+    <ul>
+      <li>Vérifier les noms, descriptions, prix, variantes et stocks de chaque produit actif.</li>
+      <li>Ajouter les matières, mesures vérifiées et conseils d’entretien disponibles ; éviter les caractéristiques supposées.</li>
+      <li>Associer les bonnes photos aux bons coloris et vérifier leur rendu sur mobile.</li>
+      <li>Relire « Notre histoire », les articles et les auteurs avec les informations réelles à conserver.</li>
+      <li>Renseigner les liens officiels des réseaux sociaux et vérifier les coordonnées de contact.</li>
+      <li>Contrôler les pages dans les trois langues, les liens, les métadonnées et le sitemap après publication.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> les informations commerciales sont exactes, les photos correspondent aux variantes et aucun lien ou texte public ne présente un service inexistant.</div>
+    <div class="notes">Notes / date de validation<div class="line"></div><div class="line"></div></div>
+    <footer>4 / 5</footer>
+  </section>
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Étapes importantes à finaliser</div></header>
+    <div class="number">Étape 7 / Finalisation</div>
+    <h1>Pages légales et paiement</h1>
+    <p><strong>À traiter en dernier, comme convenu.</strong> Objectif : disposer d’informations adaptées à l’entreprise et vérifier le parcours commercial avant l’ouverture.</p>
+    <div class="state"><strong>État actuel :</strong> les pages de conditions et de confidentialité décrivent encore une démonstration. La configuration finale du paiement et les essais externes sont reportés à votre confirmation.</div>
+    <h2>Actions importantes</h2>
+    <ul>
+      <li>Renseigner le nom légal, la forme juridique, l’adresse professionnelle et les identifiants d’entreprise applicables.</li>
+      <li>Finaliser les conditions de vente, livraison, retours et garanties avec les engagements réellement proposés.</li>
+      <li>Mettre la confidentialité en accord avec les comptes, commandes, messages, avis, emails et statistiques effectivement traités.</li>
+      <li>Valider les pays livrés, la devise, les taxes applicables et les frais avant paiement.</li>
+      <li>Tester en environnement isolé : achat, confirmation du paiement, email, stock, préparation, livraison et avis.</li>
+      <li>Tester le retour physique, la remise en stock des unités revendables et les remboursements complets et partiels.</li>
+      <li>Après validation explicite, finaliser la configuration de production et effectuer les contrôles d’ouverture.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> les textes correspondent à l’activité réelle et le parcours commercial est validé avec des montants, statuts, emails et stocks cohérents.</div>
+    <p class="muted">Les tests automatisés locaux ne remplacent pas une vérification du paiement, de l’expédition ou de la réception effective d’un email. Aucun paiement ou achat d’étiquette n’est réalisé par ce document.</p>
+    <div class="notes">Notes / date de validation<div class="line"></div><div class="line"></div></div>
+    <footer>5 / 5 — À conserver comme suivi des étapes importantes.</footer>
+  </section>
+</body>
+</html>

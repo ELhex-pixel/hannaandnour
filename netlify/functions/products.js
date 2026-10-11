@@ -18,7 +18,7 @@ exports.handler = async function (event) {
     const cents = value => /^\d{1,9}$/.test(String(value)) ? Number(value) : null;
     let query = sb.rpc('search_products', {
       p_query: String(q.q || '').trim().slice(0, 120), p_categories: list(q.category), p_sizes: list(q.sizes), p_occasions: list(q.occasions), p_min: cents(q.min), p_max: cents(q.max)
-    }).select('*, product_variants(id, color, size, stock, active)', { count: 'exact' });
+    }, { count: 'exact' }).select('*, product_variants(id, color, size, stock, active)');
     if (q.slug) query = query.in('slug', list(q.slug));
     if (q.ids) query = query.in('id', list(q.ids));
     if (q.featured === 'true') query = query.eq('is_featured', true);
@@ -29,6 +29,7 @@ exports.handler = async function (event) {
     query = query.order('id', { ascending: true }).range((page - 1) * limit, page * limit - 1);
     const { data, error, count } = await query;
     if (error) throw error;
+    if (!Number.isSafeInteger(count) || count < 0) throw new Error('Catalog count unavailable');
     const products = data || [];
     const { data: stats, error: sErr } = await sb.rpc('product_review_stats', { p_ids: products.map(p => p.id) });
     if (sErr) throw sErr;
@@ -37,6 +38,6 @@ exports.handler = async function (event) {
       const { search_vector, ...fields } = p;
       return { ...fields, variants: p.product_variants || [], approved_count: review ? Number(review.approved_count) : 0, approved_rating: review ? Number(review.approved_rating) : 0 };
     });
-    return json(200, { products: out, total: count || 0, page, limit, has_more: page * limit < count });
+    return json(200, { products: out, total: count, page, limit, has_more: page * limit < count });
   } catch (error) { return json(500, { error: 'Catalog temporarily unavailable' }); }
 };
