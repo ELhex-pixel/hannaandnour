@@ -442,9 +442,15 @@
         <button class="btn btn-primary" id="newProductBtn">+ Nouveau produit</button>
       </div>
       <div class="admin-notice"><strong>Un produit archivé reste dans votre historique.</strong> Il n’est plus vendu sur le site. « Stock non configuré » ne signifie pas « épuisé » : renseignez chaque taille et coloris avant les ventes.</div>
-      <div class="admin-bulk-bar"><span id="productSelectionCount" role="status">Aucun produit sélectionné</span><button type="button" class="btn btn-secondary btn-small" id="selectProductPage" disabled>Sélectionner cette page</button><button type="button" class="btn btn-primary btn-small" id="activateSelectedProducts" disabled>Activer la sélection</button><button type="button" class="btn btn-danger btn-small" id="archiveSelectedProducts" disabled>Archiver la sélection</button><button type="button" class="btn btn-danger btn-small" id="deleteSelectedProducts" disabled>Supprimer définitivement</button><button type="button" class="btn btn-secondary btn-small" id="clearProductSelection" disabled>Désélectionner</button></div>
+      <div class="admin-bulk-bar"><span id="productSelectionCount" role="status">Aucun produit sélectionné</span><button type="button" class="btn btn-secondary btn-small" id="selectProductPage" disabled>Sélectionner cette page</button><button type="button" class="btn btn-secondary btn-small" id="inspectProductDeletion" disabled>Vérifier les liens / la suppression</button><button type="button" class="btn btn-primary btn-small" id="activateSelectedProducts" disabled>Activer la sélection</button><button type="button" class="btn btn-danger btn-small" id="archiveSelectedProducts" disabled>Archiver la sélection</button><button type="button" class="btn btn-danger btn-small" id="deleteSelectedProducts" disabled>Supprimer définitivement</button><button type="button" class="btn btn-secondary btn-small" id="clearProductSelection" disabled>Désélectionner</button></div>
       <p class="admin-muted">Supprimer définitivement concerne uniquement les fiches hors ligne, sans stock ni historique. Les photos originales ne sont pas effacées. Pour conserver une fiche, utilisez Archiver.</p>
       <p id="productBulkStatus" class="admin-operation-status" role="status" hidden></p>
+      <section class="card" id="productDeletionInfo" aria-labelledby="productDeletionTitle" hidden>
+        <h3 id="productDeletionTitle">Liens qui empêchent la suppression</h3>
+        <p class="admin-muted">Vérification en lecture seule des produits sélectionnés au moment de la demande. Les compteurs sont complets ; au maximum trois références sont présentées par motif. Les ajustements archivés comptent aussi dans l’historique.</p>
+        <div id="productDeletionDetails" aria-live="polite"></div>
+        <div class="toolbar admin-list-pagination"><button type="button" class="btn btn-secondary btn-small" id="productDeletionPrevious" disabled>Précédents</button><span id="productDeletionPage" role="status"></span><button type="button" class="btn btn-secondary btn-small" id="productDeletionNext" disabled>Suivants</button><button type="button" class="btn btn-secondary btn-small" id="closeProductDeletionInfo">Fermer les détails</button></div>
+      </section>
       <div class="card" id="productsList"><p class="empty">Chargement...</p></div>
       <nav class="admin-list-pagination toolbar" aria-label="Pagination des produits"><span id="productResults" role="status"></span><label for="productPageSize">Par page</label><select id="productPageSize"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select><button type="button" class="btn btn-secondary btn-small" id="productPrevious" disabled>Précédente</button><span id="productPage">Page 1 / 1</span><button type="button" class="btn btn-secondary btn-small" id="productNext" disabled>Suivante</button></nav>
     </div>
@@ -1043,6 +1049,7 @@
   <script src="js/admin-catalog.js"></script>
   <script src="vendor/jsbarcode.min.js"></script>
   <script src="js/admin.js"></script>
+  <script src="js/admin-product-deletion.js"></script>
   <script src="js/admin-refunds.js"></script>
   <script src="js/admin-features.js"></script>
   <script src="js/admin-cart-offer.js"></script>

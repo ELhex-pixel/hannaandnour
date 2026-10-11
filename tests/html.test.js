@@ -21,6 +21,7 @@ test('les scripts locaux existent et les dépendances admin sont ordonnées', ()
   assert(scripts.indexOf('js/admin-catalog.js') >= 0);
   assert(scripts.indexOf('js/admin-catalog.js') < scripts.indexOf('js/admin.js'));
   assert(scripts.indexOf('js/admin.js') < scripts.indexOf('js/admin-features.js'));
+  assert(scripts.indexOf('js/admin-product-deletion.js') > scripts.indexOf('js/admin.js'));
 });
 test('l’admin modernisé conserve les rubriques et isole les opérations sensibles', () => {
   const $ = cheerio.load(fs.readFileSync('public/admin.html', 'utf8'));
@@ -55,6 +56,9 @@ test('l’admin modernisé conserve les rubriques et isole les opérations sensi
   assert.equal($('#returnPolicyDays').attr('value'), '0');
   assert($('#setReturns').is('[readonly]'));
   assert($('#deleteSelectedProducts').text().includes('Supprimer définitivement'));
+  assert.equal($('#inspectProductDeletion').attr('type'), 'button');
+  assert($('#productDeletionInfo').is('[hidden][aria-labelledby="productDeletionTitle"]'));
+  assert.equal($('#productDeletionDetails').attr('aria-live'), 'polite');
   assert($('#clearProductSelection').text().includes('Désélectionner'));
   assert($('#inventoryMode').is('[required]'));
   assert.equal($('#inventoryMode option').first().attr('value'),'');

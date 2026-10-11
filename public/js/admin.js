@@ -283,6 +283,7 @@
     document.getElementById('archiveSelectedProducts').disabled = !count || productBulkBusy;
     document.getElementById('deleteSelectedProducts').disabled = !count || productBulkBusy;
     document.getElementById('clearProductSelection').disabled = !count || productBulkBusy;
+    document.getElementById('inspectProductDeletion').disabled = !count || productBulkBusy;
   }
 
   function productRow(p) {
@@ -1474,15 +1475,18 @@
   }
 
   function wireOrders() {
+    var viewRequest = 0;
+    document.addEventListener('hn:admin-logout', function () { viewRequest++; });
     document.getElementById('refreshOrdersBtn').addEventListener('click', loadOrders);
     document.getElementById('filterOrderStatus').addEventListener('change', loadOrders);
     document.getElementById('filterShippingStatus').addEventListener('change', loadOrders);
     document.getElementById('closeOrderBtn').addEventListener('click', function () {
+      viewRequest++;
       document.getElementById('orderModal').classList.remove('open');
     });
     // Close by clicking the dark backdrop around the modal.
     document.getElementById('orderModal').addEventListener('click', function (e) {
-      if (e.target === this) this.classList.remove('open');
+      if (e.target === this) { viewRequest++; this.classList.remove('open'); }
     });
     document.addEventListener('click', function (e) {
       var dupBtn = e.target.closest('.dup-product');
@@ -1498,9 +1502,10 @@
       var viewBtn = e.target.closest('.view-order');
       if (viewBtn) {
         var id = viewBtn.getAttribute('data-id');
+        var owner = token(), request = ++viewRequest;
         call('getOrder', { id: id }).then(function (res) {
-          if (res.order) openOrder(res.order);
-        }).catch(function (err) { toast(err.message, 'err'); });
+          if (owner === token() && request === viewRequest && viewBtn.isConnected && res.order) openOrder(res.order);
+        }).catch(function (err) { if (owner === token() && request === viewRequest && viewBtn.isConnected) toast(err.message, 'err'); });
       }
       var editBtn = e.target.closest('.edit-product');
       if (editBtn) {
@@ -3005,6 +3010,7 @@
   /* ---------------- Filters ---------------- */
 
   function wireFilters() {
+    function clearDeletionInfo() { if (window.HN_PRODUCT_DELETION) window.HN_PRODUCT_DELETION.clear(); }
     function resetPage() { productPage = 1; renderProducts(); }
     document.getElementById('filterProducts').addEventListener('input', resetPage);
     ['filterCategory', 'filterProductVisibility', 'filterProductStock', 'sortProducts', 'productPageSize'].forEach(function (id) { document.getElementById(id).addEventListener('change', resetPage); });
@@ -3017,6 +3023,7 @@
     document.getElementById('productNext').addEventListener('click', function () { productPage++; renderProducts(); });
     document.getElementById('selectProductPage').addEventListener('click', function () {
       if (productBulkBusy) return;
+      clearDeletionInfo();
       var checkboxes = Array.prototype.slice.call(document.getElementById('productsList').querySelectorAll('.select-product'));
       var selected = checkboxes.length && checkboxes.every(function (checkbox) { return productSelection[checkbox.getAttribute('data-id')]; });
       checkboxes.forEach(function (checkbox) {
@@ -3027,6 +3034,7 @@
     });
     document.getElementById('productsList').addEventListener('change', function (e) {
       if (productBulkBusy) return;
+      clearDeletionInfo();
       if (e.target.id === 'selectVisibleProducts') {
         this.querySelectorAll('.select-product').forEach(function (checkbox) {
           var id = checkbox.getAttribute('data-id');
@@ -3040,7 +3048,10 @@
       }
       renderProducts();
     });
-    document.getElementById('clearProductSelection').addEventListener('click', function () { if (!productBulkBusy) { productSelection = {}; renderProducts(); } });
+    document.getElementById('clearProductSelection').addEventListener('click', function () { if (!productBulkBusy) { clearDeletionInfo(); productSelection = {}; renderProducts(); } });
+    document.getElementById('inspectProductDeletion').addEventListener('click', function () {
+      if (!productBulkBusy && window.HN_PRODUCT_DELETION) window.HN_PRODUCT_DELETION.show(Object.keys(productSelection));
+    });
     ['activateSelectedProducts', 'archiveSelectedProducts', 'deleteSelectedProducts'].forEach(function (buttonId) {
       document.getElementById(buttonId).addEventListener('click', function () {
         if (productBulkBusy) return;
@@ -3053,6 +3064,7 @@
         if (!confirm((purge ? 'Supprimer définitivement' : activate ? 'Activer' : 'Archiver') + ' ces ' + ids.length + ' produits, y compris ceux masqués par vos filtres ?\n\n' + productsAll.filter(function (p) { return productSelection[p.id]; }).map(function (p) { return p.name_fr || p.name_en || p.slug; }).join('\n') + '\n\n' + notice)) return;
         if (purge && prompt('Suppression définitive des fiches sélectionnées. Seules les fiches hors ligne, sans stock ni historique sont autorisées. Les photos originales restent conservées.\n\nTapez SUPPRIMER pour confirmer.') !== 'SUPPRIMER') return;
         var owner = token(), request = ++productBulkRevision;
+        clearDeletionInfo();
         function active() { return owner === token() && request === productBulkRevision; }
         var status = document.getElementById('productBulkStatus');
         productBulkBusy = true;
@@ -3078,6 +3090,7 @@
         }).catch(function (error) {
           if (!active()) return;
           status.textContent = (purge ? 'Suppression non confirmée : ' : activate ? 'Activation non confirmée : ' : 'Archivage non confirmé : ') + error.message + '. Actualisez la liste pour vérifier avant de recommencer.';
+          if (purge && window.HN_PRODUCT_DELETION) window.HN_PRODUCT_DELETION.show(ids);
         }).finally(function () { if (active()) { productBulkBusy = false; renderProducts(); } });
       });
     });

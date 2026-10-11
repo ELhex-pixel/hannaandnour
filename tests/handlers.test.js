@@ -126,7 +126,7 @@ function archiveAdmin(overrides = {}, databaseError = false, returnedIds = null)
   };
   vm.runInNewContext(fs.readFileSync('netlify/functions/admin.js', 'utf8'), {
     exports, process: { env: {} }, Buffer, console: { error() {} },
-    require: name => name === './shared' ? shared : name === './lib/return-policy' ? require('../netlify/functions/lib/return-policy') : name === '../../public/js/product-media' ? require('../public/js/product-media') : name === './lib/product-assistant' ? {categories:require('../public/js/categories').codes} : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales','./lib/admin-refunds','./lib/cart-offer'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales','adminRefunds','adminCartOffer'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
+    require: name => name === './shared' ? shared : name === './lib/product-deletion-info' ? { adminProductDeletionInfo: async () => { state.inventory.push('getProductDeletionInfo'); return shared.json(200, {}); } } : name === './lib/return-policy' ? require('../netlify/functions/lib/return-policy') : name === '../../public/js/product-media' ? require('../public/js/product-media') : name === './lib/product-assistant' ? {categories:require('../public/js/categories').codes} : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales','./lib/admin-refunds','./lib/cart-offer'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales','adminRefunds','adminCartOffer'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
   });
   return { handler: exports.handler, state };
 }
@@ -187,8 +187,21 @@ test('la suppression protégée distingue les refus sans divulguer les erreurs S
     const mock=archiveAdmin({ getSupabase:()=>({rpc:async()=>({error:{message}})}) });
     const response=await mock.handler(event({action:'purgeProducts',ids:[archiveId],confirmation:'SUPPRIMER'}));
     assert.equal(response.statusCode,message==='private-fixture-error'?503:409);
+    assert.equal(JSON.parse(response.body).code, message === 'private-fixture-error' ? 'product_delete_unconfirmed' : message);
     assert(!response.body.includes('private-fixture-error'));
   }
+});
+test('le diagnostic des liens exige la session admin et le quota avant les lectures', async () => {
+  const denied = archiveAdmin({ requireAdmin: async () => ({ ok: false }) });
+  assert.equal((await denied.handler(event({ action: 'getProductDeletionInfo', id: archiveId }))).statusCode, 401);
+  assert.equal(denied.state.inventory.length, 0);
+  const limited = archiveAdmin({ rateLimit: async () => ({ statusCode: 429 }) });
+  assert.equal((await limited.handler(event({ action: 'getProductDeletionInfo', id: archiveId }))).statusCode, 429);
+  assert.equal(limited.state.inventory.length, 0);
+  const allowed = archiveAdmin();
+  assert.equal((await allowed.handler(event({ action: 'getProductDeletionInfo', id: archiveId }))).statusCode, 200);
+  assert.deepEqual(allowed.state.inventory, ['getProductDeletionInfo']);
+  assert.equal(allowed.state.writes.length, 0);
 });
 test('les réglages admin affichent la politique actuelle, pas l’ancien délai de livraison', async () => {
   const mock = archiveAdmin({

@@ -331,6 +331,7 @@ function bulkProducts(response) {
   const state = { calls: [], confirms: [], allowed: true, typed: 'SUPPRIMER', token: 'fixture-token', loads: 0, toasts: [] };
   const node = id => nodes[id] || (nodes[id] = { handlers: {}, disabled: false, hidden: true, textContent: '', addEventListener(name, handler) { this.handlers[name] = handler; } });
   const context = {
+    window: {},
     document: { getElementById: node },
     productSelection: { one: true, two: true },
     productsAll: [{ id: 'one', name_fr: 'Fiche affichée' }, { id: 'two', name_fr: 'Fiche hors filtre' }],
@@ -430,6 +431,22 @@ test('désélectionner ne supprime aucune fiche ni ne fait d’appel API', () =>
   mock.nodes.clearProductSelection.handlers.click();
   assert.equal(Object.keys(mock.context.productSelection).length,0);
   assert.equal(mock.state.calls.length,0);
+});
+test('une suppression refusée ouvre le diagnostic des fiches sélectionnées, y compris hors filtre', async () => {
+  const mock = bulkProducts(() => Promise.reject(new Error('Historique lié'))), shown = [];
+  mock.context.window.HN_PRODUCT_DELETION = { clear() {}, show: ids => shown.push(Array.from(ids)) };
+  mock.nodes.inspectProductDeletion.handlers.click();
+  assert.equal(mock.state.calls.length, 0); assert.deepEqual(shown[0], ['one','two']);
+  mock.nodes.deleteSelectedProducts.handlers.click(); await settleBulk();
+  assert.deepEqual(shown[1], ['one','two']); assert.deepEqual(Object.keys(mock.context.productSelection), ['one','two']);
+  assert.equal(mock.state.loads, 0);
+});
+test('une réponse de suppression après déconnexion n’ouvre pas un ancien diagnostic', async () => {
+  let reject; const shown = [];
+  const mock = bulkProducts(() => new Promise((resolve, fail) => { reject = fail; }));
+  mock.context.window.HN_PRODUCT_DELETION = { clear() {}, show: ids => shown.push(Array.from(ids)) };
+  mock.nodes.deleteSelectedProducts.handlers.click(); mock.state.token = ''; reject(new Error('Historique lié')); await settleBulk();
+  assert.equal(shown.length, 0);
 });
 test('la suppression exige confirmation saisie, inclut les fiches hors filtre et verrouille les boutons', async () => {
   const canceled = bulkProducts();

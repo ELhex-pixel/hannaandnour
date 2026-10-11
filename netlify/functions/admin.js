@@ -215,6 +215,11 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     // ---- Everything below requires a valid admin session ----
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (action === 'getProductDeletionInfo') {
+      const limited = await rateLimit(sb, event, 'admin-product-deletion-info', 120, 600, 'admin');
+      if (limited) return limited;
+      return await require('./lib/product-deletion-info').adminProductDeletionInfo(sb, body);
+    }
     if (['getCartOffer', 'saveCartOffer'].includes(action)) {
       const limited = await rateLimit(sb, event, 'admin-cart-offer', 60, 600, 'admin');
       if (limited) return limited;
@@ -385,7 +390,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
             product_delete_history: 'Une fiche est liée à une commande, un avis, un ajustement ou un coût. Conservez-la archivée pour préserver son historique.',
             product_delete_invalid: 'Sélection ou confirmation invalide.'
           };
-          return json(errors[error.message] ? 409 : 503, { error: errors[error.message] || 'Suppression non confirmée. Actualisez le catalogue avant de réessayer.' });
+          return json(errors[error.message] ? 409 : 503, { error: errors[error.message] || 'Suppression non confirmée. Actualisez le catalogue avant de réessayer.', code: errors[error.message] ? error.message : 'product_delete_unconfirmed' });
         }
         if (!data || !Array.isArray(data.deleted_ids) || !Array.isArray(data.missing_ids)) return json(503, { error: 'Suppression non confirmée. Actualisez le catalogue.' });
         return json(200, data);

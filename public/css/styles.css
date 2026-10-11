@@ -4898,6 +4898,13 @@ select.lang-switcher {
 .admin-page .admin-bulk-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
 .admin-page .admin-bulk-bar span { color: var(--color-gray); font-size: 12px; margin-right: auto; }
 .admin-page .admin-operation-status { padding: 14px; margin: 10px 0 16px; border: 1px solid var(--admin-border); background: var(--color-off-white); color: var(--color-charcoal); border-radius: var(--radius-sm); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.admin-page .admin-deletion-card { padding: 16px 0; border-bottom: 1px solid var(--admin-border); overflow-wrap: anywhere; }
+.admin-page .admin-deletion-card:last-child { border-bottom: 0; }
+.admin-page .admin-deletion-card h4 { margin: 0 0 6px; }
+.admin-page .admin-deletion-card > div { margin-top: 14px; }
+.admin-page .admin-deletion-card ul { padding-left: 20px; margin: 8px 0; }
+.admin-page .admin-deletion-card li { margin-bottom: 10px; font-size: 12px; line-height: 1.7; }
+.admin-page .admin-deletion-card .view-order { display: block; margin-top: 6px; }
 .admin-page .admin-table { table-layout: auto; }
 .admin-page .admin-table td { padding: 16px 8px; overflow-wrap: anywhere; }
 .admin-page .admin-table th { padding: 10px 8px 16px; color: var(--color-gray); font-size: 10px; }
