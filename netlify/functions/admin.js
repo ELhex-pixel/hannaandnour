@@ -308,6 +308,16 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
         if (!require('./lib/product-assistant').categories.includes(body.category)) return json(400,{error:'Choisissez une catégorie valide dans la liste.'});
         let fields;
         try { fields = cleanProductFields(body); } catch (error) { return json(400, { error: 'Photos invalides : utilisez une URL d’image valide, au maximum 100 photos et uniquement les coloris de la fiche.' }); }
+        fields.sizes = require('../../public/js/product-sizes').unique(fields.sizes);
+        let variantsToSave = null;
+        if (Array.isArray(body.variants)) {
+          try { variantsToSave = await require('./lib/variant-sizes').prepareVariantSizes(sb, id || null, body.variants); }
+          catch (error) {
+            if (error.message === 'variant_size_duplicate') return json(400, { error: 'Une seule variante par coloris et taille : One Size et Taille unique sont la même taille.' });
+            if (error.message === 'variant_size_conflict') return json(409, { error: 'Plusieurs variantes actives existent pour ce coloris et cette taille. Vérifiez leurs stocks avant de conserver une seule variante active.' });
+            return json(503, { error: 'Variantes non confirmées. Actualisez la fiche avant de réessayer.' });
+          }
+        }
 
         let productId = id || null;
         if (!productId) {
@@ -328,9 +338,9 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
         // ---- Replace variants ----
         // Chaque variante garde son code-barres s'il est fourni, sinon se voit
         // attribuer automatiquement le prochain code de la séquence HN0000001...
-        if (Array.isArray(body.variants)) {
+        if (variantsToSave) {
           const rows = [];
-          for (const v of body.variants) {
+          for (const v of variantsToSave) {
             const row = {
               product_id: productId,
               color: String(v.color || ''),

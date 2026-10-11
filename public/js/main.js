@@ -155,19 +155,19 @@
         '</span>' +
         '<span class="nav-mobile-action-label" data-i18n="menuSearch">Search</span>' +
       '</button>' +
-      '<a href="account.html" class="nav-mobile-action-btn" aria-label="Account">' +
+      '<a href="' + window.HN.pageUrl('account.html') + '" class="nav-mobile-action-btn" aria-label="Account">' +
         '<span class="nav-mobile-action-icon">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' +
         '</span>' +
         '<span class="nav-mobile-action-label" data-i18n="crumbAccount">Account</span>' +
       '</a>' +
-      '<a href="account.html" class="nav-mobile-action-btn" aria-label="Wishlist">' +
+      '<a href="' + window.HN.pageUrl('account.html') + '" class="nav-mobile-action-btn" aria-label="Wishlist">' +
         '<span class="nav-mobile-action-icon">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>' +
         '</span>' +
         '<span class="nav-mobile-action-label" data-i18n="navWishlist">Wishlist</span>' +
       '</a>' +
-      '<a href="cart.html" class="nav-mobile-action-btn" aria-label="Cart">' +
+      '<a href="' + window.HN.pageUrl('cart.html') + '" class="nav-mobile-action-btn" aria-label="Cart">' +
         '<span class="nav-mobile-action-icon" style="position: relative; display: inline-flex;">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>' +
           '<span class="cart-count nav-mobile-cart-count"></span>' +
@@ -377,7 +377,7 @@
     const hb = e.target.closest('.header-action-btn[aria-label="Wishlist"]');
     if (hb && hb.tagName === 'BUTTON' && hb.classList.contains('header-action-btn') && !hb.closest('.product-wishlist')) {
       e.preventDefault();
-      window.location.href = 'account.html';
+      window.location.href = window.HN.pageUrl('account.html');
     }
   });
 
@@ -390,7 +390,7 @@
     const authed = window.HN && typeof window.HN.isAuthed === 'function' ? window.HN.isAuthed() : false;
     if (!authed) {
       showToast(tr('wishlistLoginRequired'), tr('authLoginIntro'), 'info');
-      window.location.href = 'account.html#orders';
+      window.location.href = window.HN.pageUrl('account.html#orders');
       return;
     }
 

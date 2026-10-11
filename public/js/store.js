@@ -122,6 +122,7 @@
   function productUrl(slug) {
     return window.HN_CONTENT && window.location.protocol !== 'file:' ? window.HN_CONTENT.path('product', slug, currentLang()) : 'product.html?slug=' + encodeURIComponent(slug);
   }
+  function pageUrl(value) { return window.I18n && window.I18n.pageUrl ? window.I18n.pageUrl(value) : value; }
 
   // Loads the admin-editable /api/config (currency symbol, shipping, tax) once
   // and reuses the cached copy when offline. Pages that call loadProducts are
@@ -715,6 +716,7 @@
     lang: currentLang,
     productName: productName,
     productUrl: productUrl,
+    pageUrl: pageUrl,
     loadProducts: loadProducts,
     fetchProducts: fetchProducts,
     loadProductSlugs: loadProductSlugs,

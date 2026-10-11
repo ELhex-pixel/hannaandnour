@@ -9,9 +9,10 @@
   function variants(p) { return Array.isArray(p.variants) && p.variants.length ? p.variants : Array.isArray(p.product_variants) ? p.product_variants : []; }
   function valid(v) { return v && typeof v.id === 'string' && v.id && typeof v.color === 'string' && typeof v.size === 'string' && v.active === true && Number.isInteger(v.stock) && v.stock > 0 && v.stock <= 1000000; }
   function values(list) { return Array.isArray(list) ? list.filter(function (value, index) { return typeof value === 'string' && value && list.indexOf(value) === index; }) : []; }
-  function unavailable(v) { return v && v.active === true && v.stock === 0 ? tr('stockOut') : tr('quickAddUnavailable'); }
+  function unavailable(v) { return v && v.active === true && v.stock === 0 ? tr('stockOut') : tr('quickAddOptionUnavailable'); }
   function color(value) { return window.HN_COLORS ? window.HN_COLORS.label(value, HN.lang()) : value; }
-  function label(v) { return [color(v.color || ''), v.size || tr('sizeUnspecified')].filter(Boolean).join(' / '); }
+  function size(value) { return window.HN_SIZES.canonical(value) === 'Taille unique' ? tr('sizeOne') : value || tr('sizeUnspecified'); }
+  function label(v) { return [color(v.color || ''), size(v.size)].filter(Boolean).join(' / '); }
   function toast(message, type) { if (window.hnToast) window.hnToast(tr('cartAdd'), message, type || 'error'); }
   function create(tag, parent, text) {
     var node = document.createElement(tag);
@@ -89,8 +90,8 @@
     refreshButton.textContent = tr('quickAddRefresh');
     var rows = variants(product), colors = values(product.colors), sizes = values(product.sizes);
     variantField.wrap.hidden = !rows.length; colorField.wrap.hidden = !!rows.length || !colors.length; sizeField.wrap.hidden = !!rows.length || !sizes.length;
-    fill(variantSelect, rows, preserve && preserve.variantId, function (v) { return label(v) + ' — ' + (valid(v) ? tr('quickAddStock', { n: v.stock }) : unavailable(v)); });
-    fill(colorSelect, colors, preserve && preserve.color, color); fill(sizeSelect, sizes, preserve && preserve.size, function (value) { return value || tr('sizeUnspecified'); });
+    fill(variantSelect, rows.filter(function (v) { return v.active === true; }), preserve && preserve.variantId, function (v) { return label(v) + ' — ' + (valid(v) ? tr('quickAddStock', { n: v.stock }) : unavailable(v)); });
+    fill(colorSelect, colors, preserve && preserve.color, color); fill(sizeSelect, sizes, preserve && preserve.size, size);
     update(message);
   }
   function close() {

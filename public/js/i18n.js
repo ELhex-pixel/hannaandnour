@@ -94,6 +94,7 @@
       quickAddConfirm: 'Add to cart',
       quickAddClose: 'Close',
       quickAddUnavailable: 'Unavailable at the moment. Try again or check the product page.',
+      quickAddOptionUnavailable: 'Unavailable',
       quickAddLimit: 'The maximum available quantity is already in your cart.',
       quickAddPriceChanged: 'The price has changed. Check the new price, then confirm the addition.',
       quickAddOptionsChanged: 'The options have changed. Check your selection before adding.',
@@ -575,6 +576,7 @@
       quickAddConfirm: 'Ajouter au panier',
       quickAddClose: 'Fermer',
       quickAddUnavailable: 'Indisponible pour le moment. Réessayez ou consultez la fiche du produit.',
+      quickAddOptionUnavailable: 'Indisponible',
       quickAddLimit: 'La quantité maximale disponible est déjà dans votre panier.',
       quickAddPriceChanged: 'Le prix a changé. Vérifiez le nouveau prix, puis confirmez l’ajout.',
       quickAddOptionsChanged: 'Les options ont changé. Vérifiez votre sélection avant l’ajout.',
@@ -1040,6 +1042,7 @@
       quickAddConfirm: 'أضف إلى السلة',
       quickAddClose: 'إغلاق',
       quickAddUnavailable: 'غير متاح حاليًا. أعد المحاولة أو راجع صفحة المنتج.',
+      quickAddOptionUnavailable: 'غير متاح',
       quickAddLimit: 'الكمية القصوى المتاحة موجودة بالفعل في سلتك.',
       quickAddPriceChanged: 'تغير السعر. راجع السعر الجديد ثم أكد الإضافة.',
       quickAddOptionsChanged: 'تغيرت الخيارات. راجع اختيارك قبل الإضافة.',
@@ -1499,9 +1502,35 @@
   Object.assign(DICT.ar, { catSets: 'أطقم', catJumpsuits: 'بدلات قطعة واحدة', catTracksuits: 'أطقم رياضية', catTshirts: 'تيشيرتات', catShirts: 'قمصان', catBlouses: 'بلوزات وتونيكات', catCardigans: 'كارديغان', catSweatshirts: 'سويت شيرت', catHoodies: 'هوديز', catCoats: 'معاطف', catCapes: 'كابات وبونشو', catVests: 'سترات بلا أكمام', catJeans: 'جينز', catShorts: 'شورتات' });
   if (typeof module === 'object' && module.exports) { module.exports = DICT; return; }
   var pathLang = window.location.pathname.split('/')[1];
-  var lang = SUPPORTED.indexOf(pathLang) >= 0 ? pathLang : localStorage.getItem('hn-lang');
+  var savedLang = '';
+  try { savedLang = localStorage.getItem('hn-lang'); } catch (error) {}
+  var lang = SUPPORTED.indexOf(pathLang) >= 0 ? pathLang : savedLang;
   if (SUPPORTED.indexOf(lang) === -1) {
     lang = navigator.language ? (navigator.language.toLowerCase().indexOf('fr') === 0 ? 'fr' : (navigator.language.toLowerCase().indexOf('ar') === 0 ? 'ar' : 'fr')) : 'fr';
+  }
+  function rememberLang(value) { try { localStorage.setItem('hn-lang', value); } catch (error) {} }
+  if (SUPPORTED.indexOf(pathLang) >= 0) rememberLang(lang);
+
+  function pageUrl(raw, nextLang) {
+    if (window.location.protocol === 'file:' || !raw || String(raw).charAt(0) === '#') return raw;
+    try {
+      var url = new URL(raw, document.baseURI || window.location.href);
+      if (url.origin !== window.location.origin || !/^https?:$/.test(url.protocol)) return raw;
+      var language = SUPPORTED.indexOf(nextLang) >= 0 ? nextLang : lang;
+      var path = url.pathname.replace(/^\/(fr|en|ar)(?=\/)/, '');
+      var page = path.match(/^\/(index|shop|product|collections|about|blog|blog-post|cart|checkout|account|contact|privacy|terms|success|review|size-guide|reset|404)(?:\.html)?\/?$/);
+      if (path === '/') path = '/index.html';
+      else if (page) path = '/' + page[1] + '.html';
+      else if (!/^\/(products|articles)\/[a-z0-9_-]+(?:\.html)?\/?$/.test(path)) return raw;
+      return '/' + language + path + url.search + url.hash;
+    } catch (error) { return raw; }
+  }
+
+  function localizeLinks() {
+    document.querySelectorAll('a[href]').forEach(function (link) {
+      var href = link.getAttribute('href'), localized = pageUrl(href);
+      if (localized !== href) link.setAttribute('href', localized);
+    });
   }
 
   function applyDir() {
@@ -1574,6 +1603,7 @@
 
   function applyTranslations() {
     applyDir();
+    localizeLinks();
 
     document.querySelectorAll('[data-i18n]').forEach(function(el) {
       var key = el.getAttribute('data-i18n');
@@ -1593,14 +1623,13 @@
 
   function setLang(nextLang) {
     if (SUPPORTED.indexOf(nextLang) === -1) return;
-    var target = window.location.pathname.replace(/^\/(fr|en|ar)(?=\/)/, '');
     if (window.location.protocol !== 'file:') {
-      localStorage.setItem('hn-lang', nextLang);
-      window.location.href = '/' + nextLang + (target === '/' ? '/index.html' : target) + window.location.search + window.location.hash;
+      rememberLang(nextLang);
+      window.location.href = pageUrl(window.location.href, nextLang);
       return;
     }
     lang = nextLang;
-    localStorage.setItem('hn-lang', lang);
+    rememberLang(lang);
     applyTranslations();
     document.dispatchEvent(new CustomEvent('langchange', { detail: lang }));
 
@@ -1616,7 +1645,8 @@
     setLang: setLang,
     apply: applyTranslations,
     refreshCurrency: refreshCurrencyLabels,
-    setShipThreshold: setShipThreshold
+    setShipThreshold: setShipThreshold,
+    pageUrl: pageUrl
   };
 
   document.addEventListener('DOMContentLoaded', function() {
@@ -1629,5 +1659,11 @@
       });
     });
   });
+  // Newly rendered cards and mobile links must keep the language too. Update
+  // the actual href before native navigation, preserving modifier-key clicks.
+  document.addEventListener('click', function (event) {
+    var link = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+    if (link) { var href = link.getAttribute('href'); var localized = pageUrl(href); if (localized !== href) link.setAttribute('href', localized); }
+  }, true);
 
 })();

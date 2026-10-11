@@ -274,6 +274,7 @@
   var productBulkBusy = false;
   var productBulkRevision = 0;
   var catalogLists = window.HN_ADMIN_CATALOG;
+  var SIZES = window.HN_SIZES;
   var productPage = 1;
 
   function updateProductSelection() {
@@ -458,7 +459,7 @@
     setVal('f-category', editing.category);
     setVal('f-badge', editing.badge || '');
     setVal('f-colors', (editing.colors || []).join(', '));
-    setVal('f-sizes', (editing.sizes || []).join(', '));
+    setVal('f-sizes', SIZES.unique(editing.sizes || []).join(', '));
     setVal('f-fabrics', (editing.fabrics || []).join(', '));
     setVal('f-occasions', (editing.occasions || []).join(', '));
     setVal('f-features_en', (editing.features_en || []).join(', '));
@@ -507,7 +508,7 @@
   }
 
   function sizeChoices() {
-    var choices = ['One Size', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', '6XL'];
+    var choices = ['Taille unique', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL', '6XL'];
     for (var n = 32; n <= 60; n += 2) choices.push(String(n));
     (productsAll || []).forEach(function (product) {
       (product.sizes || []).concat((product.variants || []).map(function (variant) { return variant.size; })).forEach(function (size) {
@@ -515,14 +516,14 @@
       });
     });
     strToList(getVal('f-sizes')).forEach(function (size) { if (choices.indexOf(size) < 0) choices.push(size); });
-    return choices;
+    return SIZES.unique(choices);
   }
 
   function addSize(value) {
-    var size = String(value || '').trim();
+    var size = SIZES.canonical(value);
     if (!size || size.length > 40 || /[,\x00-\x1f\x7f]/.test(size)) { toast('Saisissez une taille de 1 à 40 caractères, sans virgule.', 'err'); return; }
-    var selected = strToList(getVal('f-sizes'));
-    if (selected.some(function (current) { return current.toLowerCase() === size.toLowerCase(); })) return;
+    var selected = SIZES.unique(strToList(getVal('f-sizes')));
+    if (selected.some(function (current) { return SIZES.key(current) === SIZES.key(size); })) return;
     selected.push(size);
     setVal('f-sizes', selected.join(', '));
   }
@@ -537,25 +538,27 @@
   }
 
   function variantSizeHtml(size) {
+    size = SIZES.canonical(size);
     var choices = sizeChoices();
     if (size && choices.indexOf(size) < 0) choices.push(size);
     return '<select class="v-size" aria-label="Choisir la taille de cette variante"><option value="">Choisir une taille / non renseignée</option>' + choices.map(function (value) {
-      return '<option value="' + esc(value) + '"' + (value === size ? ' selected' : '') + '>' + esc(value === 'One Size' ? 'Taille unique (One Size)' : value) + '</option>';
+      return '<option value="' + esc(value) + '"' + (value === size ? ' selected' : '') + '>' + esc(value) + '</option>';
     }).join('') + '<option value="" data-custom-size="true">Autre taille…</option></select>';
   }
 
   function buildVariantGrid() {
     var colors = strToList(getVal('f-colors'));
-    var sizes = strToList(getVal('f-sizes'));
+    var sizes = SIZES.unique(strToList(getVal('f-sizes')));
 
     // Keep previously typed stock/barcode values when the lists change.
     var keep = {};
     (editing.variants || []).forEach(function (v) {
-      keep[v.color + '||' + v.size] = { stock: v.stock, barcode: v.barcode || '' };
+      var preferred = SIZES.find(editing.variants, v.color, v.size);
+      if (preferred === v) keep[v.color + '||' + SIZES.canonical(v.size)] = { stock: v.stock, barcode: v.barcode || '' };
     });
     if (variantGridRevision === editorRevision) document.querySelectorAll('#variantGrid .variant-row').forEach(function (row) {
       var color = row.querySelector('.v-color').value.trim(), size = row.querySelector('.v-size').value.trim();
-      var key = color + '||' + size, persisted = keep[key];
+      var key = color + '||' + SIZES.canonical(size), persisted = keep[key];
       keep[key] = { stock: persisted ? persisted.stock : row.querySelector('.v-stock').value.trim(), barcode: row.querySelector('.v-barcode').value.trim() };
     });
 
@@ -585,8 +588,8 @@
     });
 
     var html = rows.map(function (r, i) {
-      var persisted = (editing.variants || []).filter(function (v) { return v.id && v.color === r.color && v.size === r.size; })[0];
-      return '<div class="variant-row" data-i="' + i + '" data-original-size="' + esc(r.size) + '">' +
+      var persisted = SIZES.find(editing.variants || [], r.color, r.size);
+      return '<div class="variant-row" data-i="' + i + '" data-original-size="' + esc(persisted ? persisted.size : r.size) + '">' +
         (r.color ? colorCellHtml(r.color) : '<input type="text" class="v-color" value="" placeholder="Couleur">') +
         variantSizeHtml(r.size) +
         '<input type="number" class="v-stock" min="0" step="1" value="' + (stockFor(r.color, r.size) === '' ? '' : stockFor(r.color, r.size)) + '" placeholder="0"' + (persisted ? ' readonly aria-label="Stock existant, à ajuster dans la rubrique Stock"' : ' aria-label="Stock initial de la nouvelle variante"') + '>' +
@@ -610,10 +613,10 @@
       var stockRaw = row.querySelector('.v-stock').value.trim();
       if (stockRaw === '' ) return; // untouched => unmanaged row
       var barcodeEl = row.querySelector('.v-barcode');
-      var existing = (editing.variants || []).filter(function (variant) { return variant.color === color && variant.size === size; })[0];
+      var existing = SIZES.find(editing.variants || [], color, size);
       out.push({
         color: color,
-        size: size,
+        size: existing ? existing.size : SIZES.canonical(size),
         stock: Math.max(0, parseInt(stockRaw, 10) || 0),
         expected_stock: existing ? existing.stock : null,
         barcode: barcodeEl ? barcodeEl.value.trim() : ''
@@ -631,24 +634,24 @@
       if (custom === null) return;
       chosen = custom.trim();
       if (!chosen || chosen.length > 40 || /[,\x00-\x1f\x7f]/.test(chosen)) { toast('Saisissez une taille de 1 à 40 caractères, sans virgule.', 'err'); return; }
-      var known = sizeChoices().filter(function (size) { return size.toLowerCase() === chosen.toLowerCase(); })[0];
+      var known = sizeChoices().filter(function (size) { return SIZES.key(size) === SIZES.key(chosen); })[0];
       chosen = known || chosen;
       if (!Array.prototype.some.call(input.options, function (option) { return option.value === chosen; })) {
         var option = document.createElement('option'); option.value = chosen; option.textContent = chosen; input.appendChild(option);
       }
       input.value = chosen;
     }
-    if (chosen === before) return;
+    if (SIZES.key(chosen) === SIZES.key(before)) { input.value = SIZES.canonical(before); return; }
     var persisted = (editing.variants || []).filter(function (variant) { return variant.id && variant.color === color && variant.size === before; })[0];
     if (persisted) {
-      input.value = before;
+      input.value = SIZES.canonical(before);
       if (!chosen) { toast('Cette variante est enregistrée : sa taille et son stock sont conservés. Choisissez une autre taille pour préparer une nouvelle variante.', 'err'); return; }
       var selected = strToList(getVal('f-sizes'));
       if (selected.indexOf(chosen) < 0) addSize(chosen);
       toast('Taille ' + chosen + ' disponible dans une ligne distincte. La variante enregistrée et son stock restent inchangés ; renseignez séparément le stock initial de la nouvelle variante.', 'ok');
       return;
     }
-    var duplicate = Array.prototype.some.call(document.querySelectorAll('#variantGrid .variant-row'), function (other) { return other !== row && other.querySelector('.v-color').value.trim() === color && other.querySelector('.v-size').value === chosen; });
+    var duplicate = Array.prototype.some.call(document.querySelectorAll('#variantGrid .variant-row'), function (other) { return other !== row && other.querySelector('.v-color').value.trim() === color && SIZES.key(other.querySelector('.v-size').value) === SIZES.key(chosen); });
     if (duplicate) { input.value = before; toast('Cette taille existe déjà pour ce coloris : utilisez sa ligne pour éviter un doublon.', 'err'); return; }
     if (chosen) {
       var sizes = strToList(getVal('f-sizes'));
@@ -822,7 +825,7 @@
       fabrics: strToList(getVal('f-fabrics')),
       occasions: strToList(getVal('f-occasions')),
       colors: strToList(getVal('f-colors')),
-      sizes: strToList(getVal('f-sizes')),
+      sizes: SIZES.unique(strToList(getVal('f-sizes'))),
       fabric_comp_en: getVal('f-fabric_comp_en'),
       fabric_comp_fr: getVal('f-fabric_comp_fr'),
       fabric_comp_ar: getVal('f-fabric_comp_ar'),

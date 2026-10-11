@@ -220,6 +220,7 @@ function sizesPicker(initial = '') {
   node('f-sizes').value = initial;
   const context = {
     productsAll: [{ sizes: ['38/40'], variants: [{ size: 'Longue' }, { size: '' }] }],
+    SIZES: require('../public/js/product-sizes'),
     document: { getElementById: node },
     getVal: id => node(id).value,
     setVal: (id, value) => { node(id).value = value; },
@@ -237,7 +238,7 @@ test('le menu de tailles propose lettres, chiffres et tailles existantes sans ch
   const mock = sizesPicker();
   assert.equal(mock.nodes['f-sizes'].value, '');
   assert(!mock.context.variantSizeHtml('').includes(' selected'));
-  for (const size of ['One Size','XXS','XS','M','6XL','32','60','38/40','Longue']) assert(Array.from(mock.context.sizeChoices()).includes(size));
+  for (const size of ['Taille unique','XXS','XS','M','6XL','32','60','38/40','Longue']) assert(Array.from(mock.context.sizeChoices()).includes(size));
   assert(!Array.from(mock.context.sizeChoices()).includes(''));
   mock.context.addSize('M');mock.context.addSize('38/40');mock.context.addSize('Longueur 145');
   assert.equal(mock.nodes['f-sizes'].value,'M, 38/40, Longueur 145');
@@ -262,7 +263,7 @@ test('chaque taille de variante est un vrai select avec toutes les propositions 
   assert.match(blank, /^<select class="v-size"/);
   assert.match(blank, /aria-label="Choisir la taille/);
   assert(!blank.includes(' selected'));
-  for(const size of ['One Size','XXS','M','6XL','32','60','38/40','Sur mesure']) assert(blank.includes('value="'+size+'"'));
+  for(const size of ['Taille unique','XXS','M','6XL','32','60','38/40','Sur mesure']) assert(blank.includes('value="'+size+'"'));
   assert(mock.context.variantSizeHtml('Taille historique').includes('value="Taille historique" selected'));
 });
 test('ajouter une taille conserve les quantités initiales et codes saisis, sans altérer le stock existant ni une autre fiche', () => {
@@ -270,6 +271,7 @@ test('ajouter une taille conserve les quantités initiales et codes saisis, sans
   const draft = (size,stock,barcode) => ({ querySelector: selector => ({ value: { '.v-color':'Vin','.v-size':size,'.v-stock':stock,'.v-barcode':barcode }[selector] }) });
   const context = {
     editing:{variants:[{id:'existing',color:'Vin',size:'M',stock:18,barcode:'OLD'}]},
+    SIZES: require('../public/js/product-sizes'),
     editorRevision:1,variantGridRevision:1,
     getVal:id=>id==='f-colors'?'Vin':'M, L, XL',
     strToList:value=>value.split(',').map(s=>s.trim()),esc:value=>String(value),colorCellHtml:()=>'',
@@ -291,7 +293,7 @@ test('changer le menu d’une variante existante propose une autre ligne sans d�
   const messages=[],updates=[];
   const row={querySelector:()=>({value:'Vin'}),getAttribute:()=>''};
   const input={value:'M',closest:()=>row,selectedOptions:[]};
-  const context={editing:{variants:[{id:'existing',color:'Vin',size:'',stock:18}]},getVal:()=>'',strToList:value=>value.split(',').filter(Boolean),addSize:size=>updates.push(size),toast:(...args)=>messages.push(args),document:{querySelectorAll:()=>[]}};
+  const context={SIZES:require('../public/js/product-sizes'),editing:{variants:[{id:'existing',color:'Vin',size:'',stock:18}]},getVal:()=>'',strToList:value=>value.split(',').filter(Boolean),addSize:size=>updates.push(size),toast:(...args)=>messages.push(args),document:{querySelectorAll:()=>[]}};
   const source=fs.readFileSync('public/js/admin.js','utf8');vm.createContext(context);
   vm.runInContext(source.slice(source.indexOf('  function changeVariantSize('),source.indexOf('  function normalizeColorName(')),context);
   context.changeVariantSize(input);
@@ -303,7 +305,7 @@ test('changer une nouvelle ligne ajoute la taille à la fiche et refuse une comb
   const updates=[],messages=[];
   const row={querySelector:()=>({value:'Gris'}),getAttribute:()=>''};
   const input={value:'L',closest:()=>row,selectedOptions:[]};
-  const context={editing:{variants:[]},getVal:()=>'',strToList:value=>value.split(',').filter(Boolean),setVal:(...args)=>updates.push(args),toast:(...args)=>messages.push(args),document:{querySelectorAll:()=>[row]}};
+  const context={SIZES:require('../public/js/product-sizes'),editing:{variants:[]},getVal:()=>'',strToList:value=>value.split(',').filter(Boolean),setVal:(...args)=>updates.push(args),toast:(...args)=>messages.push(args),document:{querySelectorAll:()=>[row]}};
   const source=fs.readFileSync('public/js/admin.js','utf8');vm.createContext(context);
   vm.runInContext(source.slice(source.indexOf('  function changeVariantSize('),source.indexOf('  function normalizeColorName(')),context);
   context.changeVariantSize(input);assert.deepEqual(updates,[['f-sizes','L']]);
@@ -315,7 +317,7 @@ test('Autre taille permet une personnalisation explicite, sans changement après
   const updates=[],messages=[];
   const row={querySelector:()=>({value:'Gris'}),getAttribute:()=>''};
   const input={value:'',closest:()=>row,selectedOptions:[{hasAttribute:()=>true}],options:[],appendChild(option){this.options.push(option);}};
-  const context={editing:{variants:[]},prompt:()=>null,sizeChoices:()=>['M'],getVal:()=>'',strToList:value=>value.split(',').filter(Boolean),setVal:(...args)=>updates.push(args),toast:(...args)=>messages.push(args),document:{querySelectorAll:()=>[row],createElement:()=>({value:'',textContent:''})}};
+  const context={SIZES:require('../public/js/product-sizes'),editing:{variants:[]},prompt:()=>null,sizeChoices:()=>['M'],getVal:()=>'',strToList:value=>value.split(',').filter(Boolean),setVal:(...args)=>updates.push(args),toast:(...args)=>messages.push(args),document:{querySelectorAll:()=>[row],createElement:()=>({value:'',textContent:''})}};
   const source=fs.readFileSync('public/js/admin.js','utf8');vm.createContext(context);
   vm.runInContext(source.slice(source.indexOf('  function changeVariantSize('),source.indexOf('  function normalizeColorName(')),context);
   context.changeVariantSize(input);assert.equal(updates.length,0);

@@ -8,6 +8,7 @@
   var HN = window.HN;
   if (!HN) return;
   var tr = HN.tr;
+  var SIZES = window.HN_SIZES;
 
   var COLORS = window.HN_COLORS || {
     hex: function () { return '#A67C00'; },
@@ -147,15 +148,16 @@
 
     // Sizes
     var sizeWrap = document.querySelector('.size-options');
-    var productSizes = Array.isArray(p.sizes) && p.sizes.length ? p.sizes : productVariants(p).map(function (variant) { return variant.size || ''; }).filter(function (size, index, list) { return list.indexOf(size) === index; });
+    var productSizes = SIZES.unique(Array.isArray(p.sizes) && p.sizes.length ? p.sizes : productVariants(p).filter(function (variant) { return variant.active !== false; }).map(function (variant) { return variant.size || ''; }));
+    if (!productSizes.length && productVariants(p).some(function (variant) { return !variant.size; })) productSizes = [''];
     if (sizeWrap) {
       var sizesHtml = '';
       productSizes.forEach(function (s, i) {
-        sizesHtml += '<button class="size-option' + (i === 0 ? ' active' : '') + '" type="button" data-size="' + esc(s) + '">' + esc(s || tr('sizeUnspecified')) + '</button>';
+        sizesHtml += '<button class="size-option' + (i === 0 ? ' active' : '') + '" type="button" data-size="' + esc(s) + '">' + esc(s === 'Taille unique' ? tr('sizeOne') : s || tr('sizeUnspecified')) + '</button>';
       });
       sizeWrap.innerHTML = sizesHtml;
       var sizeLabel = document.getElementById('selectedSize');
-      if (sizeLabel) sizeLabel.textContent = productSizes.length ? productSizes[0] || tr('sizeUnspecified') : '';
+      if (sizeLabel) sizeLabel.textContent = productSizes.length ? productSizes[0] === 'Taille unique' ? tr('sizeOne') : productSizes[0] || tr('sizeUnspecified') : '';
     }
 
     // Breadcrumb last crumb
@@ -305,12 +307,7 @@
   function variantFor(p, color, size) {
     var vs = productVariants(p);
     if (!vs.length) return null;
-    var c = lower(color);
-    var s = lower(size);
-    for (var i = 0; i < vs.length; i++) {
-      if (lower(vs[i].color) === c && lower(vs[i].size) === s) return vs[i];
-    }
-    return null;
+    return SIZES.find(vs, color, size);
   }
 
   function variantStock(v) {
@@ -705,7 +702,7 @@
     var managed = productVariants(current).length > 0;
     if (managed && stock === 0) { qty = 0; }
     if (managed && qty > stock) { qty = Math.max(0, stock); }
-    return { color: color, size: size, qty: qty, variantId: variant ? variant.id : null, stock: managed ? stock : null };
+    return { color: variant ? variant.color : color, size: variant ? variant.size : size, qty: qty, variantId: variant ? variant.id : null, stock: managed ? stock : null };
   }
 
   function wireActions(p) {
@@ -725,7 +722,7 @@
         image: window.HN_MEDIA.select(p, o.color).images[0] || p.image || ''
       }, { color: o.color, size: o.size, qty: o.qty, variantId: o.variantId, stock: o.stock });
       showToast(tr('cartAdd'), HN.productName(p) + ' x' + o.qty + ' ' + tr('cartAddMsg'), 'success');
-      if (redirect) window.location.href = 'checkout.html';
+      if (redirect) window.location.href = HN.pageUrl('checkout.html');
     }
 
     if (addBtn) addBtn.addEventListener('click', function () { handleAdd(false); });
@@ -747,7 +744,7 @@
     loading.hidden = false;
     HN.loading(loading, 'card', 1);
     document.querySelectorAll('[data-product-content]').forEach(function (section) { section.hidden = true; section.setAttribute('inert', ''); });
-    if (!slug) { HN.loadError(loading, function () { window.location.href = 'shop.html'; }, 'productNotFound'); return; }
+    if (!slug) { HN.loadError(loading, function () { window.location.href = HN.pageUrl('shop.html'); }, 'productNotFound'); return; }
 
     // Apply the persisted wishlist state to the detail heart right away,
     // without waiting for the catalog (slug is already known from the URL).

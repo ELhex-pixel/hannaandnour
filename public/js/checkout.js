@@ -279,7 +279,7 @@
       if (!state.quote || state.paying) return;
       var items = HN.cart.list();
       if (!items.length) {
-        window.location.href = 'cart.html';
+        window.location.href = HN.pageUrl('cart.html');
         return;
       }
 
@@ -375,7 +375,7 @@
     var items = HN.cart.list();
     if (!items.length) {
       setEmptyCartButton();
-      window.location.href = 'cart.html';
+      window.location.href = HN.pageUrl('cart.html');
       return;
     }
 

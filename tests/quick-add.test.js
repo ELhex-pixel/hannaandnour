@@ -33,6 +33,7 @@ function setup(variants = [], options = {}) {
   context.window.addEventListener = (type, handler) => { windowEvents[type] = handler; };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('public/js/store.js', 'utf8'), context);
+  vm.runInContext(fs.readFileSync('public/js/product-sizes.js', 'utf8'), context);
   vm.runInContext(fs.readFileSync('public/js/quick-add.js', 'utf8'), context);
   const button = element('button'); button.closest = () => ({ getAttribute: () => 'veste-test' });
   const HN = context.window.HN;
@@ -220,4 +221,44 @@ test('la sélection modifiée pendant la lecture est conservée et les prix affi
   assert.equal(mock.nodes.find(node => node.className === 'quick-add-price').textContent, '$20.00');
   assert.equal(mock.node('quickAddVariant').value, b.id);
   assert.equal(mock.HN.cart.list().length, 0);
+});
+test('les trois anciennes variantes Taille unique désactivées ne doublonnent plus les variantes One Size actives', async () => {
+  const colors = ['Gris clair','Noir','Gris'];
+  const old = colors.map(color => ({ ...variant(color, 0, false), size: 'Taille unique' }));
+  const current = colors.map((color, index) => ({ ...variant(color, [2,8,2][index]), size: 'One Size' }));
+  const rows = old.concat(current), before = clone(rows), mock = setup(rows);
+  await mock.add();
+  const options = mock.node('quickAddVariant').children.filter(option => option.value);
+  assert.equal(options.length, 3);
+  assert.deepEqual(options.map(option => option.value), current.map(v => v.id));
+  assert(options.every(option => option.textContent.includes('Taille unique') && !option.disabled));
+  assert(!options.some(option => option.textContent.includes('Indisponible')));
+  mock.choose(current[1].id); await mock.submit();
+  assert.equal(mock.HN.cart.list()[0].size, 'One Size');
+  assert.equal(mock.HN.cart.list()[0].variantId, current[1].id);
+  assert.deepEqual(rows, before);
+});
+
+test('les tailles affichées sont traduites sans modifier les identifiants ni les tailles réelles', async () => {
+  for (const lang of ['fr','en','ar']) {
+    const one = { ...variant('Noir', 2), size: 'One Size' }, named = { ...variant('Vin', 3), size: '38/40' };
+    const mock = setup([one, named], { lang }); await mock.add();
+    const options = mock.node('quickAddVariant').children;
+    assert(options.find(option => option.value === one.id).textContent.includes(translations[lang].sizeOne));
+    assert(options.find(option => option.value === named.id).textContent.includes('38/40'));
+    mock.context.window.HN_QUICK_ADD.close();
+  }
+});
+
+test('les variantes désactivées restent masquées lors de la synchronisation sans inventer un stock illimité', async () => {
+  const a = variant('Vin', 2), b = variant('Noir', 3), mock = setup([a,b]);
+  await mock.add(); mock.choose(a.id);
+  mock.state.product.variants[0].active = false; await mock.refresh();
+  assert(!mock.node('quickAddVariant').children.some(option => option.value === a.id));
+  assert.equal(mock.node('quickAddVariant').value, '');
+  assert.equal(mock.node('quickAddConfirm').disabled, true);
+  mock.state.product.variants[1].active = false; await mock.refresh();
+  assert.equal(mock.node('quickAddVariant').children.length, 1);
+  assert.equal(mock.node('quickAddConfirm').disabled, true);
+  await mock.submit(); assert.equal(mock.HN.cart.list().length, 0);
 });

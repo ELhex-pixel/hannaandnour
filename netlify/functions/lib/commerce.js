@@ -1,6 +1,7 @@
 const rules = require('../../../public/js/commerce');
 const { intEnv, floatEnv } = require('../shared');
 const { returnPolicy } = require('./return-policy');
+const sizes = require('../../../public/js/product-sizes');
 
 async function settings(sb, rows) {
   let data = rows;
@@ -34,9 +35,9 @@ async function quote(sb, body) {
     const product = (products || []).find(p => p.slug === item.slug);
     if (!product) throw new Error('Product unavailable');
     const managed = (variants || []).filter(v => v.product_id === product.id);
-    const variant = managed.find(v => String(v.color).toLowerCase() === item.color.toLowerCase() && String(v.size).toLowerCase() === item.size.toLowerCase());
+    const variant = sizes.find(managed, item.color, item.size);
     if (managed.length && (!variant || !variant.active || variant.stock < item.qty)) throw new Error('Stock unavailable');
-    return { ...item, product, variantId: variant ? variant.id : null, price_cents: product.price_cents };
+    return { ...item, color: variant ? variant.color : item.color, size: variant ? variant.size : item.size, product, variantId: variant ? variant.id : null, price_cents: product.price_cents };
   });
   let promo = null;
   if (body.promo) {

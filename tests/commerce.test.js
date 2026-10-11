@@ -97,6 +97,7 @@ function productStockUI(product, language = 'fr') {
   const head = { appendChild(node) { state.schema = JSON.parse(node.textContent); } };
   const context = {
     current: product,
+    SIZES: require('../public/js/product-sizes'),
     stockEl: { style: {}, textContent: '' },
     document: {
       getElementById: id => nodes[id] || null,
