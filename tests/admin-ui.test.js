@@ -448,24 +448,35 @@ test('une réponse de suppression après déconnexion n’ouvre pas un ancien di
   mock.nodes.deleteSelectedProducts.handlers.click(); mock.state.token = ''; reject(new Error('Historique lié')); await settleBulk();
   assert.equal(shown.length, 0);
 });
-test('la suppression exige confirmation saisie, inclut les fiches hors filtre et verrouille les boutons', async () => {
+test('la suppression du catalogue exige confirmation, inclut les fiches hors filtre et verrouille les boutons', async () => {
   const canceled = bulkProducts();
-  canceled.state.typed = 'oui';
+  canceled.state.allowed = false;
   canceled.nodes.deleteSelectedProducts.handlers.click();
   assert.equal(canceled.state.calls.length,0);
   let done;
-  const mock = bulkProducts((action,body) => { assert.equal(action,'purgeProducts'); assert.equal(body.confirmation,'SUPPRIMER'); return new Promise(resolve => { done=resolve; }); });
+  const mock = bulkProducts((action,body) => { assert.equal(action,'deleteProductsFromCatalog'); assert.equal(body.confirmation,'SUPPRIMER'); return new Promise(resolve => { done=resolve; }); });
   mock.nodes.deleteSelectedProducts.handlers.click();
   mock.nodes.deleteSelectedProducts.handlers.click();
   assert.equal(mock.state.calls.length,1);
   assert.match(mock.state.confirms[0],/Fiche hors filtre/);
-  assert.match(mock.state.confirms[0],/irréversible/);
+  assert.match(mock.state.confirms[0],/retirées de la boutique/);
   assert.equal(mock.nodes.clearProductSelection.disabled,true);
   done({ deleted_ids:['one'],missing_ids:['two'] });
   await settleBulk();
   assert.equal(Object.keys(mock.context.productSelection).length,0);
   assert.match(mock.nodes.productBulkStatus.textContent,/1 fiche\(s\) supprimée\(s\)/);
   assert.equal(mock.state.loads,1);
+});
+test('le bouton d’une fiche archivée supprime uniquement cette fiche, sans toucher aux autres sélections', async () => {
+  const mock = bulkProducts((action, body) => Promise.resolve({ deleted_ids: body.ids, missing_ids: [] }));
+  const event = { target: { closest: selector => selector === '.delete-catalog-product' ? { getAttribute: () => 'two' } : null } };
+  mock.nodes.productsList.handlers.click(event); mock.nodes.productsList.handlers.click(event);
+  assert.equal(mock.state.calls.length, 1);
+  assert.deepEqual(mock.state.calls[0], { action: 'deleteProductsFromCatalog', ids: ['two'] });
+  assert(mock.state.confirms[0].includes('Fiche hors filtre')); assert(!mock.state.confirms[0].includes('Fiche affichée'));
+  await settleBulk();
+  assert.deepEqual(Object.keys(mock.context.productSelection), ['one']);
+  assert.equal(mock.state.loads, 1);
 });
 test('une suppression refusée, incomplète ou tardive conserve la sélection sans faux succès', async () => {
   for (const response of [()=>Promise.reject(new Error('Historique protégé')),()=>Promise.resolve({ deleted_ids:['one'],missing_ids:[] }),()=>Promise.resolve({ deleted_ids:['one'],missing_ids:['one'] })]) {

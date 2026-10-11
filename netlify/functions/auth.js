@@ -150,6 +150,11 @@ exports.handler = async function (event) {
         const auth = await requireUser(sb, bearerToken(event));
         if (!auth.ok) return json(401, { error: auth.error });
         const user = auth.user;
+        if (body.return_portal === true) {
+          const limited = await rateLimit(sb, event, 'customer-return-list', 60, 600, user.id);
+          if (limited) return limited;
+          return await require('./lib/customer-return-list').customerReturnList(sb, user.id, body);
+        }
         let query = sb.from('orders').select('*, order_items(*)').eq('user_id', user.id);
 
         // Optional date range on created_at (values "YYYY-MM-DD").

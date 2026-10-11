@@ -945,13 +945,28 @@ body[data-menu-open="true"] .nav-mobile {
   transition: transform var(--transition-normal);
 }
 
-.product-card:hover .product-card-quick-add {
+.product-card:hover .product-card-quick-add,
+.product-card:focus-within .product-card-quick-add {
   transform: translateY(0);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .product-card-quick-add { transform: translateY(0); }
 }
 
 .product-card-quick-add .btn {
   width: 100%;
 }
+
+.quick-add-dialog { width: min(440px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow-y: auto; margin: auto; padding: var(--spacing-xl); border: 1px solid var(--color-cream-dark); border-radius: var(--radius-md); background: var(--color-off-white); color: var(--color-charcoal); }
+.quick-add-dialog::backdrop { background: rgba(0, 0, 0, .5); }
+.quick-add-dialog h2 { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: var(--spacing-md); overflow-wrap: anywhere; }
+.quick-add-price { font-weight: 600; margin-bottom: var(--spacing-lg); }
+.quick-add-field { margin-bottom: var(--spacing-md); }
+.quick-add-field label { display: block; margin-bottom: var(--spacing-sm); }
+.quick-add-field select { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--color-gray-light); border-radius: var(--radius-sm); background: var(--color-off-white); color: var(--color-charcoal); font: inherit; }
+.quick-add-actions { display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-lg); flex-wrap: wrap; }
+.quick-add-actions .btn { flex: 1 1 160px; }
 
 .product-card-info {
   padding: var(--spacing-lg);
@@ -4905,6 +4920,18 @@ select.lang-switcher {
 .admin-page .admin-deletion-card ul { padding-left: 20px; margin: 8px 0; }
 .admin-page .admin-deletion-card li { margin-bottom: 10px; font-size: 12px; line-height: 1.7; }
 .admin-page .admin-deletion-card .view-order { display: block; margin-top: 6px; }
+.admin-page .admin-return-card { border-bottom: 1px solid var(--admin-border); padding: 14px 0; overflow-wrap: anywhere; }
+.admin-page .admin-return-card summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; cursor: pointer; min-height: 40px; }
+.admin-page .admin-return-card summary strong { flex: 1 1 260px; }
+.admin-page .admin-return-card summary small { color: var(--color-gray); }
+.admin-page .admin-return-body { padding: 16px 4px; display: grid; gap: 10px; }
+.admin-page .admin-return-body :is(input,select,textarea) { width: min(100%,560px); padding: 10px; border: 1px solid var(--admin-border); border-radius: var(--radius-sm); background: var(--admin-surface); color: var(--color-charcoal); font: inherit; }
+.admin-page .admin-return-body button { justify-self: start; }
+.account-return-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-sm); margin: var(--spacing-md) 0; }
+.account-return-controls .form-input { flex: 1 1 160px; min-width: 0; width: auto; }
+.account-return-order summary { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); justify-content: space-between; cursor: pointer; padding: var(--spacing-sm) 0; }
+.account-return-order summary span { color: var(--color-gray); font-size: .8125rem; }
+.account-return-body { padding-top: var(--spacing-md); }
 .admin-page .admin-table { table-layout: auto; }
 .admin-page .admin-table td { padding: 16px 8px; overflow-wrap: anywhere; }
 .admin-page .admin-table th { padding: 10px 8px 16px; color: var(--color-gray); font-size: 10px; }

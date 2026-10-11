@@ -248,7 +248,7 @@ function services(options = {}) {
       state.calls.push({ payload, needsAuth });
       if (payload.action === 'orders') {
         if (options.pending) return new Promise(resolve => { state.resolveOrders = resolve; });
-        return { orders: options.orders || [] };
+        return { orders: options.orders || [], total: (options.orders || []).length, page: payload.page || 1, limit: payload.limit || 5 };
       }
       return { ok: true };
     }
@@ -295,8 +295,9 @@ test('les services ne déclenchent aucun email au chargement et valident le code
   assert.equal(confirmation.payload.code, '123456');
   assert.equal(confirmation.needsAuth, true);
   assert.equal(mock.state.calls.filter(call => call.payload.action === 'requestOrderClaim').length, 0);
-  assert.equal(mock.state.requests[0].request.headers.Authorization, 'Bearer fixture-token');
-  assert.doesNotMatch(mock.state.requests[0].url, /token/);
+  assert.equal(mock.state.requests.length, 0);
+  assert.equal(mock.state.calls[0].payload.return_portal, true);
+  assert.equal(mock.state.calls[0].needsAuth, true);
 });
 
 test('une réponse de commandes arrivée après déconnexion ne restaure aucune donnée privée', async () => {

@@ -521,6 +521,10 @@
       }
     }
     if (found) {
+      var currentCap = Math.min(10, o.stock != null ? maxQty : found.maxQty != null ? found.maxQty : 10);
+      if (found.qty >= currentCap) return cart;
+      if (o.stock != null) found.maxQty = maxQty;
+      if (o.variantId) found.variantId = o.variantId;
       found.qty = Math.min(found.maxQty != null ? found.maxQty : 10, 10, found.qty + qty || qty);
     } else {
       cart.push({
@@ -616,6 +620,7 @@
   function quickAdd(btn) {
     var card = btn && btn.closest ? btn.closest('.product-card, [data-slug]') : null;
     var slug = card ? card.getAttribute('data-slug') : (btn ? btn.getAttribute('data-slug') : null);
+    if (window.HN_QUICK_ADD && typeof window.HN_QUICK_ADD.add === 'function') return window.HN_QUICK_ADD.add(btn, slug);
     var product = productsList.filter(function (p) { return p.slug === slug && p.active !== false; })[0];
     if (!product) {
       if (slug) window.location.href = productUrl(slug);
@@ -624,7 +629,7 @@
 
     // Products with managed variant stock need a color/size selection: the
     // one-tap button cannot pick a valid variant, so open the product page.
-    if (product.product_variants && product.product_variants.length) {
+    if ((product.variants && product.variants.length) || (product.product_variants && product.product_variants.length)) {
       window.location.href = productUrl(product.slug);
       return;
     }

@@ -55,7 +55,7 @@ test('erreur de lecture et réponse incomplète n’annoncent jamais un produit 
   const id = randomUUID();
   for (const response of [() => Promise.reject(new Error('Lecture indisponible')), () => ({ id, missing: false, product: { id, name: 'Test' }, reasons: [] })]) {
     const mock = ui(response); mock.controller.show([id]); await settle();
-    assert(!mock.nodes.productDeletionDetails.textContent.includes('Aucun blocage'));
+    assert(!mock.nodes.productDeletionDetails.textContent.includes('Aucun historique'));
     assert.match(mock.nodes.productDeletionDetails.textContent, /non confirmé|incomplète/);
   }
 });

@@ -442,12 +442,12 @@
         <button class="btn btn-primary" id="newProductBtn">+ Nouveau produit</button>
       </div>
       <div class="admin-notice"><strong>Un produit archivé reste dans votre historique.</strong> Il n’est plus vendu sur le site. « Stock non configuré » ne signifie pas « épuisé » : renseignez chaque taille et coloris avant les ventes.</div>
-      <div class="admin-bulk-bar"><span id="productSelectionCount" role="status">Aucun produit sélectionné</span><button type="button" class="btn btn-secondary btn-small" id="selectProductPage" disabled>Sélectionner cette page</button><button type="button" class="btn btn-secondary btn-small" id="inspectProductDeletion" disabled>Vérifier les liens / la suppression</button><button type="button" class="btn btn-primary btn-small" id="activateSelectedProducts" disabled>Activer la sélection</button><button type="button" class="btn btn-danger btn-small" id="archiveSelectedProducts" disabled>Archiver la sélection</button><button type="button" class="btn btn-danger btn-small" id="deleteSelectedProducts" disabled>Supprimer définitivement</button><button type="button" class="btn btn-secondary btn-small" id="clearProductSelection" disabled>Désélectionner</button></div>
-      <p class="admin-muted">Supprimer définitivement concerne uniquement les fiches hors ligne, sans stock ni historique. Les photos originales ne sont pas effacées. Pour conserver une fiche, utilisez Archiver.</p>
+      <div class="admin-bulk-bar"><span id="productSelectionCount" role="status">Aucun produit sélectionné</span><button type="button" class="btn btn-secondary btn-small" id="selectProductPage" disabled>Sélectionner cette page</button><button type="button" class="btn btn-secondary btn-small" id="inspectProductDeletion" disabled>Voir l’historique lié</button><button type="button" class="btn btn-primary btn-small" id="activateSelectedProducts" disabled>Activer la sélection</button><button type="button" class="btn btn-danger btn-small" id="archiveSelectedProducts" disabled>Archiver la sélection</button><button type="button" class="btn btn-danger btn-small" id="deleteSelectedProducts" disabled>Supprimer du catalogue</button><button type="button" class="btn btn-secondary btn-small" id="clearProductSelection" disabled>Désélectionner</button></div>
+      <p class="admin-muted">Archiver garde la fiche dans « Hors ligne / archivés ». Supprimer du catalogue la retire de Produits, des produits archivés et de la boutique, même avec un historique. Les commandes, avis, ajustements, coûts, photos et quantités restent conservés.</p>
       <p id="productBulkStatus" class="admin-operation-status" role="status" hidden></p>
       <section class="card" id="productDeletionInfo" aria-labelledby="productDeletionTitle" hidden>
-        <h3 id="productDeletionTitle">Liens qui empêchent la suppression</h3>
-        <p class="admin-muted">Vérification en lecture seule des produits sélectionnés au moment de la demande. Les compteurs sont complets ; au maximum trois références sont présentées par motif. Les ajustements archivés comptent aussi dans l’historique.</p>
+        <h3 id="productDeletionTitle">Historique lié au produit</h3>
+        <p class="admin-muted">Ces références restent conservées après une suppression du catalogue. Les compteurs sont complets ; au maximum trois références sont présentées par type. Les ajustements archivés comptent aussi dans l’historique.</p>
         <div id="productDeletionDetails" aria-live="polite"></div>
         <div class="toolbar admin-list-pagination"><button type="button" class="btn btn-secondary btn-small" id="productDeletionPrevious" disabled>Précédents</button><span id="productDeletionPage" role="status"></span><button type="button" class="btn btn-secondary btn-small" id="productDeletionNext" disabled>Suivants</button><button type="button" class="btn btn-secondary btn-small" id="closeProductDeletionInfo">Fermer les détails</button></div>
       </section>
@@ -478,7 +478,11 @@
     </div>
     <div class="admin-panel" id="panel-returns">
       <div class="admin-notice"><strong>Parcours actuel :</strong> demande depuis le compte client → décision dans cet admin → réception physique → remboursement séparé. Ne remettez en stock que des articles contrôlés et revendables. Les étiquettes retour ne sont pas encore générées par le site.</div>
-      <div class="card"><h2>Demandes de retour</h2><p>1. Examiner et autoriser avec un motif. 2. Recevoir et contrôler les articles. 3. Remettre uniquement les unités revendables en stock. 4. Traiter séparément le remboursement dans la commande. Les décisions ne déclenchent aucun email automatique.</p><button type="button" class="btn btn-secondary" id="refreshReturnRequests">Actualiser</button><div id="returnRequestsList"></div></div>
+      <div class="card"><h2>Demandes de retour</h2><p>Ouvrez une ligne pour examiner la demande, autoriser/refuser, ou enregistrer la réception physique. Le remboursement se traite séparément dans la commande. « Supprimer de la liste » retire uniquement une demande reçue ou refusée de cette vue admin, en conservant l’historique client.</p>
+        <div class="toolbar"><input id="returnAdminSearch" type="search" maxlength="100" aria-label="Rechercher un retour" placeholder="Numéro de commande, article ou motif"><select id="returnAdminScope" aria-label="Filtrer les retours"><option value="open">À traiter</option><option value="requested">À examiner</option><option value="approved">Autorisés / à recevoir</option><option value="received">Réceptions traitées</option><option value="rejected">Refusés</option><option value="all">Toutes les demandes visibles</option></select><button type="button" class="btn btn-secondary" id="returnAdminApply">Rechercher</button><button type="button" class="btn btn-secondary" id="refreshReturnRequests">Actualiser</button></div>
+        <p id="returnListStatus" class="admin-muted" role="status"></p><div id="returnRequestsList"></div>
+        <nav class="toolbar admin-list-pagination" aria-label="Pagination des retours"><span id="returnAdminResults" role="status"></span><label for="returnAdminPageSize">Par page</label><select id="returnAdminPageSize"><option value="10">10</option><option value="5">5</option><option value="25">25</option></select><button type="button" class="btn btn-secondary btn-small" id="returnAdminPrevious" disabled>Précédente</button><button type="button" class="btn btn-secondary btn-small" id="returnAdminNext" disabled>Suivante</button></nav>
+      </div>
     </div>
     <div class="admin-panel" id="panel-orders">
       <div class="toolbar">
@@ -1052,6 +1056,7 @@
   <script src="js/admin-product-deletion.js"></script>
   <script src="js/admin-refunds.js"></script>
   <script src="js/admin-features.js"></script>
+  <script src="js/admin-returns.js"></script>
   <script src="js/admin-cart-offer.js"></script>
   <script src="js/tiktok-xlsx.js"></script>
   <script src="js/admin-tiktok.js"></script>

@@ -129,6 +129,7 @@ async function build() {
       if (preview || process.env.STAGING_MODE === 'true') $('body').attr('data-preview', '');
       if ($('script[src="js/store.js"]').length && !$('script[src="js/content.js"]').length) $('script[src="js/store.js"]').before('<script src="js/content.js"></script>');
       if ($('script[src="js/store.js"]').length && !$('script[src="js/categories.js"]').length) $('script[src="js/store.js"]').before('<script src="js/categories.js"></script>');
+      if ($('script[src="js/store.js"]').length && $('script[src="js/main.js"]').length && !$('script[src="js/quick-add.js"]').length) $('script[src="js/main.js"]').before('<script src="js/quick-add.js"></script>');
       $('base').remove();
       $('head').prepend('<base href="/">');
       $('html').attr('lang', language).attr('dir', language === 'ar' ? 'rtl' : 'ltr');

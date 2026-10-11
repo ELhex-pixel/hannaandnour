@@ -32,6 +32,16 @@ test('les catégories étendues exigent leur migration avant publication sans mo
   await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='catalog_categories_schema_version'?{error:{}}:{data:1};}}),/migration_catalog_categories/);
   assert.equal(calls.at(-1),'catalog_categories_schema_version');
 });
+test('la suppression du catalogue exige sa migration privée avant publication, sans supprimer de fiche', async () => {
+  const calls = [];
+  await assert.rejects(preflight(env, { rpc: async name => { calls.push(name); return name === 'product_catalog_deletion_schema_version' ? { error: {} } : { data: 1 }; } }), /migration_catalog_return_cleanup/);
+  assert.equal(calls.at(-1), 'product_catalog_deletion_schema_version');
+});
+test('les listes de retours exigent leur migration avant publication sans modifier un retour',async()=>{
+  const calls=[];
+  await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='return_lists_schema_version'?{error:{}}:{data:1};}}),/migration_catalog_return_cleanup/);
+  assert.equal(calls.at(-1),'return_lists_schema_version');
+});
 test('le marqueur du lot stock/préparation est obligatoire avant publication', async () => {
   const calls = [];
   await assert.rejects(preflight(env, { rpc: async name => { calls.push(name); return name === 'commerce_schema_version' ? { data: 1 } : { error: { code: 'PGRST202' } }; } }), /migration_admin_inventory/);

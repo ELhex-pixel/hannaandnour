@@ -300,6 +300,7 @@
       '<td data-label=""><span style="white-space:nowrap;">' +
       '<button class="btn btn-secondary btn-small edit-product" data-id="' + esc(p.id) + '">Modifier</button> ' +
       '<button class="btn btn-secondary btn-small dup-product" title="Dupliquer en brouillon avec un stock à zéro" data-id="' + esc(p.id) + '">Dupliquer</button>' +
+      ' <button type="button" class="btn btn-danger btn-small delete-catalog-product" title="Retirer cette fiche de Produits et des produits archivés" data-id="' + esc(p.id) + '" aria-label="Supprimer du catalogue ' + esc(p.name_fr || p.name_en || p.slug) + '"' + (productBulkBusy ? ' disabled' : '') + '>Supprimer</button>' +
       '</span></td></tr>';
   }
 
@@ -308,7 +309,7 @@
     var owner = token();
     return call('listProducts').then(function (res) {
       if (request !== productRequest || owner !== token()) return;
-      productsAll = res.products || [];
+      productsAll = (res.products || []).filter(function (p) { return p.catalog_deleted_at == null; });
       Object.keys(productSelection).forEach(function (id) { if (!productsAll.some(function (p) { return p.id === id; })) delete productSelection[id]; });
       renderProducts();
     }).catch(function (e) {
@@ -1195,7 +1196,7 @@
       '<td data-label="Exp\u00e9dition"><span class="badge ' + shipClass(o.shipping_status) + '">' + shipLabel(o.shipping_status) + '</span>' +
       (o.tracking_number ? '<br><small style="color:#8a7d66;">' + esc(o.tracking_number) + '</small>' : '') + '</td>' +
       '<td data-label=""><span style="white-space:nowrap;"><button class="btn btn-secondary btn-small view-order" data-id="' + o.id + '">Voir</button> ' +
-      '<button class="btn btn-danger btn-small del-order" data-id="' + o.id + '" data-number="' + esc(o.order_number) + '">Supprimer</button></span></td>' +
+      '<button class="btn btn-danger btn-small del-order" data-id="' + o.id + '" data-number="' + esc(o.order_number) + '">Supprimer de la liste</button></span></td>' +
       '</tr>';
   }
 
@@ -1464,14 +1465,17 @@
   }
 
   function deleteOrder(id, label) {
-    if (!confirm('Supprimer d\u00e9finitivement la commande ' + (label || '') + ' ?\nCette action est irr\u00e9versible.')) return;
+    if (!confirm('Retirer la commande ' + (label || '') + ' de la liste admin ?\nLa commande, les paiements et son historique restent conservés.')) return;
+    var owner = token();
     call('deleteOrder', { id: id })
-      .then(function () {
+      .then(function (result) {
+        if (owner !== token()) return;
+        if (!result || result.ok !== true) throw new Error('Retrait de la liste non confirmé. Actualisez pour vérifier.');
         document.getElementById('orderModal').classList.remove('open');
-        toast('Commande supprim\u00e9e', 'ok');
+        toast('Commande retirée de la liste admin', 'ok');
         return loadOrders();
       })
-      .catch(function (e) { toast(e.message, 'err'); });
+      .catch(function (e) { if (owner === token()) toast(e.message, 'err'); });
   }
 
   function wireOrders() {
@@ -3052,47 +3056,50 @@
     document.getElementById('inspectProductDeletion').addEventListener('click', function () {
       if (!productBulkBusy && window.HN_PRODUCT_DELETION) window.HN_PRODUCT_DELETION.show(Object.keys(productSelection));
     });
-    ['activateSelectedProducts', 'archiveSelectedProducts', 'deleteSelectedProducts'].forEach(function (buttonId) {
-      document.getElementById(buttonId).addEventListener('click', function () {
-        if (productBulkBusy) return;
-        var ids = Object.keys(productSelection);
-        if (!ids.length) return;
-        if (ids.length > 100) { toast('Sélectionnez au maximum 100 produits par opération.', 'err'); return; }
-        var activate = buttonId === 'activateSelectedProducts';
-        var purge = buttonId === 'deleteSelectedProducts';
-        var notice = purge ? 'Suppression irréversible des fiches hors ligne, sans stock ni historique. Toute fiche protégée bloque le lot entier ; utilisez Archiver pour la conserver. Les fichiers photo restent conservés.' : activate ? 'Ils seront remis en ligne. Vérifiez les fiches, les prix et les stocks avant la vente. Un stock non configuré peut autoriser des ventes sans limite. Aucune quantité ne sera ajoutée ; les commandes, photos et stocks restent conservés.' : 'Ils ne seront plus vendus. Les commandes, photos et stocks restent conservés.';
-        if (!confirm((purge ? 'Supprimer définitivement' : activate ? 'Activer' : 'Archiver') + ' ces ' + ids.length + ' produits, y compris ceux masqués par vos filtres ?\n\n' + productsAll.filter(function (p) { return productSelection[p.id]; }).map(function (p) { return p.name_fr || p.name_en || p.slug; }).join('\n') + '\n\n' + notice)) return;
-        if (purge && prompt('Suppression définitive des fiches sélectionnées. Seules les fiches hors ligne, sans stock ni historique sont autorisées. Les photos originales restent conservées.\n\nTapez SUPPRIMER pour confirmer.') !== 'SUPPRIMER') return;
-        var owner = token(), request = ++productBulkRevision;
-        clearDeletionInfo();
-        function active() { return owner === token() && request === productBulkRevision; }
-        var status = document.getElementById('productBulkStatus');
-        productBulkBusy = true;
-        status.hidden = false;
-        status.textContent = purge ? 'Vérification et suppression en cours…' : activate ? 'Activation en cours…' : 'Archivage en cours…';
-        renderProducts();
-        call(purge ? 'purgeProducts' : activate ? 'activateProducts' : 'archiveProducts', purge ? { ids: ids, confirmation: 'SUPPRIMER' } : { ids: ids }).then(function (res) {
-          if (!active()) return;
-          if (purge) {
-            if (!Array.isArray(res.deleted_ids) || !Array.isArray(res.missing_ids)) throw new Error('Réponse incomplète : actualisez le catalogue.');
-            var resolved = res.deleted_ids.concat(res.missing_ids);
-            if (resolved.length !== ids.length || resolved.some(function (id, index) { return ids.indexOf(id) < 0 || resolved.indexOf(id) !== index; })) throw new Error('Réponse incomplète : actualisez le catalogue.');
-            resolved.forEach(function (id) { delete productSelection[id]; });
-            status.textContent = res.deleted_ids.length + ' fiche(s) supprimée(s).' + (res.missing_ids.length ? ' ' + res.missing_ids.length + ' déjà absente(s).' : '') + ' Photos originales conservées.';
-            return loadProducts();
-          }
-          var changed = res[activate ? 'activated_ids' : 'archived_ids'];
-          if (!Array.isArray(changed) || changed.some(function (id) { return ids.indexOf(id) < 0; })) throw new Error('Réponse incomplète : vérifiez la visibilité avant de réessayer.');
-          changed = changed.filter(function (id, index) { return changed.indexOf(id) === index; });
-          changed.forEach(function (id) { delete productSelection[id]; });
-          status.textContent = changed.length + ' produit(s) ' + (activate ? 'activé(s)' : 'archivé(s)') + '. Historique et stock conservés.' + (changed.length < ids.length ? ' Certains produits n’ont pas été trouvés : vérifiez la liste actualisée.' : '');
+    function runProductAction(buttonId, ids) {
+      if (productBulkBusy || !ids.length) return;
+      if (ids.length > 100) { toast('Sélectionnez au maximum 100 produits par opération.', 'err'); return; }
+      var activate = buttonId === 'activateSelectedProducts';
+      var remove = buttonId === 'deleteSelectedProducts';
+      var notice = remove ? 'Ces fiches seront retirées de la boutique, de Produits et des produits archivés. Leurs commandes, avis, ajustements, coûts et photos restent conservés dans l’historique. Les quantités ne sont pas effacées.' : activate ? 'Ils seront remis en ligne. Vérifiez les fiches, les prix et les stocks avant la vente. Un stock non configuré peut autoriser des ventes sans limite. Aucune quantité ne sera ajoutée ; les commandes, photos et stocks restent conservés.' : 'Ils ne seront plus vendus. Les commandes, photos et stocks restent conservés.';
+      if (!confirm((remove ? 'Supprimer du catalogue' : activate ? 'Activer' : 'Archiver') + ' ces ' + ids.length + ' produits, y compris ceux masqués par vos filtres ?\n\n' + productsAll.filter(function (p) { return ids.indexOf(p.id) >= 0; }).map(function (p) { return p.name_fr || p.name_en || p.slug; }).join('\n') + '\n\n' + notice)) return;
+      var owner = token(), request = ++productBulkRevision;
+      clearDeletionInfo();
+      function active() { return owner === token() && request === productBulkRevision; }
+      var status = document.getElementById('productBulkStatus');
+      productBulkBusy = true;
+      status.hidden = false;
+      status.textContent = remove ? 'Suppression du catalogue en cours…' : activate ? 'Activation en cours…' : 'Archivage en cours…';
+      renderProducts();
+      call(remove ? 'deleteProductsFromCatalog' : activate ? 'activateProducts' : 'archiveProducts', remove ? { ids: ids, confirmation: 'SUPPRIMER' } : { ids: ids }).then(function (res) {
+        if (!active()) return;
+        if (remove) {
+          if (!Array.isArray(res.deleted_ids) || !Array.isArray(res.missing_ids)) throw new Error('Réponse incomplète : actualisez le catalogue.');
+          var resolved = res.deleted_ids.concat(res.missing_ids);
+          if (resolved.length !== ids.length || resolved.some(function (id, index) { return ids.indexOf(id) < 0 || resolved.indexOf(id) !== index; })) throw new Error('Réponse incomplète : actualisez le catalogue.');
+          resolved.forEach(function (id) { delete productSelection[id]; });
+          productsAll = productsAll.filter(function (p) { return resolved.indexOf(p.id) < 0; });
+          status.textContent = res.deleted_ids.length + ' fiche(s) supprimée(s) du catalogue et des produits archivés.' + (res.missing_ids.length ? ' ' + res.missing_ids.length + ' déjà absente(s).' : '') + ' Historique, photos et quantités conservés.';
           return loadProducts();
-        }).catch(function (error) {
-          if (!active()) return;
-          status.textContent = (purge ? 'Suppression non confirmée : ' : activate ? 'Activation non confirmée : ' : 'Archivage non confirmé : ') + error.message + '. Actualisez la liste pour vérifier avant de recommencer.';
-          if (purge && window.HN_PRODUCT_DELETION) window.HN_PRODUCT_DELETION.show(ids);
-        }).finally(function () { if (active()) { productBulkBusy = false; renderProducts(); } });
-      });
+        }
+        var changed = res[activate ? 'activated_ids' : 'archived_ids'];
+        if (!Array.isArray(changed) || changed.some(function (id) { return ids.indexOf(id) < 0; })) throw new Error('Réponse incomplète : vérifiez la visibilité avant de réessayer.');
+        changed = changed.filter(function (id, index) { return changed.indexOf(id) === index; });
+        changed.forEach(function (id) { delete productSelection[id]; });
+        status.textContent = changed.length + ' produit(s) ' + (activate ? 'activé(s)' : 'archivé(s)') + '. Historique et stock conservés.' + (changed.length < ids.length ? ' Certains produits n’ont pas été trouvés : vérifiez la liste actualisée.' : '');
+        return loadProducts();
+      }).catch(function (error) {
+        if (!active()) return;
+        status.textContent = (remove ? 'Suppression non confirmée : ' : activate ? 'Activation non confirmée : ' : 'Archivage non confirmé : ') + error.message + '. Actualisez la liste pour vérifier avant de recommencer.';
+        if (remove && window.HN_PRODUCT_DELETION) window.HN_PRODUCT_DELETION.show(ids);
+      }).finally(function () { if (active()) { productBulkBusy = false; renderProducts(); } });
+    }
+    ['activateSelectedProducts', 'archiveSelectedProducts', 'deleteSelectedProducts'].forEach(function (buttonId) {
+      document.getElementById(buttonId).addEventListener('click', function () { runProductAction(buttonId, Object.keys(productSelection)); });
+    });
+    document.getElementById('productsList').addEventListener('click', function (event) {
+      var button = event.target.closest('.delete-catalog-product');
+      if (button) runProductAction('deleteSelectedProducts', [button.getAttribute('data-id')]);
     });
   }
 

@@ -95,3 +95,26 @@ test('changer un filtre réinitialise la page et un rechargement réduit borne l
   ui.nodes.resetProductFilters.handlers.click();
   assert.match(ui.nodes.productResults.textContent, /1–1 sur 1/);
 });
+test('supprimer une fiche archivée la retire de toutes les vues Produits et garde les autres sélections', async () => {
+  const current = product('one'), archived = product('two', [{ stock: 5 }], false);
+  const ui = productUI([current, archived]);
+  ui.context.productSelection = { one: true };
+  ui.change('filterProductVisibility', 'inactive');
+  assert.match(ui.nodes.productsList.innerHTML, /delete-catalog-product/);
+  assert.match(ui.nodes.productsList.innerHTML, /data-id="two"/);
+  ui.context.confirm = () => true;
+  const calls = [];
+  ui.context.call = async (action, body) => {
+    calls.push({ action, ids: body ? Array.from(body.ids) : [] });
+    if (action === 'deleteProductsFromCatalog') { archived.catalog_deleted_at = '2026-10-11T12:00:00Z'; return { deleted_ids: ['two'], missing_ids: [] }; }
+    return { products: [current, archived] };
+  };
+  ui.nodes.productsList.handlers.click({ target: { closest: () => ({ getAttribute: () => 'two' }) } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(calls[0], { action: 'deleteProductsFromCatalog', ids: ['two'] });
+  assert.match(ui.nodes.productsList.innerHTML, /Aucun produit pour ces filtres/);
+  ui.change('filterProductVisibility', '');
+  assert.equal(ui.context.productsAll.length, 1);
+  assert(!ui.nodes.productsList.innerHTML.includes('data-id="two"'));
+  assert.deepEqual(Object.keys(ui.context.productSelection), ['one']);
+});

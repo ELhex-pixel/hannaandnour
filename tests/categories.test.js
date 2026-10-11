@@ -29,7 +29,7 @@ test('les 24 catégories sont identiques dans les menus admin, filtres boutique 
 test('Ensembles est sauvegardé tel quel et une catégorie inconnue est refusée avant toute écriture',async()=>{
   const exports={},state={writes:0,row:null};
   const sb={from:table=>{
-    assert.equal(table,'products');return{insert(row){state.writes++;state.row={...row,id:'fixture-product'};return this;},select(){return this;},single:async()=>({data:{id:'fixture-product'},error:null}),eq(){return this;},maybeSingle:async()=>({data:state.row,error:null})};
+    assert.equal(table,'products');return{insert(row){state.writes++;state.row={...row,id:'fixture-product'};return this;},select(){return this;},single:async()=>({data:{id:'fixture-product'},error:null}),eq(){return this;},is(){return this;},maybeSingle:async()=>({data:state.row,error:null})};
   }};
   const shared={json:(statusCode,body)=>({statusCode,body:JSON.stringify(body)}),isConfigured:()=>true,getSupabase:()=>sb,readBody:event=>JSON.parse(event.body),requireAdmin:async()=>({ok:true}),rateLimit:async()=>null};
   vm.runInNewContext(fs.readFileSync('netlify/functions/admin.js','utf8'),{exports,Buffer,process:{env:{}},require:name=>name==='./shared'?shared:name==='crypto'?require('node:crypto'):name==='./lib/product-assistant'?{categories:registry.codes}:name==='../../public/js/product-media'?require('../public/js/product-media'):class Stripe{constructor(){throw new Error('No payment expected');}}});

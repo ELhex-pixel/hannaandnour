@@ -6,7 +6,7 @@
   if (!panel || !api) return;
   var ids = [], page = 0, revision = 0, busy = false;
   var uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-  var titles = { visibility: 'Produit encore en ligne', stock: 'Variante(s) avec un stock non nul', orders: 'Ligne(s) de commande liée(s)', reviews: 'Avis lié(s)', adjustments: 'Ajustement(s) de stock, y compris archives', costs: 'Coût(s) de variante enregistré(s)', cost_history: 'Entrée(s) dans l’historique des coûts' };
+  var titles = { visibility: 'Produit actuellement en ligne', stock: 'Variante(s) avec un stock non nul', orders: 'Ligne(s) de commande liée(s)', reviews: 'Avis lié(s)', adjustments: 'Ajustement(s) de stock, y compris archives', costs: 'Coût(s) de variante enregistré(s)', cost_history: 'Entrée(s) dans l’historique des coûts' };
   function node(tag, text, parent) {
     var value = document.createElement(tag);
     if (text !== undefined) value.textContent = String(text);
@@ -31,12 +31,12 @@
     if (info.missing) { node('h4', 'Produit ' + result.id, card); node('p', 'Fiche absente du catalogue actualisé.', card); return; }
     node('h4', info.product.name, card);
     node('p', [info.product.sku, info.product.slug, result.id].filter(Boolean).join(' · '), card).className = 'admin-muted';
-    if (!info.reasons.length) { node('p', 'Aucun blocage détecté pour l’instant. La suppression effectuera encore son contrôle transactionnel.', card); return; }
+    if (!info.reasons.length) { node('p', 'Aucun historique lié ni stock non nul détecté.', card); return; }
     info.reasons.forEach(function (reason) {
       if (!reason || !titles[reason.kind] || !Number.isSafeInteger(reason.count) || reason.count < 1 || !Array.isArray(reason.samples) || reason.samples.length > 3 || reason.samples.some(function (sample) { return !sample || typeof sample !== 'object'; })) { node('p', 'Motif non confirmé : actualisez pour vérifier.', card); return; }
       var section = node('div', undefined, card);
       node('strong', titles[reason.kind] + ' : ' + reason.count, section);
-      if (reason.kind === 'visibility') { node('p', 'Archivez la fiche avant toute suppression définitive.', section); return; }
+      if (reason.kind === 'visibility') { node('p', 'Supprimer du catalogue retirera aussi ce produit de la boutique.', section); return; }
       var list = node('ul', undefined, section);
       reason.samples.forEach(function (sample) {
         var item = node('li', sampleText(reason.kind, sample), list);

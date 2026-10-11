@@ -37,82 +37,6 @@
     box.hidden = true;
   });
 
-  var returnsRevision = 0;
-  function renderReturns() {
-    var list = document.getElementById('returnRequestsList');
-    var requestVersion = ++returnsRevision, owner = window.HN_ADMIN.token();
-    list.textContent = 'Chargement…';
-    call('listReturnRequests').then(function (res) {
-      if (requestVersion !== returnsRevision || owner !== window.HN_ADMIN.token()) return;
-      list.textContent = '';
-      (res.requests || []).forEach(function (request) {
-        function node(tag, text) { var n = document.createElement(tag); if (text) n.textContent = text; card.appendChild(n); return n; }
-        var card = document.createElement('section');
-        card.className = 'card admin-return-card';
-        var order = request.orders || {}, item = request.order_items || {};
-        node('h3', (order.order_number || 'Commande') + ' — ' + (item.product_name || 'Article') + ' × ' + request.quantity);
-        node('p', { requested:'1 · Demande à examiner',approved:'2 · Retour autorisé, réception à contrôler',rejected:'Demande refusée',received:'3 · Réception enregistrée' }[request.status] || request.status).className = 'badge badge-gray';
-        node('p', ({ withdrawal:'Changement d’avis',seller_error:'Erreur de la boutique',nonconforming:'Défaut / non-conformité' }[request.category] || 'Changement d’avis') + ' — ' + request.reason);
-        node('p', 'Remboursement confirmé pour la commande : ' + ((order.refunded_cents || 0) / 100).toFixed(2) + ' ' + (order.currency || '') + '. Aucun remboursement ni achat d’étiquette depuis ce formulaire.');
-        if (request.decision_note) node('p', 'Décision : ' + request.decision_note + ' · Frais retour : ' + (request.shipping_payer === 'store' ? 'boutique' : 'client'));
-        if (request.status === 'received') {
-          var inspection = request.inspection;
-          node('p', inspection && inspection.sellable_quantity != null ? inspection.sellable_quantity + ' unité(s) revendables remises en stock, ' + (inspection.quantity-inspection.sellable_quantity) + ' hors vente. Contrôle : ' + inspection.inspection_note : 'Retour historique : contrôle revendable non documenté. Aucune nouvelle remise en stock.');
-        }
-        (request.evidence_urls || []).forEach(function (url) { var link = document.createElement('a'); link.href = url; link.textContent = 'Voir la photo du retour'; link.target = '_blank'; link.rel = 'noopener noreferrer'; card.appendChild(link); });
-        var payer, sellable, note;
-        if (request.status === 'requested') {
-          node('label', 'Qui paie le retour ?');
-          payer = node('select'); payer.setAttribute('aria-label', 'Qui paie le retour ?');
-          [['customer','Client — changement d’avis uniquement'],['store','Boutique — erreur, défaut ou retour offert']].forEach(function (entry) { var option = document.createElement('option'); option.value = entry[0]; option.textContent = entry[1]; payer.appendChild(option); });
-          payer.value = request.category && request.category !== 'withdrawal' ? 'store' : (order.return_policy || {}).withdrawal_payer || 'customer';
-          if ((request.category && request.category !== 'withdrawal') || (order.return_policy || {}).withdrawal_payer === 'store') payer.disabled = true;
-        }
-        if (request.status === 'approved') {
-          node('p', 'Ouvrez et contrôlez le colis. Seules les unités revendables retournent au disponible ; les autres restent hors vente.');
-          node('label', 'Unités contrôlées et revendables (0 à ' + request.quantity + ')');
-          sellable = node('input'); sellable.type = 'number'; sellable.min = 0; sellable.max = request.quantity; sellable.step = 1; sellable.value = ''; sellable.required = true; sellable.setAttribute('aria-label', 'Unités revendables');
-        }
-        if (['requested','approved'].includes(request.status)) { node('label', 'Motif / contrôle enregistré'); note = node('textarea'); note.maxLength = 500; note.setAttribute('aria-label', 'Motif / contrôle enregistré'); }
-        var actions = request.status === 'requested' ? [['approved', 'Autoriser le retour'], ['rejected', 'Refuser avec motif']] : request.status === 'approved' ? [['received', 'Confirmer la réception et le contrôle']] : [];
-        var buttons = [], busy = false, frozen = null;
-        var status = node('p'); status.setAttribute('role','status');
-        actions.forEach(function (entry) {
-          var button = document.createElement('button');
-          button.className = 'btn btn-secondary btn-small';
-          button.textContent = entry[1];
-          button.setAttribute('data-return-action', entry[0]);
-          buttons.push(button);
-          button.addEventListener('click', function () {
-            if (busy || (frozen && frozen.status !== entry[0])) return;
-            var payload = frozen || { id:request.id,status:entry[0],shipping_payer:payer ? payer.value : request.shipping_payer,note:note.value.trim() };
-            if (sellable) payload.sellable_quantity = frozen ? frozen.sellable_quantity : sellable.value === '' ? null : Number(sellable.value);
-            if (payload.note.length < 3 || (sellable && (!Number.isInteger(payload.sellable_quantity) || payload.sellable_quantity < 0 || payload.sellable_quantity > request.quantity))) { status.textContent = 'Renseignez le contrôle et la quantité revendable, zéro si aucun.'; return; }
-            if (!frozen && !confirm(entry[0] === 'received' ? 'Confirmer le colis reçu ? ' + payload.sellable_quantity + ' unité(s) revendables, ' + (request.quantity-payload.sellable_quantity) + ' hors vente. Aucun remboursement.' : 'Enregistrer cette décision et son motif ? Aucun email, remboursement ou achat d’étiquette.')) return;
-            frozen = payload; busy = true;
-            buttons.forEach(function (b) { b.disabled = true; });
-            [payer,sellable,note].filter(Boolean).forEach(function (n) { n.disabled = true; });
-            call('updateReturnRequest', payload).then(function (result) {
-              if (requestVersion !== returnsRevision || owner !== window.HN_ADMIN.token()) return;
-              if (!result || !result.ok) throw new Error('Réponse incomplète, vérifiez avant toute nouvelle opération.');
-              renderReturns();
-            }).catch(function (error) {
-              if (requestVersion !== returnsRevision || owner !== window.HN_ADMIN.token()) return;
-              busy = false; button.disabled = false;
-              status.textContent = error.message + ' Réessayez la même décision ou actualisez pour vérifier.';
-            });
-          });
-          card.appendChild(button);
-        });
-        list.appendChild(card);
-      });
-      if (!(res.requests || []).length) list.textContent = 'Aucune demande de retour.';
-    }).catch(function (error) { if (requestVersion === returnsRevision && owner === window.HN_ADMIN.token()) list.textContent = error.message; });
-  }
-  document.addEventListener('hn:admin-logout', function () { returnsRevision++; document.getElementById('returnRequestsList').textContent = ''; });
-  document.getElementById('refreshReturnRequests').addEventListener('click', renderReturns);
-  document.querySelector('[data-tab="returns"]').addEventListener('click', renderReturns);
-
   var operationsRevision = 0, costsLoad = 0, policyLoad = 0, costs = [], policy = null, costBusy = false, policyBusy = false;
   function operationCurrent(version, owner) { return version === operationsRevision && owner === window.HN_ADMIN.token(); }
   function validReturnPolicy(value) {
@@ -385,7 +309,7 @@
     api.call('listProducts').then(function (res) {
       if (request !== revision || owner !== api.token()) return;
       rows = [];
-      products = res.products || [];
+      products = (res.products || []).filter(function (product) { return product.catalog_deleted_at == null; });
       groups = products.map(function (product, index) {
         var group = { id: product.id || product.slug || String(index), product: product, rows: [] };
         (product.variants || []).forEach(function (variant) {

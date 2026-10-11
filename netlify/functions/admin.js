@@ -215,6 +215,11 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     // ---- Everything below requires a valid admin session ----
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (action === 'deleteProductsFromCatalog') {
+      const limited = await rateLimit(sb, event, 'admin-delete-product-catalog', 30, 600, 'admin');
+      if (limited) return limited;
+      return await require('./lib/product-catalog-deletion').deleteProductsFromCatalog(sb, body);
+    }
     if (action === 'getProductDeletionInfo') {
       const limited = await rateLimit(sb, event, 'admin-product-deletion-info', 120, 600, 'admin');
       if (limited) return limited;
@@ -241,7 +246,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
       if (limited) return limited;
       return await require('./lib/tiktok').adminTiktok(sb, action, body);
     }
-    if (['recordReturn', 'listReturnRequests', 'updateReturnRequest'].includes(action)) {
+    if (['recordReturn', 'listReturnRequests', 'updateReturnRequest', 'hideCompletedReturn'].includes(action)) {
       const limited = await rateLimit(sb, event, 'admin-returns', 120, 600, 'admin');
       if (limited) return limited;
       return await require('./lib/returns').adminReturns(sb, action, body);
@@ -289,6 +294,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
         const { data, error } = await sb
           .from('products')
           .select('*, product_variants(id, color, size, stock, active, barcode)')
+          .is('catalog_deleted_at', null)
           .order('created_at', { ascending: true });
         if (error) throw error;
         const products = (data || []).map((p) => ({ ...p, variants: p.product_variants || [] }));
@@ -314,8 +320,9 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
 } else {
           if (String(body.slug || '').trim()) fields.slug = slugify(body.slug);
           if (String(body.sku || '').trim()) fields.sku = String(body.sku).trim();
-          const { error: updErr } = await sb.from('products').update(fields).eq('id', id);
+          const { data: updated, error: updErr } = await sb.from('products').update(fields).eq('id', id).is('catalog_deleted_at', null).select('id').maybeSingle();
           if (updErr) throw updErr;
+          if (!updated) return json(409, { error: 'Cette fiche a été supprimée du catalogue ou n’existe plus. Actualisez la liste.' });
         }
 
         // ---- Replace variants ----
@@ -359,6 +366,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
           }
           const { error: vErr } = await sb.rpc('save_product_variants', { p_product_id: productId, p_rows: rows });
           if (vErr && vErr.message === 'Stock changed') return json(409, { error: 'Le stock a changé depuis l’ouverture de la fiche. Rechargez avant de modifier les quantités.' });
+          if (vErr && vErr.message === 'product_catalog_deleted') return json(409, { error: 'Cette fiche a été supprimée du catalogue. Actualisez la liste.' });
           if (vErr) throw vErr;
         }
 
@@ -366,14 +374,16 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
           .from('products')
           .select('*, product_variants(id, color, size, stock, active, barcode)')
           .eq('id', productId)
+          .is('catalog_deleted_at', null)
           .maybeSingle();
         if (savedErr) throw savedErr;
+        if (!saved) return json(409, { error: 'Cette fiche a été supprimée du catalogue ou n’existe plus. Actualisez la liste.' });
         return json(200, { product: saved ? { ...saved, variants: saved.product_variants || [] } : saved });
       }
 
       case 'deleteProduct': {
         if (!body.id) return json(400, { error: 'Missing id' });
-        const { error } = await sb.from('products').update({ active: false }).eq('id', body.id);
+        const { error } = await sb.from('products').update({ active: false }).eq('id', body.id).is('catalog_deleted_at', null);
         if (error) throw error;
         return json(200, { ok: true });
       }
@@ -405,7 +415,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
         if (limited) return limited;
         const ids = [...new Set(body.ids)];
         const active = action === 'activateProducts';
-        const { data, error } = await sb.from('products').update({ active }).in('id', ids).select('id');
+        const { data, error } = await sb.from('products').update({ active }).in('id', ids).is('catalog_deleted_at', null).select('id');
         if (error) throw error;
         return json(200, { [active ? 'activated_ids' : 'archived_ids']: (data || []).map(product => product.id) });
       }

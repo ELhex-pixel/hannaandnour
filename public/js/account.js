@@ -406,11 +406,7 @@
         renderWishlist();
       }
       if (add && slug) {
-        var p2 = HN.getProduct(slug);
-        if (p2) {
-          HN.cart.add({ slug: p2.slug, name_en: p2.name_en, price_cents: p2.price_cents, image: p2.image }, {});
-          window.hnToast && hnToast(tr('cartAdd'), HN.productName(p2) + ' ' + tr('cartAddMsg'), 'success');
-        }
+        HN.quickAdd(add);
       }
     });
   }

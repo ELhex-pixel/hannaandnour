@@ -115,6 +115,7 @@ function archiveAdmin(overrides = {}, databaseError = false, returnedIds = null)
   const query = {
     upsert(row) { assert(state.tables.includes('settings')); state.writes.push(row); return Promise.resolve({ error: databaseError ? new Error('Database unavailable') : null }); },
     update(fields) { state.writes.push(fields); return this; },
+    is(field, value) { assert.equal(field, 'catalog_deleted_at'); assert.equal(value, null); return this; },
     in(field, ids) { assert.equal(field, 'id'); state.ids = Array.from(ids); return this; },
     select(fields) { assert.equal(fields, 'id'); return Promise.resolve({ data: (returnedIds || state.ids).map(id => ({ id })), error: databaseError ? new Error('Database unavailable') : null }); }
   };
@@ -359,7 +360,7 @@ test('toutes les actions stock/préparation exigent la session et le débit avan
   }
 });
 test('les retours, coûts, politique et rapports exigent la session et le débit avant tout module',async () => {
-  for (const action of ['recordReturn','listReturnRequests','updateReturnRequest','getReturnPolicy','saveReturnPolicy','listVariantCosts','saveVariantCost','saleStats']) {
+  for (const action of ['recordReturn','listReturnRequests','updateReturnRequest','hideCompletedReturn','getReturnPolicy','saveReturnPolicy','listVariantCosts','saveVariantCost','saleStats']) {
     const denied = archiveAdmin({ requireAdmin:async () => ({ ok:false }) });
     assert.equal((await denied.handler(event({ action }))).statusCode,401);
     assert.equal(denied.state.inventory.length,0);

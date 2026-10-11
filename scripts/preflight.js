@@ -24,15 +24,19 @@ async function preflight(env = process.env, client) {
     if (refunds.error || refunds.data !== 1) throw new Error('schema');
     const categories = await client.rpc('catalog_categories_schema_version');
     if (categories.error || categories.data !== 1) throw new Error('schema');
+    const deletion = await client.rpc('product_catalog_deletion_schema_version');
+    if (deletion.error || deletion.data !== 1) throw new Error('schema');
+    const returnsList = await client.rpc('return_lists_schema_version');
+    if (returnsList.error || returnsList.data !== 1) throw new Error('schema');
     for (const [table, columns] of [
       ['orders', 'inventory_reserved,stock_issue,confirmation_claimed_at,admin_archived,payment_intent_id,refunded_cents,carrier,stripe_creation_started,refund_restock,prepared_at,return_policy'],
       ['order_items', 'stock_debited,net_total_cents,prepared_quantity'],
-      ['return_requests', 'evidence_paths,category,shipping_payer,decision_note'],
+      ['return_requests', 'evidence_paths,category,shipping_payer,decision_note,admin_hidden_at'],
       ['order_returns','sellable_quantity,inspection_note'],
       ['variant_costs','variant_id,unit_cost_cents,currency,updated_at'],
       ['variant_cost_history','id,variant_id,unit_cost_cents,currency,reason,created_at'],
       ['order_item_costs','order_item_id,unit_cost_cents,currency,created_at'],
-      ['products', 'search_vector,fit_fr,measurements_fr,opacity,video_url'],
+      ['products', 'search_vector,fit_fr,measurements_fr,opacity,video_url,catalog_deleted_at'],
       ['inventory_adjustments', 'id,variant_id,mode,quantity,expected_stock,stock_before,stock_after,reason,product_name,color,size,barcode,created_at'],
       ['inventory_journal_resets', 'id,archived_count,created_at'],
       ['inventory_journal_archives', 'adjustment_id,reset_id'],
@@ -42,7 +46,7 @@ async function preflight(env = process.env, client) {
       if (tableError) throw new Error('schema');
     }
   } catch (error) {
-    throw new Error('Publication bloquée : vérifier les migrations existantes, dont supabase/migration_integrity_features.sql, supabase/migration_admin_inventory.sql, supabase/migration_admin_operations.sql, supabase/migration_return_policy_editor.sql, supabase/migration_catalog_cleanup.sql, supabase/migration_inventory_journal.sql, supabase/migration_partial_refunds.sql et supabase/migration_catalog_categories.sql. Aucune migration distante n’a été exécutée automatiquement.');
+    throw new Error('Publication bloquée : vérifier les migrations existantes, dont supabase/migration_integrity_features.sql, supabase/migration_admin_inventory.sql, supabase/migration_admin_operations.sql, supabase/migration_return_policy_editor.sql, supabase/migration_catalog_cleanup.sql, supabase/migration_inventory_journal.sql, supabase/migration_partial_refunds.sql, supabase/migration_catalog_categories.sql et supabase/migration_catalog_return_cleanup.sql. Aucune migration distante n’a été exécutée automatiquement.');
   }
   console.log('Compatibilité Supabase vérifiée en lecture seule.');
 }
