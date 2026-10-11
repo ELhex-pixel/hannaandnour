@@ -433,13 +433,20 @@
     if (!mainImage || !el) return;
 
     const img = el.tagName === 'IMG' ? el : el.querySelector('img');
-    mainImage.src = img.src;
+    if (!img) return;
+    const wrapper = el.closest('.product-thumbnail');
+    const source = (wrapper && wrapper.getAttribute('data-img')) || img.src;
+    if (!source) return;
+    // The thumbnail is deliberately only 160px wide. Its data-img points to
+    // the full detail view; using img.src here enlarged the tiny preview.
+    mainImage.removeAttribute('srcset');
+    mainImage.removeAttribute('sizes');
+    mainImage.src = source;
     mainImage.style.filter = img.style.filter || '';
 
     thumbnails.forEach(function(t) {
       t.classList.remove('active');
     });
-    const wrapper = el.closest('.product-thumbnail');
     if (wrapper) wrapper.classList.add('active');
   };
 
