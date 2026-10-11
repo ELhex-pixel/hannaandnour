@@ -8,7 +8,8 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
 function setup(variants = [], options = {}) {
-  const cache = new Map(), nodes = [], events = {};
+  const cache = new Map(), nodes = [], events = {}, windowEvents = {}, pollTimers = new Map();
+  let timerId = 0;
   const state = { lang: options.lang || 'fr', calls: [], messages: [], product: { id: randomUUID(), slug: 'veste-test', name_fr: 'Veste test', name_en: 'Test jacket', name_ar: 'سترة اختبار', price_cents: 2000, active: true, catalog_deleted_at: null, colors: [], sizes: [], variants }, config: { currency: { code: 'eur', symbol: '€' }, settings: { tax_rate: 0.2 }, return_policy: { days: 14 } }, failed: false, gates: [] };
   function element(tag) {
     const node = { tag, children: [], handlers: {}, disabled: false, hidden: false, open: false, _value: '', _text: '', attrs: {},
@@ -27,12 +28,15 @@ function setup(variants = [], options = {}) {
       return { ok: true, json: async () => url.endsWith('/config') ? clone(state.config) : url.includes('/products') ? { products: state.product ? [clone(state.product)] : [] } : {} };
     }
   };
+  context.setTimeout = (fn, ms) => { if (ms === 15000) { const id = 'poll-' + (++timerId); pollTimers.set(id, fn); return id; } return setTimeout(fn, ms); };
+  context.clearTimeout = id => { if (pollTimers.has(id)) pollTimers.delete(id); else clearTimeout(id); };
+  context.window.addEventListener = (type, handler) => { windowEvents[type] = handler; };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('public/js/store.js', 'utf8'), context);
   vm.runInContext(fs.readFileSync('public/js/quick-add.js', 'utf8'), context);
   const button = element('button'); button.closest = () => ({ getAttribute: () => 'veste-test' });
   const HN = context.window.HN;
-  return { state, cache, context, nodes, HN, button, node: document.getElementById, dialog: () => nodes.find(node => node.tag === 'dialog'), add: () => HN.quickAdd(button), choose(id) { const select = document.getElementById('quickAddVariant'); select.value = id; select.handlers.change(); }, submit() { nodes.find(node => node.tag === 'form').handlers.submit({ preventDefault() {} }); return settle(); } };
+  return { state, cache, context, nodes, HN, button, pollTimers, windowEvents, node: document.getElementById, dialog: () => nodes.find(node => node.tag === 'dialog'), add: () => HN.quickAdd(button), refresh: () => document.getElementById('quickAddRefresh').handlers.click(), async poll() { const [id, fn] = pollTimers.entries().next().value; pollTimers.delete(id); await fn(); }, choose(id) { const select = document.getElementById('quickAddVariant'); select.value = id; select.handlers.change(); }, submit() { nodes.find(node => node.tag === 'form').handlers.submit({ preventDefault() {} }); return settle(); } };
 }
 const variant = (color, stock, active = true) => ({ id: randomUUID(), color, size: 'Unique', stock, active });
 
@@ -124,4 +128,96 @@ test('ajouter depuis les favoris utilise aussi le sélecteur de variantes, sans 
   vm.runInNewContext(source.slice(source.indexOf('  function wireWishlistGrid()'),source.indexOf('  function renderWishlist()'))+';wireWishlistGrid();',context);
   click({target:{closest:selector=>selector==='.wishlist-add'?button:selector==='.product-card'?card:null}});
   assert.equal(chosen,button);
+});
+test('la fenêtre ouverte synchronise les prix et variantes admin toutes les 15 secondes sans ajouter au panier', async () => {
+  const a = variant('Vin', 5), b = variant('Noir', 3), mock = setup([a, b]);
+  await mock.add(); mock.choose(a.id);
+  assert.equal(mock.pollTimers.size, 1);
+  mock.state.product.name_fr = 'Cape mise à jour';
+  mock.state.product.price_cents = 2500;
+  mock.state.product.variants[0].stock = 8;
+  const added = variant('Taupe', 12); mock.state.product.variants.push(added);
+  await mock.poll();
+  assert.equal(mock.node('quickAddTitle').textContent, 'Cape mise à jour');
+  const price = mock.nodes.find(node => node.className === 'quick-add-price');
+  assert.equal(price.textContent, '€25.00');
+  assert.equal(mock.node('quickAddVariant').value, a.id);
+  assert(mock.node('quickAddVariant').children.some(option => option.value === added.id && option.textContent.includes('12')));
+  assert.equal(mock.node('quickAddStatus').textContent, translations.fr.quickAddPriceChanged);
+  assert.equal(mock.node('quickAddSyncStatus').textContent, translations.fr.quickAddUpdated);
+  assert.equal(mock.HN.cart.list().length, 0);
+  assert.equal(mock.pollTimers.size, 1);
+  assert(mock.state.calls.filter(call => call.url.includes('/products')).every(call => call.options.cache === 'no-store'));
+  mock.context.window.HN_QUICK_ADD.close(); assert.equal(mock.pollTimers.size, 0);
+});
+
+test('aucune nouvelle option n’est choisie automatiquement si l’admin retire ou désactive la sélection', async () => {
+  for (const mode of ['removed','disabled','empty','unselected']) {
+    const a = variant('Vin', 5), b = variant('Noir', 3), mock = setup([a, b]);
+    await mock.add(); if (mode !== 'unselected') mock.choose(a.id);
+    if (mode === 'removed') mock.state.product.variants = [b];
+    if (mode === 'unselected') mock.state.product.variants = [a];
+    if (mode === 'disabled') mock.state.product.variants[0].active = false;
+    if (mode === 'empty') mock.state.product.variants[0].stock = 0;
+    await mock.poll();
+    assert.equal(mock.node('quickAddConfirm').disabled, true);
+    assert.notEqual(mock.node('quickAddVariant').value, b.id);
+    if (mode === 'removed' || mode === 'unselected') assert.equal(mock.node('quickAddVariant').value, '');
+    await mock.submit(); assert.equal(mock.HN.cart.list().length, 0);
+  }
+});
+
+test('une panne de synchronisation ou un produit retiré bloque l’ajout jusqu’à confirmation de données fraîches', async () => {
+  for (const mode of ['network','deleted']) {
+    const a = variant('Vin', 5), mock = setup([a, variant('Noir', 3)]);
+    await mock.add(); mock.choose(a.id);
+    if (mode === 'network') mock.state.failed = true; else mock.state.product.catalog_deleted_at = '2026-10-11T12:00:00Z';
+    await mock.refresh();
+    assert.equal(mock.node('quickAddConfirm').disabled, true);
+    assert.equal(mock.node('quickAddSyncStatus').textContent, translations.fr.quickAddSyncFailed);
+    await mock.submit(); assert.equal(mock.HN.cart.list().length, 0);
+    mock.state.failed = false; mock.state.product.catalog_deleted_at = null;
+    await mock.refresh();
+    assert.equal(mock.node('quickAddConfirm').disabled, false);
+    assert.equal(mock.node('quickAddVariant').value, a.id);
+  }
+});
+
+test('la synchronisation ne tourne pas en arrière-plan et relit les données au retour sur la page', async () => {
+  const mock = setup([variant('Vin', 5), variant('Noir', 3)]);
+  await mock.add();
+  mock.context.document.hidden = true; mock.context.document.dispatchEvent({ type: 'visibilitychange' });
+  assert.equal(mock.pollTimers.size, 0);
+  const before = mock.state.calls.length;
+  mock.windowEvents.focus(); await settle(); assert.equal(mock.state.calls.length, before);
+  mock.state.product.price_cents = 3000;
+  mock.context.document.hidden = false; mock.context.document.dispatchEvent({ type: 'visibilitychange' }); await settle();
+  assert.equal(mock.nodes.find(node => node.className === 'quick-add-price').textContent, '€30.00');
+  assert.equal(mock.pollTimers.size, 1);
+  mock.context.window.HN_QUICK_ADD.close(); const closedCalls = mock.state.calls.length;
+  mock.windowEvents.pageshow({ persisted: true }); await settle(); assert.equal(mock.state.calls.length, closedCalls);
+});
+
+test('une lecture de synchronisation coalesce les clics et ignore les réponses après fermeture', async () => {
+  const a = variant('Vin', 5), mock = setup([a, variant('Noir', 3)]);
+  await mock.add(); mock.choose(a.id); mock.state.wait = true;
+  const refresh = mock.refresh(); mock.refresh(); mock.windowEvents.focus(); await mock.submit(); await settle();
+  assert.equal(mock.state.gates.length, 1);
+  assert.equal(mock.HN.cart.list().length, 0);
+  mock.context.window.HN_QUICK_ADD.close(); mock.state.gates[0](); await refresh;
+  assert.equal(mock.dialog().open, false); assert.equal(mock.pollTimers.size, 0);
+  assert.equal(mock.HN.cart.list().length, 0);
+});
+
+test('la sélection modifiée pendant la lecture est conservée et les prix affichés suivent la devise admin', async () => {
+  const a = variant('Vin', 5), b = variant('Noir', 3), mock = setup([a, b]);
+  await mock.add(); mock.choose(a.id); mock.state.wait = true;
+  const refresh = mock.refresh(); await settle(); mock.choose(b.id);
+  mock.state.product.variants[1].stock = 7; mock.state.config.currency = { code: 'usd', symbol: '$' };
+  // The config request is already complete: the next sync confirms the new currency.
+  mock.state.gates[0](); await refresh; assert.equal(mock.node('quickAddVariant').value, b.id);
+  mock.state.wait = false; await mock.refresh();
+  assert.equal(mock.nodes.find(node => node.className === 'quick-add-price').textContent, '$20.00');
+  assert.equal(mock.node('quickAddVariant').value, b.id);
+  assert.equal(mock.HN.cart.list().length, 0);
 });

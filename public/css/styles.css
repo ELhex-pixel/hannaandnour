@@ -962,6 +962,7 @@ body[data-menu-open="true"] .nav-mobile {
 .quick-add-dialog::backdrop { background: rgba(0, 0, 0, .5); }
 .quick-add-dialog h2 { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: var(--spacing-md); overflow-wrap: anywhere; }
 .quick-add-price { font-weight: 600; margin-bottom: var(--spacing-lg); }
+.quick-add-sync-status { color: var(--color-gray); font-size: .8125rem; line-height: 1.5; margin-top: var(--spacing-sm); }
 .quick-add-field { margin-bottom: var(--spacing-md); }
 .quick-add-field label { display: block; margin-bottom: var(--spacing-sm); }
 .quick-add-field select { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--color-gray-light); border-radius: var(--radius-sm); background: var(--color-off-white); color: var(--color-charcoal); font: inherit; }

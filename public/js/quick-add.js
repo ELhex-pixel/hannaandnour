@@ -2,8 +2,9 @@
   'use strict';
   var HN = window.HN;
   if (!HN) return;
-  var dialog, form, title, price, status, variantField, colorField, sizeField, variantSelect, colorSelect, sizeSelect, confirmButton, closeButton;
+  var dialog, form, title, price, status, variantField, colorField, sizeField, variantSelect, colorSelect, sizeSelect, confirmButton, closeButton, refreshButton, syncStatus;
   var product = null, currency = null, origin = null, busy = false, revision = 0;
+  var syncing = false, syncFailed = false, syncTimer = null;
   function tr(key, values) { return HN.tr(key, values); }
   function variants(p) { return Array.isArray(p.variants) && p.variants.length ? p.variants : Array.isArray(p.product_variants) ? p.product_variants : []; }
   function valid(v) { return v && typeof v.id === 'string' && v.id && typeof v.color === 'string' && typeof v.size === 'string' && v.active === true && Number.isInteger(v.stock) && v.stock > 0 && v.stock <= 1000000; }
@@ -34,18 +35,22 @@
     variantField = field('quickAddVariant'); colorField = field('quickAddColor'); sizeField = field('quickAddSize');
     variantSelect = variantField.select; colorSelect = colorField.select; sizeSelect = sizeField.select;
     status = create('p', form); status.id = 'quickAddStatus'; status.setAttribute('role', 'status');
+    syncStatus = create('p', form); syncStatus.id = 'quickAddSyncStatus'; syncStatus.className = 'quick-add-sync-status'; syncStatus.setAttribute('role', 'status');
     var actions = create('div', form); actions.className = 'quick-add-actions';
     confirmButton = create('button', actions); confirmButton.type = 'submit'; confirmButton.id = 'quickAddConfirm'; confirmButton.className = 'btn btn-primary';
     closeButton = create('button', actions); closeButton.type = 'button'; closeButton.className = 'btn btn-outline';
+    refreshButton = create('button', actions); refreshButton.id = 'quickAddRefresh'; refreshButton.type = 'button'; refreshButton.className = 'btn btn-outline';
+    refreshButton.addEventListener('click', refresh);
     closeButton.addEventListener('click', close);
     dialog.addEventListener('cancel', function (event) { event.preventDefault(); close(); });
+    dialog.addEventListener('close', function () { if (product && !dialog.open) close(); });
     form.addEventListener('submit', function (event) { event.preventDefault(); confirm(); });
   }
   function fill(select, list, preserve, text) {
     select.textContent = '';
     var placeholder = create('option', select, tr('quickAddChoose')); placeholder.value = '';
     list.forEach(function (item) { var option = create('option', select, text(item)); option.value = typeof item === 'string' ? item : item.id; if (typeof item !== 'string') option.disabled = !valid(item); });
-    select.value = preserve || (list.length === 1 ? (typeof list[0] === 'string' ? list[0] : list[0].id) : '');
+    select.value = preserve != null ? preserve : (list.length === 1 ? (typeof list[0] === 'string' ? list[0] : list[0].id) : '');
   }
   function choice() {
     if (!product) return null;
@@ -66,8 +71,9 @@
     if (origin) origin.disabled = busy;
     if (!form) return;
     [variantSelect, colorSelect, sizeSelect].forEach(function (select) { select.disabled = busy; });
-    confirmButton.disabled = busy || !choice();
+    confirmButton.disabled = busy || syncing || syncFailed || !choice();
     confirmButton.textContent = tr(busy ? 'processing' : 'quickAddConfirm');
+    refreshButton.disabled = busy || syncing;
   }
   function update(message) {
     if (!product || !status) return;
@@ -77,9 +83,10 @@
   }
   function render(preserve, message) {
     title.textContent = HN.productName(product);
-    price.textContent = HN.money(product.price_cents);
+    price.textContent = currency.symbol + (product.price_cents / 100).toFixed(2);
     variantField.heading.textContent = tr('quickAddVariantLabel'); colorField.heading.textContent = tr('colorLabel'); sizeField.heading.textContent = tr('sizeLabel');
     closeButton.textContent = tr('quickAddClose');
+    refreshButton.textContent = tr('quickAddRefresh');
     var rows = variants(product), colors = values(product.colors), sizes = values(product.sizes);
     variantField.wrap.hidden = !rows.length; colorField.wrap.hidden = !!rows.length || !colors.length; sizeField.wrap.hidden = !!rows.length || !sizes.length;
     fill(variantSelect, rows, preserve && preserve.variantId, function (v) { return label(v) + ' — ' + (valid(v) ? tr('quickAddStock', { n: v.stock }) : unavailable(v)); });
@@ -87,10 +94,48 @@
     update(message);
   }
   function close() {
-    revision++; busy = false;
+    revision++; busy = false; syncing = false; syncFailed = false;
+    stopSync();
     if (dialog && dialog.open) dialog.close();
     if (origin) { origin.disabled = false; if (document.contains(origin)) origin.focus(); }
     product = null; currency = null; origin = null;
+  }
+  function stopSync() { if (syncTimer !== null) clearTimeout(syncTimer); syncTimer = null; }
+  function scheduleSync() {
+    stopSync();
+    if (product && dialog && dialog.open && !document.hidden) syncTimer = setTimeout(function () { syncTimer = null; return refresh(); }, 15000);
+  }
+  function selection() { return { variantId: variantSelect.value, color: colorSelect.value, size: sizeSelect.value }; }
+  function fingerprint(p) {
+    return JSON.stringify({ id: p.id, name: HN.productName(p), colors: values(p.colors), sizes: values(p.sizes), variants: variants(p).map(function (v) { return [v.id, v.color, v.size, v.stock, v.active]; }) });
+  }
+  function sameSelection(before, after) { return (before.variantId || '') === (after.variantId || '') && before.color === after.color && before.size === after.size; }
+  function refresh() {
+    if (busy || syncing || !product || !dialog || !dialog.open || document.hidden) { scheduleSync(); return Promise.resolve(); }
+    stopSync();
+    var old = product, oldCurrency = currency, selected = selection(), request = ++revision;
+    syncing = true; syncStatus.textContent = tr('quickAddSyncing'); lock();
+    return read(old.slug).then(function (fresh) {
+      if (request !== revision || !dialog.open) return;
+      // Capture the current selection again: the customer may change it while
+      // the background read is running. Never pick a different option for them.
+      selected = selection();
+      var previous = variants(old).filter(function (v) { return v.id === selected.variantId; })[0];
+      var expected = previous ? { variantId: previous.id, color: previous.color, size: previous.size } : selected;
+      var changed = fingerprint(old) !== fingerprint(fresh.product);
+      var priceChanged = old.price_cents !== fresh.product.price_cents || oldCurrency.code !== fresh.currency.code || oldCurrency.symbol !== fresh.currency.symbol;
+      product = fresh.product; currency = fresh.currency; syncFailed = false;
+      if (changed || priceChanged) {
+        render(selected);
+        var current = choice();
+        if ((selected.variantId || selected.color || selected.size) && (!current || !sameSelection(expected, current))) update(tr('quickAddOptionsChanged'));
+        else if (priceChanged) update(tr('quickAddPriceChanged'));
+        syncStatus.textContent = tr('quickAddUpdated');
+      } else { update(); syncStatus.textContent = tr('quickAddSynced'); }
+    }).catch(function () {
+      if (request !== revision || !dialog.open) return;
+      syncFailed = true; syncStatus.textContent = tr('quickAddSyncFailed'); update(tr('quickAddUnavailable'));
+    }).finally(function () { if (request === revision) { syncing = false; lock(); scheduleSync(); } });
   }
   function read(slug) {
     return Promise.all([HN.requireConfig(true), HN.fetchProducts({ slug: slug, limit: 1 })]).then(function (results) {
@@ -120,17 +165,17 @@
       } else if (!rows.length && colors.length <= 1 && sizes.length <= 1) {
         addSelected(product, { color: colors[0] || '', size: sizes[0] || '', variantId: null, stock: null, qty: 1 }); close();
       } else {
-        ensureDialog(); busy = false; render();
-        if (typeof dialog.showModal === 'function') dialog.showModal(); else { window.location.href = HN.productUrl(product.slug); close(); }
+        ensureDialog(); busy = false; syncFailed = false; render(); syncStatus.textContent = tr('quickAddSynced');
+        if (typeof dialog.showModal === 'function') { dialog.showModal(); scheduleSync(); } else { window.location.href = HN.productUrl(product.slug); close(); }
       }
     }).catch(function () { if (request === revision) { toast(tr('quickAddUnavailable')); close(); } })
       .finally(function () { if (request === revision) { busy = false; lock(); } });
   }
   function confirm() {
-    if (busy || !product) return;
+    if (busy || syncing || syncFailed || !product) return;
     var selected = choice(); if (!selected) { update(tr('quickAddChoose')); return; }
     var old = product, oldCurrency = currency, request = ++revision;
-    busy = true; update(tr('processing'));
+    stopSync(); busy = true; update(tr('processing'));
     return read(old.slug).then(function (fresh) {
       if (request !== revision) return;
       product = fresh.product; currency = fresh.currency;
@@ -139,9 +184,15 @@
       var current = choice();
       if (!current || current.variantId !== selected.variantId || current.color !== selected.color || current.size !== selected.size) { update(tr('quickAddOptionsChanged')); return; }
       if (addSelected(product, current)) close();
-    }).catch(function () { if (request === revision) update(tr('quickAddUnavailable')); })
-      .finally(function () { if (request === revision) { busy = false; lock(); } });
+    }).catch(function () { if (request === revision) { syncFailed = true; syncStatus.textContent = tr('quickAddSyncFailed'); update(tr('quickAddUnavailable')); } })
+      .finally(function () { if (request === revision) { busy = false; lock(); scheduleSync(); } });
   }
-  document.addEventListener('langchange', function () { if (product && dialog && dialog.open) render(choice()); });
+  document.addEventListener('langchange', function () { if (product && dialog && dialog.open) { render(selection()); syncStatus.textContent = tr(syncing ? 'quickAddSyncing' : syncFailed ? 'quickAddSyncFailed' : 'quickAddSynced'); } });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stopSync(); else refresh(); });
+  document.addEventListener('hn:cart', function () { if (product && dialog && dialog.open && !busy && !syncing) update(); });
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pageshow', function (event) { if (event.persisted) refresh(); });
+  }
   window.HN_QUICK_ADD = { add: add, close: close };
 })();
