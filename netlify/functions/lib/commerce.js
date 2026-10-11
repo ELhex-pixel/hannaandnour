@@ -5,7 +5,7 @@ const { returnPolicy } = require('./return-policy');
 async function settings(sb, rows) {
   let data = rows;
   if (data === undefined) {
-    const response = await sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy']);
+    const response = await sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy', 'cart_offer']);
     if (response.error) throw response.error;
     data = response.data;
   }
@@ -18,6 +18,7 @@ async function settings(sb, rows) {
       nextday_cents: intEnv('SHIPPING_NEXTDAY_CENTS', 2500), free_threshold_cents: intEnv('FREE_SHIPPING_THRESHOLD_CENTS', 7500), tax_rate: floatEnv('TAX_RATE', 0.07)
     }, shipping),
     currency: { code, symbol: code === 'eur' ? '€' : '$' },
+    cart_offer: rules.cartOffer((data || []).find(row => row.key === 'cart_offer')?.value),
     return_policy: returnPolicy((data || []).find(row => row.key === 'return_policy')?.value, shipping)
   };
 }
@@ -45,12 +46,13 @@ async function quote(sb, body) {
     promo = data;
   }
   const method = body.shipping_method || 'standard';
-  const totals = rules.calculate(resolved, config.shipping, method, promo ? promo.percent_off : 0);
-  return { items: resolved, totals, currency: config.currency, return_policy: config.return_policy, promo, method };
+  const discount = rules.chooseDiscount(config.cart_offer, promo ? promo.percent_off : 0);
+  const totals = rules.calculate(resolved, config.shipping, method, discount.percent_off);
+  return { items: resolved, totals, currency: config.currency, return_policy: config.return_policy, discount, promo: discount.kind === 'code' ? promo : null, method };
 }
 
 function publicQuote(value) {
-  return { totals: value.totals, currency: value.currency, return_policy: value.return_policy, items: value.items.map(i => ({ slug: i.slug, color: i.color, size: i.size, qty: i.qty, price_cents: i.price_cents, image: i.product.image, name: i.product.name_en, name_en: i.product.name_en, name_fr: i.product.name_fr, name_ar: i.product.name_ar, variantId: i.variantId })) };
+  return { totals: value.totals, currency: value.currency, return_policy: value.return_policy, discount: value.discount, items: value.items.map(i => ({ slug: i.slug, color: i.color, size: i.size, qty: i.qty, price_cents: i.price_cents, image: i.product.image, name: i.product.name_en, name_en: i.product.name_en, name_fr: i.product.name_fr, name_ar: i.product.name_ar, variantId: i.variantId })) };
 }
 
 module.exports = { ...rules, settings, quote, publicQuote };

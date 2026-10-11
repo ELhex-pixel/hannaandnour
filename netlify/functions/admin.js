@@ -169,9 +169,7 @@ function cleanProductFields(body) {
   p.compare_at_price_cents = body.compare_at_price_cents != null && body.compare_at_price_cents
     ? Math.max(0, parseInt(body.compare_at_price_cents, 10))
     : null;
-  p.category = require('./lib/product-assistant').categories.includes(body.category)
-    ? body.category
-    : 'hijab';
+  p.category = body.category;
   p.badge = String(body.badge || '').trim() || null;
   p.is_featured = !!body.is_featured;
   p.is_bestseller = !!body.is_bestseller;
@@ -217,6 +215,11 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     // ---- Everything below requires a valid admin session ----
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (['getCartOffer', 'saveCartOffer'].includes(action)) {
+      const limited = await rateLimit(sb, event, 'admin-cart-offer', 60, 600, 'admin');
+      if (limited) return limited;
+      return await require('./lib/cart-offer').adminCartOffer(sb, action, body);
+    }
     if (['scanSale','resetAll','resetStock'].includes(action)) return json(409, { error: 'Parcours suspendu pour préserver le stock et l’historique. Utilisez les ajustements justifiés dans Stock ; la caisse manuelle doit être remplacée par une transaction idempotente avant réactivation.' });
     if (['listInventoryAdjustments', 'resetInventoryJournal', 'adjustInventory', 'scanSetStock', 'setPreparationQuantity', 'completePreparation'].includes(action)) {
       const limited = await rateLimit(sb, event, 'admin-inventory', 120, 600, 'admin');
@@ -291,6 +294,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
         const id = String(body.id || '').trim();
         const limited = await rateLimit(sb, event, 'admin-save-product', 60, 600, 'admin');
         if (limited) return limited;
+        if (!require('./lib/product-assistant').categories.includes(body.category)) return json(400,{error:'Choisissez une catégorie valide dans la liste.'});
         let fields;
         try { fields = cleanProductFields(body); } catch (error) { return json(400, { error: 'Photos invalides : utilisez une URL d’image valide, au maximum 100 photos et uniquement les coloris de la fiche.' }); }
 
@@ -611,6 +615,8 @@ case 'getSettings': {
 
       case 'saveSettings': {
         const shipping = body.shipping || {};
+        if (shipping.show_tax !== undefined && typeof shipping.show_tax !== 'boolean') return json(400, { error: 'Le choix d’affichage de la TVA doit être coché ou décoché.' });
+        const current = await loadSettings(sb);
         const value = {
           standard_cents: Math.max(0, parseInt(shipping.standard_cents, 10) || 0),
           express_cents: Math.max(0, parseInt(shipping.express_cents, 10) || 0),
@@ -618,8 +624,9 @@ case 'getSettings': {
           pickup_cents: Math.max(0, parseInt(shipping.pickup_cents, 10) || 0),
           free_threshold_cents: Math.max(0, parseInt(shipping.free_threshold_cents, 10) || 0),
           tax_rate: Math.max(0, Math.min(1, parseFloat(shipping.tax_rate) || 0)),
+          show_tax: shipping.show_tax === undefined ? current.show_tax !== false : shipping.show_tax,
           pickup_enabled: shipping.pickup_enabled !== false,
-          returns_days: (await loadSettings(sb)).returns_days || 30
+          returns_days: current.returns_days || 30
         };
         const { error } = await sb.from('settings').upsert({ key: 'shipping', value, updated_at: new Date().toISOString() });
         if (error) throw error;
@@ -1505,7 +1512,7 @@ summary.d30.topPaths = Object.keys(byPath)
 
 async function loadSettings(sb) {
   const row = await getSetting(sb, 'shipping', null);
-  if (row) return row;
+  if (row) return { ...row, show_tax: row.show_tax !== false };
   return {
     standard_cents: intEnv('SHIPPING_STANDARD_CENTS', 699),
     express_cents: intEnv('SHIPPING_EXPRESS_CENTS', 1200),
@@ -1513,6 +1520,7 @@ async function loadSettings(sb) {
     pickup_cents: 0,
     free_threshold_cents: intEnv('FREE_SHIPPING_THRESHOLD_CENTS', 7500),
     tax_rate: floatEnv('TAX_RATE', 0.07),
+    show_tax: true,
     returns_days: 30,
     pickup_enabled: true
   };

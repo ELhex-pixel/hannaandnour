@@ -200,8 +200,26 @@
         tSec.style.display = cfg && cfg.reviews && cfg.reviews.show_demo ? '' : 'none';
       }
     } catch (e) {}
+    refreshTaxVisibility(CONFIG_DATA);
     refreshFooterTrust();
     document.dispatchEvent(new CustomEvent('hn:config', { detail: cfg }));
+  }
+
+  function refreshTaxVisibility(settings) {
+    document.querySelectorAll('[data-tax-row]').forEach(function (row) {
+      row.hidden = settings.show_tax === false;
+    });
+  }
+
+  function renderCartOffer(prefix, discount, totals, format) {
+    var label = document.getElementById(prefix + 'DiscountLabel');
+    var notice = document.getElementById(prefix + 'OfferNotice');
+    var surprise = discount && discount.kind === 'surprise' && totals.discount > 0;
+    if (label) label.textContent = surprise ? tr('cartOfferLabel', { pct: discount.percent_off }) : tr('sumDiscount');
+    if (notice) {
+      notice.hidden = !surprise;
+      notice.textContent = surprise ? tr('cartOfferMessage', { pct: discount.percent_off, amount: format(totals.discount) }) : '';
+    }
   }
 
   function currentLang() {
@@ -232,6 +250,7 @@
         try { writeLS(PROMOS_CACHE_KEY, promosList); } catch (e) {}
         refreshPromoAnnounce(promosList);
         refreshFooterTrust();
+        emit('hn:promos');
         return promosList;
       })
       .catch(function () {
@@ -387,6 +406,7 @@
   }
 
   function catKey(cat) {
+    if (window.HN_CATEGORIES) return window.HN_CATEGORIES.key(cat);
     return { hijab: 'catHijabs', abaya: 'catAbayas', dress: 'catDresses', prayer: 'catPrayerWear', accessory: 'catAccessories', knitwear: 'catKnitwear', jacket: 'catJackets', skirt: 'catSkirts', top: 'catTops', trousers: 'catTrousers' }[cat] || 'allProducts';
   }
 
@@ -685,6 +705,7 @@
     loadError: loadError,
     tr: tr,
     money: money,
+    renderCartOffer: renderCartOffer,
     image: imageUrl,
     lang: currentLang,
     productName: productName,

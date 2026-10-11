@@ -27,7 +27,7 @@ exports.handler = async function (event) {
     const options = { log: entry => console.warn(JSON.stringify(entry)) };
     const [configuration, color_swatches, demo] = await Promise.all([
       publicRead('configuration', async signal => {
-        const query = sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy', 'catalog', 'reviews', 'home', 'story']);
+        const query = sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy', 'catalog', 'reviews', 'home', 'story', 'cart_offer']);
         return queryResult(await query.abortSignal(signal));
       }, options),
       publicRead('color_swatches', signal => loadColorSwatches(sb, signal), options),
@@ -52,7 +52,7 @@ exports.handler = async function (event) {
       reviews.demo = { count: list.length, sum: list.reduce((sum, row) => sum + (parseInt(row.rating, 10) || 0), 0) };
     }
     const authoritative = await commerceSettings(sb, rows);
-    return json(200, { settings: { ...authoritative.shipping, returns_days: authoritative.return_policy.days }, return_policy: authoritative.return_policy, catalog, currency: authoritative.currency, reviews, home: value('home') ?? null, story: generalStory(value('story') ?? null), color_swatches });
+    return json(200, { settings: { ...authoritative.shipping, returns_days: authoritative.return_policy.days }, return_policy: authoritative.return_policy, cart_offer: authoritative.cart_offer, catalog, currency: authoritative.currency, reviews, home: value('home') ?? null, story: generalStory(value('story') ?? null), color_swatches });
   } catch (err) {
     const response = json(err.transient ? 503 : 500, { error: 'Configuration temporarily unavailable' });
     if (err.transient) response.headers['Retry-After'] = '1';

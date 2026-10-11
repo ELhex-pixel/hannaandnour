@@ -17,7 +17,7 @@
   };
   var PROMO_LOCAL = { WELCOME15: 0.15 };
 
-  var state = { method: 'standard', settings: DEFAULTS, loaded: false, quote: null, revision: 0 };
+  var state = { method: 'standard', settings: DEFAULTS, loaded: false, quote: null, revision: 0, paying: false };
 
   function getPromo() {
     try { return window.sessionStorage.getItem('hn-promo') || ''; } catch (e) { return ''; }
@@ -75,6 +75,7 @@
   }
 
   function refreshQuote() {
+    if (state.paying) return Promise.resolve();
     var revision = ++state.revision;
     state.quote = null;
     showPendingQuote();
@@ -114,6 +115,7 @@
     if (taxEl) taxEl.textContent = formatMoney(t.tax);
     if (discRow) discRow.style.display = t.discount > 0 ? '' : 'none';
     if (discEl) discEl.textContent = '-' + formatMoney(t.discount);
+    HN.renderCartOffer('checkout', state.quote.discount, t, formatMoney);
     if (totalEl) totalEl.textContent = formatMoney(t.total);
 
     var btn = document.getElementById('placeOrderBtn');
@@ -213,6 +215,7 @@
     var methods = document.querySelectorAll('.payment-method[data-method]');
     methods.forEach(function (m) {
       m.addEventListener('click', function () {
+        if (state.paying) return;
         methods.forEach(function (x) { x.classList.remove('selected'); });
         m.classList.add('selected');
         state.method = m.getAttribute('data-method');
@@ -246,6 +249,7 @@
     var input = document.getElementById('discountInput');
     if (applyBtn && input) {
       applyBtn.addEventListener('click', function () {
+        if (state.paying) return;
         var code = input.value.trim().toUpperCase();
         if (!code) { setPromo(''); refreshQuote(); return; }
         var rate = window.HN && typeof window.HN.promoRate === 'function'
@@ -253,7 +257,6 @@
           : (PROMO_LOCAL[code] || 0);
         if (rate > 0) {
           setPromo(code);
-          window.hnToast && hnToast(tr('promoApplied'), tr('promoAppliedMsg', { pct: Math.round(rate * 100) }), 'success');
         } else {
           setPromo('');
           window.hnToast && hnToast(tr('invalidCode'), tr('invalidCodeMsg'), 'error');
@@ -273,7 +276,7 @@
     if (!btn) return;
 
     btn.addEventListener('click', function () {
-      if (!state.quote) return;
+      if (!state.quote || state.paying) return;
       var items = HN.cart.list();
       if (!items.length) {
         window.location.href = 'cart.html';
@@ -327,6 +330,7 @@
         return;
       }
 
+      state.paying = true;
       btn.disabled = true;
       btn.textContent = tr('processing');
 
@@ -342,6 +346,7 @@
           if (out.status === 200 && out.data.url) {
             window.location.href = out.data.url;
           } else if (out.status === 409 && out.data.totals) {
+            state.paying = false;
             acceptQuote(out.data);
             window.hnToast && hnToast(tr('checkoutError'), tr('quoteChanged'), 'error');
           } else {
@@ -349,6 +354,7 @@
           }
         })
         .catch(function (err) {
+          state.paying = false;
           btn.disabled = false;
           btn.textContent = tr('placeOrder') + ' \u2022 ' + formatMoney(totals().total);
           window.hnToast && hnToast(tr('checkoutError'), err.message || tr('demoMsg'), 'error');
@@ -361,6 +367,7 @@
     document.querySelectorAll('[id^="checkoutSummary"]').forEach(function (el) { el.innerHTML = '<span class="live-amount" aria-hidden="true"></span>'; });
     var policy = document.getElementById('checkoutReturnPolicy'); if (policy) policy.textContent = '';
     var discount = document.getElementById('checkoutDiscountRow'); if (discount) discount.style.display = 'none';
+    var notice = document.getElementById('checkoutOfferNotice'); if (notice) { notice.hidden = true; notice.textContent = ''; }
     var apply = document.getElementById('applyDiscount'); if (apply) apply.disabled = true;
   }
 
@@ -401,5 +408,6 @@
   }
 
   document.addEventListener('langchange', function () { if (state.loaded) renderShippingMethodPrices(); renderSummary(); renderReturnPolicy(); });
+  document.addEventListener('hn:config', function () { if (state.loaded) refreshQuote(); });
   init();
 })();

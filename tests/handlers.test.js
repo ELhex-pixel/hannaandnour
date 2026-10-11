@@ -126,16 +126,40 @@ function archiveAdmin(overrides = {}, databaseError = false, returnedIds = null)
   };
   vm.runInNewContext(fs.readFileSync('netlify/functions/admin.js', 'utf8'), {
     exports, process: { env: {} }, Buffer, console: { error() {} },
-    require: name => name === './shared' ? shared : name === './lib/return-policy' ? require('../netlify/functions/lib/return-policy') : name === '../../public/js/product-media' ? require('../public/js/product-media') : name === './lib/product-assistant' ? {categories:['abaya','hijab']} : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales','./lib/admin-refunds'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales','adminRefunds'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
+    require: name => name === './shared' ? shared : name === './lib/return-policy' ? require('../netlify/functions/lib/return-policy') : name === '../../public/js/product-media' ? require('../public/js/product-media') : name === './lib/product-assistant' ? {categories:require('../public/js/categories').codes} : name === '../../public/js/colors' ? require('../public/js/colors') : name === 'crypto' ? crypto : ['./lib/admin-inventory','./lib/returns','./lib/admin-operations','./lib/admin-sales','./lib/admin-refunds','./lib/cart-offer'].includes(name) ? Object.fromEntries(['adminInventory','adminReturns','adminOperations','adminSales','adminRefunds','adminCartOffer'].map(key => [key,async (sb,action) => { state.inventory.push(action); return shared.json(200,{ ok:true }); }])) : class Stripe { constructor() { throw new Error('No payment expected'); } }
   });
   return { handler: exports.handler, state };
 }
 const archiveId = '11111111-1111-4111-8111-111111111111';
+test('le choix d’affichage TVA est sauvegardé sans changer son taux et conservé par les anciens formulaires', async () => {
+  const initial = { tax_rate: 0.2, show_tax: false, standard_cents: 299, express_cents: 700, nextday_cents: 1200, pickup_cents: 0, free_threshold_cents: 7500, pickup_enabled: true, returns_days: 30 };
+  for (const choice of [false, true, undefined]) {
+    const mock = archiveAdmin({ getSetting: async () => initial });
+    const shipping = { ...initial }; delete shipping.show_tax;
+    if (choice !== undefined) shipping.show_tax = choice;
+    const response = await mock.handler(event({ action: 'saveSettings', shipping }));
+    assert.equal(response.statusCode, 200);
+    assert.equal(mock.state.writes.length, 1);
+    assert.equal(mock.state.writes[0].key, 'shipping');
+    assert.equal(mock.state.writes[0].value.show_tax, choice === undefined ? false : choice);
+    assert.equal(mock.state.writes[0].value.tax_rate, 0.2);
+    assert.equal(JSON.parse(response.body).settings.show_tax, choice === undefined ? false : choice);
+  }
+  for (const choice of ['false', 0, null]) {
+    const mock = archiveAdmin();
+    assert.equal((await mock.handler(event({ action: 'saveSettings', shipping: { show_tax: choice } }))).statusCode, 400);
+    assert.equal(mock.state.writes.length, 0);
+  }
+  const denied = archiveAdmin({ requireAdmin: async () => ({ ok: false }) });
+  assert.equal((await denied.handler(event({ action: 'saveSettings', shipping: { show_tax: false } }))).statusCode, 401);
+  assert.equal(denied.state.writes.length, 0);
+});
 test('une association photo/coloris invalide ne modifie pas le produit et exige la session admin', async () => {
   const mock=archiveAdmin();
   for (const gallery of [[{src:'images/vin.jpg',color:'Autre'}],['javascript:alert(1)'],Array(101).fill('images/test.jpg')]) {
-    const response=await mock.handler(event({action:'saveProduct',id:archiveId,name_en:'Local',colors:['Vin'],image:'images/test.jpg',gallery}));
+    const response=await mock.handler(event({action:'saveProduct',id:archiveId,name_en:'Local',category:'top',colors:['Vin'],image:'images/test.jpg',gallery}));
     assert.equal(response.statusCode,400);
+    assert.match(response.body,/Photos invalides/);
   }
   assert.equal(mock.state.writes.length,0);
   const denied=archiveAdmin({requireAdmin:async()=>({ok:false})});
@@ -349,6 +373,15 @@ test('toutes les actions de remboursement exigent la session et la limite avant 
     const allowed=archiveAdmin();assert.equal((await allowed.handler(event({action}))).statusCode,200);assert.deepEqual(allowed.state.inventory,[action]);assert.equal(allowed.state.limits,1);
   }
 });
+test('les réglages de promotion surprise exigent la session admin et le quota avant tout accès', async () => {
+  for (const action of ['getCartOffer', 'saveCartOffer']) {
+    const denied = archiveAdmin({ requireAdmin: async () => ({ ok: false }) });
+    assert.equal((await denied.handler(event({ action }))).statusCode, 401); assert.equal(denied.state.inventory.length, 0);
+    const limited = archiveAdmin({ rateLimit: async () => ({ statusCode: 429 }) });
+    assert.equal((await limited.handler(event({ action }))).statusCode, 429); assert.equal(limited.state.inventory.length, 0);
+    const allowed = archiveAdmin(); assert.equal((await allowed.handler(event({ action }))).statusCode, 200); assert.deepEqual(allowed.state.inventory, [action]);
+  }
+});
 
 function publicConfig(rows, fail = '', optionalDemoError = false) {
   const exports = {}, state = { reads: [], release: null }, gate = new Promise(resolve => { state.release = resolve; });
@@ -377,11 +410,12 @@ test('la configuration lit trois sources en parallèle, sans double lecture mon�
   const mock=publicConfig(rows), promise=mock.handler({httpMethod:'GET'});
   await Promise.resolve();await Promise.resolve();
   assert.equal(mock.state.reads.length,3);
-  assert.deepEqual(mock.state.keys,['shipping','currency','return_policy','catalog','reviews','home','story']);
+  assert.deepEqual(mock.state.keys,['shipping','currency','return_policy','catalog','reviews','home','story','cart_offer']);
   mock.state.release();const response=await promise, body=JSON.parse(response.body);
   assert.equal(response.statusCode,200);assert.equal(response.headers['Cache-Control'],'no-store');
   const authoritative=await require('../netlify/functions/lib/commerce').settings({from(){throw new Error('Une quatrième lecture est interdite');}},rows);
   assert.deepEqual(body.currency,authoritative.currency);
+  assert.deepEqual(body.cart_offer, { enabled: false, percent_off: 0 });
   assert.deepEqual(body.settings,{...authoritative.shipping,returns_days:14});
   assert.deepEqual(body.return_policy,authoritative.return_policy);
   assert.deepEqual(body.reviews,{show_demo:false,demo:{count:2,sum:9}});
@@ -395,4 +429,17 @@ test('les pannes de configuration ou de teintes échouent sans fuite, les avis f
   }
   const mock=publicConfig([], '', true);mock.state.release();const response=await mock.handler({httpMethod:'GET'});
   assert.equal(response.statusCode,200);assert.deepEqual(JSON.parse(response.body).reviews,{show_demo:false,demo:{count:0,sum:0}});
+});
+test('la configuration publique expose le choix TVA enregistré et affiche par défaut pour les anciens réglages', async () => {
+  for (const choice of [true, false, undefined]) {
+    const shipping = { tax_rate: 0.2 };
+    if (choice !== undefined) shipping.show_tax = choice;
+    const mock = publicConfig([{ key: 'shipping', value: shipping }]);
+    mock.state.release();
+    const response = await mock.handler({ httpMethod: 'GET' });
+    assert.equal(response.statusCode, 200);
+    const settings = JSON.parse(response.body).settings;
+    assert.equal(settings.show_tax, choice !== false);
+    assert.equal(settings.tax_rate, 0.2);
+  }
 });

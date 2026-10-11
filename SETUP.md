@@ -37,6 +37,7 @@ paiement réel via **Stripe Checkout**, et une API servie par des **Netlify Func
      - `supabase/migration_catalog_cleanup.sql` (suppression protégée des fiches inutilisées et protection des références historiques)
       - `supabase/migration_inventory_journal.sql` (réinitialisation du journal courant par archivage privé, sans modification du stock)
       - `supabase/migration_partial_refunds.sql` (journal privé et devis de remboursement par articles, reprise des opérations Stripe)
+      - `supabase/migration_catalog_categories.sql` (24 catégories de vêtements, sans reclassement automatique ni changement de stock)
 3. Récupérez dans **Settings > API** :
    - `Project URL` → `SUPABASE_URL`
    - `service_role secret` → `SUPABASE_SERVICE_ROLE_KEY` (serveur, **jamais** dans le navigateur)
@@ -316,6 +317,12 @@ Une confirmation Stripe est rapprochée par la même RPC que les webhooks, de fa
 Le compteur catalogue demande désormais `count: 'exact'` sur la RPC `search_products`, avant `select`, avec les mêmes filtres que les résultats. L’absence de compteur est une erreur de service, pas un total zéro inventé. Filtres, tri et pagination conservent leurs contrats ; cette correction n’exige aucune migration.
 
 Le PDF `docs/etapes-importantes-hanna-nour.pdf` contient cinq pages de suivi pour les étapes 2, 3, 5, 6 et 7 ; sa source HTML est conservée dans le même dossier. Il n’est pas publié avec le site.
+
+### Catégories de vêtements
+
+La liste comporte 24 choix organisés dans l’admin en cinq familles : ensembles/pièces complètes, hauts, vestes/manteaux, bas, accessoires/autres collections. Elle comprend notamment Ensembles, Combinaisons, Survêtements, T-shirts, Chemises, Blouses/tuniques, Gilets/cardigans, Sweats, Sweats à capuche, Manteaux, Capes/ponchos, Vestes sans manches, Jeans et Shorts/bermudas. `public/js/categories.js` fournit les codes et clés communs à l’admin, au site et à la validation du serveur ; les libellés boutique sont traduits FR/EN/AR. La reconnaissance photo utilise les mêmes choix. Un code inconnu est refusé avant écriture, plutôt que remplacé par une autre catégorie.
+
+Appliquer uniquement la nouvelle migration `supabase/migration_catalog_categories.sql` après les prérequis existants. Elle étend la contrainte PostgreSQL et ajoute le marqueur privé `catalog_categories_schema_version()` = 1, désormais exigé en lecture seule par le build. Elle ne reclasse aucun produit, ne modifie aucun prix ou stock et n’affecte pas les commandes. Les ensembles déjà préparés dans Hauts peuvent ensuite être reclassés manuellement en Ensembles depuis la fiche. Tests locaux de rollback, réexécution, sauvegarde et concordance des menus ; aucun SQL distant n’est appliqué automatiquement.
 
 ### Données historiques et limites
 

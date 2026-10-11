@@ -89,9 +89,9 @@ function inventoryEditor(adjust, reset) {
   const nodes = {}, listeners = {}, storage = new Map();
   const state = { token:'fixture-token',calls:[],resets:[],history:[],archives:[],stock:18,present:true,confirms:[],confirmed:true };
   const node = id => nodes[id] || (nodes[id] = { value:'',textContent:'',hidden:false,disabled:false,handlers:{},addEventListener(name,handler) { this.handlers[name]=handler; },querySelectorAll:()=>[],reset() {},focus() {},scrollIntoView() {} });
-  node('inventoryFilter').value='active';
+  node('inventoryFilter').value='all';
   const api = { token:()=>state.token,call:async (action,body) => {
-    if (action==='listProducts') return { products:state.present?[{ name_fr:'Fixture locale',variants:[{ id:variantId,stock:state.stock,color:'Vin',size:'M' }] }]:[] };
+    if (action==='listProducts') return { products:state.products || (state.present?[{ id:'fixture',name_fr:'Fixture locale',variants:[{ id:variantId,stock:state.stock,color:'Vin',size:'M' }] }]:[]) };
     if (action==='listInventoryAdjustments') return { adjustments:body.archived ? state.archives : state.history };
     if (action==='resetInventoryJournal') {
       state.resets.push({ ...body });
@@ -107,12 +107,86 @@ function inventoryEditor(adjust, reset) {
     state.stock=body.mode==='restock'?before+body.quantity:body.mode==='remove'?before-body.quantity:body.quantity;
     return { result:{ operation_id:body.operation_id,stock_before:before,stock_after:state.stock } };
   } };
-  const context = { window:{ HN_ADMIN:api,crypto:{ randomUUID } },document:{ getElementById:node,querySelector:node,addEventListener(name,handler) { listeners[name]=handler; } },sessionStorage:{ getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key) },confirm:message=>{ state.confirms.push(message); return state.confirmed; } };
+  const context = { window:{ HN_ADMIN:api,HN_ADMIN_CATALOG:require('../public/js/admin-catalog'),crypto:{ randomUUID } },document:{ getElementById:node,querySelector:node,addEventListener(name,handler) { listeners[name]=handler; } },sessionStorage:{ getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key) },confirm:message=>{ state.confirms.push(message); return state.confirmed; } };
   const source=fs.readFileSync('public/js/admin-features.js','utf8');
   vm.runInNewContext(source.slice(source.indexOf("(function () {\n  'use strict';\n  var api = window.HN_ADMIN;")),context);
   return { nodes,state,storage,listeners,load:()=>node('refreshInventory').handlers.click(),pick:()=>node('inventoryVariant').handlers.change.call({ value:variantId }),submit:()=>node('inventoryForm').handlers.submit({ preventDefault() {} }),input(mode,value) { node('inventoryMode').value=mode; node('inventoryMode').handlers.change(); node('inventoryQuantity').value=String(value); node('inventoryQuantity').handlers.input(); node('inventoryReason').value='Déstockage local'; } };
 }
 const settleInventory = () => new Promise(resolve=>setImmediate(resolve));
+test('le stock pagine les produits, regroupe les variantes et recherche une référence ou un code-barres', async () => {
+  const mock=inventoryEditor();
+  mock.state.products=Array.from({length:12},(_,i)=>({id:'p'+i,name_fr:'Produit '+i,sku:'REF-'+i,active:i!==11,variants:i===10?[]:[{id:'v'+i,stock:2,color:'Crème',size:'Unique',barcode:'BAR-'+i},{id:'disabled'+i,stock:50,active:false,color:'Bleu',size:'Unique'}]}));
+  mock.load();await settleInventory();
+  assert.match(mock.nodes.inventoryResults.textContent,/1–10 sur 12/);
+  assert.equal((mock.nodes.inventoryList.innerHTML.match(/<details /g)||[]).length,10);
+  assert(!mock.nodes.inventoryList.innerHTML.includes(' open'));
+  mock.nodes.inventoryList.handlers.toggle({target:{getAttribute:()=> 'p0',open:true}});
+  mock.nodes.inventoryNext.handlers.click();
+  assert.match(mock.nodes.inventoryResults.textContent,/11–12 sur 12/);
+  assert.match(mock.nodes.inventoryList.innerHTML,/Stock non configuré/);
+  mock.nodes.inventoryPrevious.handlers.click();
+  assert.match(mock.nodes.inventoryList.innerHTML,/data-inventory-product="p0" open/);
+  mock.nodes.inventorySearch.value='BAR-11';mock.nodes.inventorySearch.handlers.input();
+  assert.match(mock.nodes.inventoryResults.textContent,/1–1 sur 1/);
+  assert.match(mock.nodes.inventoryList.innerHTML,/Hors ligne \/ archivé/);
+  assert(!mock.nodes.inventoryList.innerHTML.includes('disabled11'));
+  mock.nodes.inventoryVisibility.value='active';mock.nodes.inventoryVisibility.handlers.change();
+  assert.match(mock.nodes.inventoryList.innerHTML,/Aucun produit pour ces filtres/);
+  mock.nodes.resetInventoryFilters.handlers.click();
+  mock.nodes.inventorySearch.value='REF-10';mock.nodes.inventorySearch.handlers.input();
+  assert.match(mock.nodes.inventoryList.innerHTML,/Stock non configuré/);
+  assert.equal(mock.state.calls.length,0);
+  assert.equal(mock.state.resets.length,0);
+});
+test('les filtres combinés séparent un produit épuisé, partiellement disponible et désactivé', async () => {
+  const mock=inventoryEditor();
+  mock.state.products=[
+    {id:'empty',name_fr:'Épuisé',active:true,variants:[{id:'empty-row',stock:0}]},
+    {id:'partial',name_fr:'Partiellement disponible',active:true,variants:[{id:'zero-row',stock:0},{id:'low-row',stock:2},{id:'inactive-row',stock:30,active:false}]},
+    {id:'offline',name_fr:'Hors ligne',active:false,variants:[{id:'offline-row',stock:3}]},
+    {id:'disabled',name_fr:'Désactivé',active:true,variants:[{id:'disabled-row',stock:2,active:false}]}
+  ];
+  mock.load();await settleInventory();
+  mock.nodes.inventoryVisibility.value='active';mock.nodes.inventoryVisibility.handlers.change();
+  mock.nodes.inventoryFilter.value='low';mock.nodes.inventoryFilter.handlers.change();
+  assert.match(mock.nodes.inventoryResults.textContent,/1–1 sur 1/);
+  assert.match(mock.nodes.inventoryList.innerHTML,/low-row/);
+  assert(!/zero-row|inactive-row|offline-row|disabled-row/.test(mock.nodes.inventoryList.innerHTML));
+  mock.nodes.inventoryFilter.value='empty';mock.nodes.inventoryFilter.handlers.change();
+  assert.match(mock.nodes.inventoryList.innerHTML,/empty-row/);
+  assert(!mock.nodes.inventoryList.innerHTML.includes('zero-row'));
+  mock.nodes.inventoryFilter.value='disabled';mock.nodes.inventoryFilter.handlers.change();
+  assert.match(mock.nodes.inventoryList.innerHTML,/badge-gray">Variante désactivée/);
+  assert.equal(mock.state.calls.length,0);
+});
+test('les filtres et pages conservent le devis d’ajustement et une opération incertaine', async () => {
+  const mock=inventoryEditor(async()=>{throw new Error('Réponse perdue locale');});
+  mock.load();await settleInventory();mock.pick();mock.input('remove',9);
+  const preview=mock.nodes.inventoryPreview.textContent;
+  mock.nodes.inventorySearch.value='aucun';mock.nodes.inventorySearch.handlers.input();
+  mock.nodes.inventoryNext.handlers.click();
+  assert.equal(mock.nodes.inventoryVariant.value,variantId);
+  assert.equal(mock.nodes.inventoryPreview.textContent,preview);
+  mock.submit();await settleInventory();
+  const saved=mock.storage.get('hn-admin-stock-operation');
+  mock.nodes.resetInventoryFilters.handlers.click();
+  mock.nodes.inventoryFilter.value='empty';mock.nodes.inventoryFilter.handlers.change();
+  assert.equal(mock.storage.get('hn-admin-stock-operation'),saved);
+  mock.submit();await settleInventory();
+  assert.equal(mock.state.calls.length,2);
+  assert.equal(mock.state.calls[0].operation_id,mock.state.calls[1].operation_id);
+  assert.equal(mock.state.calls[1].expected_stock,18);
+});
+test('un stock invalide ne devient pas épuisé et ne permet aucun ajustement', async () => {
+  const mock=inventoryEditor();mock.state.stock=null;
+  mock.load();await settleInventory();mock.pick();mock.input('count',9);mock.submit();
+  assert.match(mock.nodes.inventorySummary.innerHTML,/À vérifier/);
+  assert.match(mock.nodes.inventoryList.innerHTML,/Stock à vérifier/);
+  assert.equal(mock.nodes.saveInventory.disabled,true);
+  assert.equal(mock.state.calls.length,0);
+  mock.nodes.inventoryFilter.value='empty';mock.nodes.inventoryFilter.handlers.change();
+  assert.match(mock.nodes.inventoryList.innerHTML,/Aucun produit/);
+});
 test('le stock exige un choix explicite et prévisualise ajout, retrait et correction sans écriture', async () => {
   const mock=inventoryEditor(); mock.load(); await settleInventory(); mock.pick();
   mock.input('',9); mock.submit();

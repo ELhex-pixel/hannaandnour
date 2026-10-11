@@ -3,7 +3,19 @@
   else root.HN_COMMERCE = factory();
 })(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
-  var defaults = { standard_cents: 699, express_cents: 1200, nextday_cents: 2500, pickup_cents: 0, free_threshold_cents: 7500, tax_rate: 0.07, pickup_enabled: true };
+  var defaults = { standard_cents: 699, express_cents: 1200, nextday_cents: 2500, pickup_cents: 0, free_threshold_cents: 7500, tax_rate: 0.07, show_tax: true, pickup_enabled: true };
+
+  function cartOffer(value) {
+    if (!value || typeof value.enabled !== 'boolean' || !Number.isInteger(value.percent_off) || value.percent_off < 0 || value.percent_off > 100 || (value.enabled && value.percent_off === 0)) return { enabled: false, percent_off: 0 };
+    return { enabled: value.enabled, percent_off: value.percent_off };
+  }
+
+  function chooseDiscount(offer, codePercent) {
+    var automatic = cartOffer(offer);
+    var percent = typeof codePercent === 'number' && Number.isFinite(codePercent) && codePercent > 0 && codePercent <= 100 ? codePercent : 0;
+    if (automatic.enabled && automatic.percent_off >= percent) return { kind: 'surprise', percent_off: automatic.percent_off };
+    return { kind: percent ? 'code' : null, percent_off: percent };
+  }
 
   function normalize(items) {
     if (!Array.isArray(items) || !items.length || items.length > 50) throw new Error('Invalid cart');
@@ -59,5 +71,5 @@
     return lines;
   }
 
-  return { defaults: defaults, normalize: normalize, calculate: calculate, discountedLines: discountedLines };
+  return { defaults: defaults, normalize: normalize, calculate: calculate, discountedLines: discountedLines, cartOffer: cartOffer, chooseDiscount: chooseDiscount };
 });

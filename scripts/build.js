@@ -128,6 +128,7 @@ async function build() {
       $('body').attr('data-site-origin', new URL(origin).origin);
       if (preview || process.env.STAGING_MODE === 'true') $('body').attr('data-preview', '');
       if ($('script[src="js/store.js"]').length && !$('script[src="js/content.js"]').length) $('script[src="js/store.js"]').before('<script src="js/content.js"></script>');
+      if ($('script[src="js/store.js"]').length && !$('script[src="js/categories.js"]').length) $('script[src="js/store.js"]').before('<script src="js/categories.js"></script>');
       $('base').remove();
       $('head').prepend('<base href="/">');
       $('html').attr('lang', language).attr('dir', language === 'ar' ? 'rtl' : 'ltr');

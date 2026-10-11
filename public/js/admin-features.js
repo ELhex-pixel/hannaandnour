@@ -287,6 +287,7 @@
   var form = el('inventoryForm');
   if (!form) return;
   var rows = [], revision = 0, busy = false, snapshot = null, pending = null;
+  var catalog = window.HN_ADMIN_CATALOG, products = [], groups = [], page = 1, expanded = Object.create(null);
   var pendingKey = 'hn-admin-stock-operation';
   try { if (api.token && api.token()) pending = JSON.parse(sessionStorage.getItem(pendingKey) || 'null'); } catch (e) {}
   var pendingReset = null, historyRevision = 0;
@@ -299,7 +300,7 @@
   function clearReset() { pendingReset = null; try { sessionStorage.removeItem(resetKey); } catch (e) {} }
   function preview() {
     var mode = el('inventoryMode').value, value = el('inventoryQuantity').value, qty = Number(value);
-    if (!snapshot || ['restock','remove','count'].indexOf(mode) < 0 || value === '') { el('inventoryPreview').textContent = 'Choisissez une variante, une opération et une quantité pour voir le résultat avant envoi.'; return false; }
+    if (!snapshot || !catalog.validStock(snapshot.stock) || ['restock','remove','count'].indexOf(mode) < 0 || value === '') { el('inventoryPreview').textContent = 'Choisissez une variante au stock confirmé, une opération et une quantité pour voir le résultat avant envoi.'; return false; }
     if (!Number.isInteger(qty) || qty < 0 || qty > 1000000 || (mode !== 'count' && qty === 0)) { el('inventoryPreview').textContent = 'Saisissez une quantité entière valide.'; return false; }
     var after = mode === 'restock' ? snapshot.stock + qty : mode === 'remove' ? snapshot.stock - qty : qty;
     if (after < 0 || after > 1000000) { el('inventoryPreview').textContent = after < 0 ? 'Retrait impossible : quantité supérieure au disponible affiché.' : 'La quantité dépasserait la limite du stock.'; return false; }
@@ -326,24 +327,42 @@
     if (!row) { snapshot = null; el('inventoryVariant').value = ''; el('inventoryCurrent').textContent = 'Variante non disponible dans la liste chargée.'; lock(!!pending); return; }
     snapshot = row;
     el('inventoryVariant').value = id;
-    el('inventoryCurrent').textContent = row.label + ' — ' + row.stock + ' unité(s) actuellement disponibles' + (row.active ? '' : ' — hors ligne');
+    el('inventoryCurrent').textContent = row.label + ' — ' + (catalog.validStock(row.stock) ? row.stock + ' unité(s) actuellement disponibles' : 'stock à vérifier, ajustement indisponible') + (row.active ? '' : ' — hors ligne');
     lock(!!pending);
   }
   function render() {
     var active = rows.filter(function (row) { return row.active; });
-    var stats = [[active.length, 'Variantes en vente'], [active.reduce(function (n, row) { return n + row.stock; }, 0), 'Unités disponibles'], [active.filter(function (row) { return row.stock === 0; }).length, 'Variantes épuisées'], [active.filter(function (row) { return row.stock > 0 && row.stock <= 5; }).length, 'Stock faible (1 à 5)']];
+    var invalid = active.some(function (row) { return !catalog.validStock(row.stock); });
+    var stats = [[products.length, 'Produits catalogue'], [invalid ? 'À vérifier' : active.reduce(function (n, row) { return n + row.stock; }, 0), 'Unités disponibles en ligne'], [products.filter(function (p) { return catalog.stock(p).state === 'unconfigured'; }).length, 'Stock non configuré'], [active.filter(function (row) { return catalog.validStock(row.stock) && row.stock > 0 && row.stock <= 5; }).length, 'Variantes en ligne faibles (1 à 5)']];
     el('inventorySummary').innerHTML = stats.map(function (item) { return '<div class="stat-card"><strong>' + item[0] + '</strong><span>' + item[1] + '</span></div>'; }).join('');
-    var query = el('inventorySearch').value.toLowerCase().trim(), filter = el('inventoryFilter').value;
-    var list = rows.filter(function (row) {
-      if (filter !== 'all' && !row.active) return false;
-      if (filter === 'low' && !(row.stock > 0 && row.stock <= 5)) return false;
-      if (filter === 'empty' && row.stock !== 0) return false;
-      return !query || (row.label + ' ' + row.barcode).toLowerCase().indexOf(query) >= 0;
+    var query = catalog.normalize(el('inventorySearch').value).trim(), filter = el('inventoryFilter').value;
+    var options = { visibility: el('inventoryVisibility').value, stock: filter };
+    var list = groups.filter(function (group) {
+      if (!catalog.matchesProduct(group.product, options)) return false;
+      var productMatch = catalog.matchesProduct(group.product, { query: query });
+      group.visibleRows = group.rows.filter(function (row) {
+        if (filter === 'low' && !(row.enabled && catalog.validStock(row.stock) && row.stock > 0 && row.stock <= 5)) return false;
+        if (filter === 'available' && !(row.enabled && catalog.validStock(row.stock) && row.stock > 0)) return false;
+        return productMatch || catalog.normalize(row.label + ' ' + row.barcode).indexOf(query) >= 0;
+      });
+      return group.visibleRows.length > 0 || (!group.rows.length && productMatch);
     });
-    el('inventoryList').innerHTML = !list.length ? '<p class="empty">Aucune variante pour ces filtres. Si le produit n’a pas de variantes, configurez ses tailles et coloris dans sa fiche.</p>' :
-      '<table class="admin-table"><thead><tr><th>Produit / variante</th><th>Disponible</th><th>État</th><th>Action</th></tr></thead><tbody>' + list.map(function (row) {
-        return '<tr><td data-label="Variante"><strong>' + esc(row.label) + '</strong><br><small>' + esc(row.barcode || 'Code-barres non configuré') + '</small></td><td data-label="Disponible">' + row.stock + '</td><td data-label="État"><span class="badge ' + (row.stock === 0 ? 'badge-red' : row.stock <= 5 ? 'badge-warn' : 'badge-green') + '">' + (row.active ? row.stock === 0 ? 'Épuisé' : row.stock <= 5 ? 'Stock faible' : 'Disponible' : 'Hors ligne') + '</span></td><td data-label="Action"><button type="button" class="btn btn-secondary btn-small" data-inventory-variant="' + esc(row.id) + '">Ajuster</button></td></tr>';
-      }).join('') + '</tbody></table>';
+    var sorted = catalog.sort(list.map(function (group) { return group.product; }), el('inventorySort').value);
+    list.sort(function (a, b) { return sorted.indexOf(a.product) - sorted.indexOf(b.product); });
+    var result = catalog.page(list, page, el('inventoryPageSize').value);
+    page = result.number;
+    catalog.updatePager(document, 'inventory', result);
+    el('inventoryList').innerHTML = !result.items.length ? '<p class="empty">Aucun produit pour ces filtres. Changez la recherche ou réinitialisez les filtres.</p>' : result.items.map(function (group) {
+      var p = group.product, summary = catalog.stock(p);
+      var heading = '<span class="inventory-product-name"><strong>' + esc(catalog.name(p)) + '</strong><small>' + esc(p.sku || p.slug || '') + '</small></span><span class="badge ' + (p.active !== false ? 'badge-green' : 'badge-gray') + '">' + (p.active !== false ? 'En ligne' : 'Hors ligne / archivé') + '</span><span class="badge ' + catalog.stockBadge(summary) + '">' + catalog.stockLabel(summary) + '</span>';
+      if (!group.rows.length) return '<div class="inventory-product inventory-unconfigured"><div class="inventory-product-heading">' + heading + '</div><p class="admin-muted">Configurez les tailles et coloris dans la rubrique Produits.</p></div>';
+      return '<details class="inventory-product" data-inventory-product="' + esc(group.id) + '"' + (expanded[group.id] ? ' open' : '') + '><summary>' + heading + '<span class="inventory-variant-count">' + group.visibleRows.length + ' / ' + group.rows.length + ' variante(s) · ouvrir / fermer</span></summary><table class="admin-table admin-compact-table"><thead><tr><th>Coloris / taille</th><th>Disponible</th><th>État</th><th>Action</th></tr></thead><tbody>' + group.visibleRows.map(function (row) {
+        var valid = catalog.validStock(row.stock);
+        var label = !valid ? 'Stock à vérifier' : !row.enabled ? 'Variante désactivée' : row.stock === 0 ? 'Épuisé' : row.stock <= 5 ? 'Stock faible' : 'Disponible';
+        var badge = !valid ? 'badge-warn' : !row.enabled ? 'badge-gray' : row.stock === 0 ? 'badge-red' : row.stock <= 5 ? 'badge-warn' : 'badge-green';
+        return '<tr><td data-label="Variante"><strong>' + esc(row.variantLabel) + '</strong><br><small>' + esc(row.barcode || 'Code-barres non configuré') + '</small></td><td data-label="Disponible">' + (valid ? row.stock : 'À vérifier') + '</td><td data-label="État"><span class="badge ' + badge + '">' + label + '</span></td><td data-label="Action"><button type="button" class="btn btn-secondary btn-small" data-inventory-variant="' + esc(row.id) + '"' + (!valid || pending || pendingReset || busy ? ' disabled' : '') + '>Ajuster</button></td></tr>';
+      }).join('') + '</tbody></table></details>';
+    }).join('');
   }
   function renderHistory(adjustments) {
     if (!adjustments.length) { el('inventoryHistory').innerHTML = '<p class="empty">' + (el('inventoryHistoryView').value === 'archived' ? 'Aucun ajustement archivé.' : 'Aucun ajustement dans le journal courant.') + '</p>'; return; }
@@ -366,10 +385,15 @@
     api.call('listProducts').then(function (res) {
       if (request !== revision || owner !== api.token()) return;
       rows = [];
-      (res.products || []).forEach(function (product) {
+      products = res.products || [];
+      groups = products.map(function (product, index) {
+        var group = { id: product.id || product.slug || String(index), product: product, rows: [] };
         (product.variants || []).forEach(function (variant) {
-          rows.push({ id: variant.id, stock: variant.stock, active: product.active !== false && variant.active !== false, barcode: variant.barcode || '', label: [product.name_fr || product.name_en || product.slug, variant.color, variant.size].filter(Boolean).join(' — ') });
+          var row = { id: variant.id, stock: variant.stock, enabled: variant.active !== false, active: product.active !== false && variant.active !== false, barcode: variant.barcode || '', variantLabel: [variant.color, variant.size].filter(Boolean).join(' — ') || 'Variante sans coloris / taille', label: [catalog.name(product), variant.color, variant.size].filter(Boolean).join(' — ') };
+          rows.push(row);
+          group.rows.push(row);
         });
+        return group;
       });
       render();
       el('inventoryVariant').innerHTML = '<option value="">Choisir une variante</option>' + rows.map(function (row) { return '<option value="' + esc(row.id) + '">' + esc(row.label) + (row.active ? '' : ' — hors ligne') + '</option>'; }).join('');
@@ -458,8 +482,19 @@
   el('inventoryMode').addEventListener('change', modeLabel);
   el('inventoryQuantity').addEventListener('input', function () { lock(!!pending); });
   el('inventoryVariant').addEventListener('change', function () { if (!pending) pick(this.value); });
-  el('inventorySearch').addEventListener('input', render);
-  el('inventoryFilter').addEventListener('change', render);
+  function resetPage() { page = 1; render(); }
+  el('inventorySearch').addEventListener('input', resetPage);
+  ['inventoryFilter', 'inventoryVisibility', 'inventorySort', 'inventoryPageSize'].forEach(function (id) { el(id).addEventListener('change', resetPage); });
+  el('resetInventoryFilters').addEventListener('click', function () {
+    el('inventorySearch').value = ''; el('inventoryVisibility').value = ''; el('inventoryFilter').value = 'all'; el('inventorySort').value = 'name';
+    resetPage();
+  });
+  el('inventoryPrevious').addEventListener('click', function () { page--; render(); });
+  el('inventoryNext').addEventListener('click', function () { page++; render(); });
+  el('inventoryList').addEventListener('toggle', function (event) {
+    var id = event.target.getAttribute('data-inventory-product');
+    if (id) expanded[id] = event.target.open;
+  }, true);
   el('refreshInventory').addEventListener('click', function () { load(); });
   document.querySelector('[data-tab="inventory"]').addEventListener('click', function () { load(); });
   el('inventoryList').addEventListener('click', function (event) {
@@ -478,13 +513,14 @@
   document.addEventListener('hn:admin-logout', function () {
     revision++;
     historyRevision++;
-    rows = []; snapshot = null; pending = null; busy = false;
+    rows = []; products = []; groups = []; page = 1; expanded = Object.create(null); snapshot = null; pending = null; busy = false;
     clearReset();
     try { sessionStorage.removeItem(pendingKey); } catch (e) {}
     form.reset();
     modeLabel();
     lock(false);
     ['inventoryList', 'inventorySummary', 'inventoryHistory', 'inventoryCurrent'].forEach(function (id) { el(id).textContent = ''; });
+    catalog.updatePager(document, 'inventory', catalog.page([], 1, 10));
     el('inventoryVariant').innerHTML = '<option value="">Choisir une variante</option>';
     el('inventoryStatus').textContent = '';
     el('inventoryStatus').hidden = true;

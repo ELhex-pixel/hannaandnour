@@ -429,21 +429,24 @@
         <input type="text" id="filterProducts" aria-label="Rechercher un produit" placeholder="Nom, référence ou catégorie..." style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
         <select id="filterCategory" aria-label="Filtrer par catégorie" style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
           <option value="">Toutes cat&eacute;gories</option>
-          <option value="hijab">Hijab</option>
-          <option value="abaya">Abaya</option>
-          <option value="prayer">Prayer</option>
-          <option value="dress">Dress</option>
-          <option value="accessory">Accessory</option>
-          <option value="knitwear">Pull / maille</option><option value="jacket">Veste</option><option value="skirt">Jupe</option><option value="top">Haut</option><option value="trousers">Pantalon</option>
+          <optgroup label="Ensembles et pièces complètes"><option value="set">Ensembles</option><option value="dress">Robes</option><option value="jumpsuit">Combinaisons</option><option value="tracksuit">Survêtements</option></optgroup>
+          <optgroup label="Hauts"><option value="top">Hauts</option><option value="tshirt">T-shirts</option><option value="shirt">Chemises</option><option value="blouse">Blouses et tuniques</option><option value="knitwear">Pulls et maille</option><option value="cardigan">Gilets et cardigans</option><option value="sweatshirt">Sweats</option><option value="hoodie">Sweats à capuche</option></optgroup>
+          <optgroup label="Vestes et manteaux"><option value="jacket">Vestes et blazers</option><option value="coat">Manteaux</option><option value="cape">Capes et ponchos</option><option value="vest">Vestes sans manches</option></optgroup>
+          <optgroup label="Bas"><option value="trousers">Pantalons</option><option value="jeans">Jeans</option><option value="skirt">Jupes</option><option value="shorts">Shorts et bermudas</option></optgroup>
+          <optgroup label="Accessoires et autres collections"><option value="accessory">Accessoires</option><option value="hijab">Hijabs</option><option value="abaya">Abayas</option><option value="prayer">Tenues de prière</option></optgroup>
         </select>
         <select id="filterProductVisibility" aria-label="Filtrer la visibilité"><option value="">Toute visibilité</option><option value="active">En ligne</option><option value="inactive">Hors ligne / archivés</option></select>
+        <select id="filterProductStock" aria-label="Filtrer l’état du stock"><option value="">Tous les stocks</option><option value="unconfigured">Stock non configuré</option><option value="configured">Stock configuré</option><option value="available">Disponible</option><option value="low">Au moins une variante faible (1 à 5)</option><option value="empty">Épuisé</option><option value="disabled">Toutes les variantes désactivées</option><option value="invalid">Stock à vérifier</option></select>
+        <select id="sortProducts" aria-label="Trier les produits"><option value="name">Nom : A à Z</option><option value="recent">Plus récents</option><option value="price-asc">Prix croissant</option><option value="price-desc">Prix décroissant</option><option value="stock-asc">Disponible croissant</option><option value="stock-desc">Disponible décroissant</option></select>
+        <button type="button" class="btn btn-secondary" id="resetProductFilters">Réinitialiser les filtres</button>
         <button class="btn btn-primary" id="newProductBtn">+ Nouveau produit</button>
       </div>
       <div class="admin-notice"><strong>Un produit archivé reste dans votre historique.</strong> Il n’est plus vendu sur le site. « Stock non configuré » ne signifie pas « épuisé » : renseignez chaque taille et coloris avant les ventes.</div>
-      <div class="admin-bulk-bar"><span id="productSelectionCount" role="status">Aucun produit sélectionné</span><button type="button" class="btn btn-primary btn-small" id="activateSelectedProducts" disabled>Activer la sélection</button><button type="button" class="btn btn-danger btn-small" id="archiveSelectedProducts" disabled>Archiver la sélection</button><button type="button" class="btn btn-danger btn-small" id="deleteSelectedProducts" disabled>Supprimer définitivement</button><button type="button" class="btn btn-secondary btn-small" id="clearProductSelection" disabled>Désélectionner</button></div>
+      <div class="admin-bulk-bar"><span id="productSelectionCount" role="status">Aucun produit sélectionné</span><button type="button" class="btn btn-secondary btn-small" id="selectProductPage" disabled>Sélectionner cette page</button><button type="button" class="btn btn-primary btn-small" id="activateSelectedProducts" disabled>Activer la sélection</button><button type="button" class="btn btn-danger btn-small" id="archiveSelectedProducts" disabled>Archiver la sélection</button><button type="button" class="btn btn-danger btn-small" id="deleteSelectedProducts" disabled>Supprimer définitivement</button><button type="button" class="btn btn-secondary btn-small" id="clearProductSelection" disabled>Désélectionner</button></div>
       <p class="admin-muted">Supprimer définitivement concerne uniquement les fiches hors ligne, sans stock ni historique. Les photos originales ne sont pas effacées. Pour conserver une fiche, utilisez Archiver.</p>
       <p id="productBulkStatus" class="admin-operation-status" role="status" hidden></p>
       <div class="card" id="productsList"><p class="empty">Chargement...</p></div>
+      <nav class="admin-list-pagination toolbar" aria-label="Pagination des produits"><span id="productResults" role="status"></span><label for="productPageSize">Par page</label><select id="productPageSize"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select><button type="button" class="btn btn-secondary btn-small" id="productPrevious" disabled>Précédente</button><span id="productPage">Page 1 / 1</span><button type="button" class="btn btn-secondary btn-small" id="productNext" disabled>Suivante</button></nav>
     </div>
 
     <!-- ORDERS -->
@@ -494,9 +497,18 @@
 
     <div class="admin-panel" id="panel-inventory">
       <div class="admin-notice"><strong>Disponible ≠ quantité totale chez vous.</strong> Les unités réservées pour un paiement ou déjà vendues sont exclues du disponible. Pour un comptage, ne les comptez pas à nouveau. Un arrivage ajoute des unités ; une correction remplace uniquement le disponible.</div>
-      <div class="toolbar"><input id="inventorySearch" type="search" aria-label="Rechercher une variante" placeholder="Produit, taille, coloris ou code-barres"><select id="inventoryFilter" aria-label="Filtrer les stocks"><option value="active">Variantes en vente</option><option value="low">Stock faible (1 à 5)</option><option value="empty">Épuisées</option><option value="all">Toutes, y compris hors ligne</option></select><button type="button" class="btn btn-secondary" id="refreshInventory">Actualiser</button></div>
+      <div class="toolbar">
+        <input id="inventorySearch" type="search" aria-label="Rechercher un produit ou une variante" placeholder="Nom, référence, taille, coloris ou code-barres">
+        <select id="inventoryVisibility" aria-label="Filtrer la visibilité des produits du stock"><option value="">Toute visibilité</option><option value="active">En ligne</option><option value="inactive">Hors ligne / archivés</option></select>
+        <select id="inventoryFilter" aria-label="Filtrer les stocks"><option value="all">Tous les stocks</option><option value="unconfigured">Stock non configuré</option><option value="configured">Stock configuré</option><option value="available">Disponible</option><option value="low">Au moins une variante faible (1 à 5)</option><option value="empty">Produit épuisé</option><option value="disabled">Toutes les variantes désactivées</option><option value="invalid">Stock à vérifier</option></select>
+        <select id="inventorySort" aria-label="Trier les produits du stock"><option value="name">Nom : A à Z</option><option value="stock-asc">Disponible croissant</option><option value="stock-desc">Disponible décroissant</option><option value="recent">Plus récents</option></select>
+        <button type="button" class="btn btn-secondary" id="resetInventoryFilters">Réinitialiser les filtres</button>
+        <button type="button" class="btn btn-secondary" id="refreshInventory">Actualiser</button>
+      </div>
       <div class="stat-cards admin-product-stats" id="inventorySummary"></div>
+      <p class="admin-muted admin-list-hint">Ouvrez un produit pour voir ses tailles et coloris. « Épuisé » signifie que toutes ses variantes activées sont à zéro. Le filtre stock faible repère une variante de 1 à 5 unités.</p>
       <div class="card" id="inventoryList"><p class="empty">Ouvrez la rubrique pour charger le stock.</p></div>
+      <nav class="admin-list-pagination toolbar" aria-label="Pagination du stock"><span id="inventoryResults" role="status"></span><label for="inventoryPageSize">Produits par page</label><select id="inventoryPageSize"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select><button type="button" class="btn btn-secondary btn-small" id="inventoryPrevious" disabled>Précédente</button><span id="inventoryPage">Page 1 / 1</span><button type="button" class="btn btn-secondary btn-small" id="inventoryNext" disabled>Suivante</button></nav>
       <div class="card"><h3>Ajuster une variante</h3><p class="admin-muted">Chaque opération ci-dessous est enregistrée avec son motif. Un double envoi de la même opération ne la compte pas deux fois.</p>
         <form id="inventoryForm" class="form-grid">
           <div class="field full"><label for="inventoryVariant">Produit, coloris et taille</label><select id="inventoryVariant" required><option value="">Choisir une variante</option></select><p id="inventoryCurrent" class="admin-muted"></p></div>
@@ -673,6 +685,17 @@
 
     <!-- PROMOS -->
     <div class="admin-panel" id="panel-promos">
+      <div class="card">
+        <h3>Promotion surprise dans le panier</h3>
+        <p>Les prix de la boutique restent inchangés. Quand le client ouvre son panier ou passe au paiement, la remise est appliquée automatiquement sur ses articles, sans code à saisir.</p>
+        <form id="cartOfferForm" class="form-grid">
+          <div class="field full"><label class="check" for="cartOfferEnabled"><input type="checkbox" id="cartOfferEnabled" disabled> Activer la promotion surprise</label></div>
+          <div class="field"><label for="cartOfferPercent">Réduction sur les articles (%)</label><input type="number" id="cartOfferPercent" min="0" max="100" step="1" disabled aria-describedby="cartOfferHelp"></div>
+          <div class="field full"><p class="admin-muted" id="cartOfferHelp">Offre sur tous les articles, hors frais de livraison. Pour activer, choisissez 1 à 100 %. Avec un code promo, seule la meilleure remise s’applique ; en cas d’égalité, l’offre automatique est retenue.</p></div>
+          <div class="field full"><button type="submit" class="btn btn-primary" id="saveCartOffer" disabled>Enregistrer la promotion surprise</button> <button type="button" class="btn btn-secondary" id="refreshCartOffer">Actualiser</button></div>
+        </form>
+        <p id="cartOfferStatus" class="admin-operation-status" role="status">Ouvrez la rubrique pour vérifier l’état de la promotion.</p>
+      </div>
       <div class="toolbar">
         <span style="color:#8a7d66;">Codes promo (r&eacute;duction en %)</span>
         <button class="btn btn-primary" id="newPromoBtn">+ Nouveau code</button>
@@ -742,7 +765,7 @@
           <div class="field"><label>J+1 ($)</label><input type="number" step="0.01" min="0" id="setNext"></div>
           <div class="field"><label>Retrait / point relais ($)</label><input type="number" step="0.01" min="0" id="setPickup"></div>
           <div class="field"><label>Livraison gratuite &agrave; partir de</label><input type="number" step="0.01" min="0" id="setFree"></div>
-          <div class="field"><label>Taxe (%)</label><input type="number" step="0.1" min="0" max="100" id="setTax"></div>
+          <div class="field"><label for="setTax">TVA / taxe (%)</label><input type="number" step="0.1" min="0" max="100" id="setTax"></div>
           <div class="field"><label for="setReturns">Délai actuel sur le site (lecture seule)</label><input type="number" id="setReturns" readonly><small>Synchronisé avec la politique de retours ci-dessus ; les anciennes commandes gardent leur propre délai.</small></div>
           <div class="field">
             <label>Devise de la boutique</label>
@@ -752,6 +775,10 @@
             </select>
             <div style="font-size:12px;color:#8a7d66;margin-top:4px;">Appliqu&eacute;e &agrave; tous les prix (boutique + paiement Stripe).</div>
           </div>
+        </div>
+        <div style="margin-top:14px;">
+          <label class="check" for="setShowTax"><input type="checkbox" id="setShowTax" checked aria-describedby="setShowTaxHelp"> Afficher la TVA sur le site</label>
+          <p class="admin-muted" id="setShowTaxHelp">Décochez pour masquer la ligne TVA dans le panier et le récapitulatif de paiement. Le taux, le calcul et le total à payer restent identiques. Cliquez sur Enregistrer pour appliquer votre choix.</p>
         </div>
         <div style="margin-top:14px;">
           <label class="check"><input type="checkbox" id="setPickupEnabled"> Activer l&rsquo;option &laquo; Retrait / point relais &raquo; au checkout</label>
@@ -902,13 +929,13 @@
         <div class="field"><label id="productPriceLabel" for="f-price">Prix (devise de la boutique) *</label><input type="number" step="0.01" min="0.01" id="f-price"></div>
         <div class="field"><label id="productCompareLabel" for="f-compare">Ancien prix (devise de la boutique)</label><input type="number" step="0.01" min="0" id="f-compare"></div>
         <div class="field">
-          <label>Cat&eacute;gorie</label>
+          <label for="f-category">Cat&eacute;gorie</label>
           <select id="f-category">
-            <option value="hijab">Hijab</option><option value="abaya">Abaya</option>
-            <option value="prayer">Prayer</option><option value="dress">Dress</option>
-            <option value="accessory">Accessory</option>
-            <option value="knitwear">Pull / maille</option><option value="jacket">Veste</option>
-            <option value="skirt">Jupe</option><option value="top">Haut</option><option value="trousers">Pantalon</option>
+            <optgroup label="Ensembles et pièces complètes"><option value="set">Ensembles</option><option value="dress">Robes</option><option value="jumpsuit">Combinaisons</option><option value="tracksuit">Survêtements</option></optgroup>
+            <optgroup label="Hauts"><option value="top">Hauts</option><option value="tshirt">T-shirts</option><option value="shirt">Chemises</option><option value="blouse">Blouses et tuniques</option><option value="knitwear">Pulls et maille</option><option value="cardigan">Gilets et cardigans</option><option value="sweatshirt">Sweats</option><option value="hoodie">Sweats à capuche</option></optgroup>
+            <optgroup label="Vestes et manteaux"><option value="jacket">Vestes et blazers</option><option value="coat">Manteaux</option><option value="cape">Capes et ponchos</option><option value="vest">Vestes sans manches</option></optgroup>
+            <optgroup label="Bas"><option value="trousers">Pantalons</option><option value="jeans">Jeans</option><option value="skirt">Jupes</option><option value="shorts">Shorts et bermudas</option></optgroup>
+            <optgroup label="Accessoires et autres collections"><option value="accessory">Accessoires</option><option value="hijab">Hijabs</option><option value="abaya">Abayas</option><option value="prayer">Tenues de prière</option></optgroup>
           </select>
         </div>
         <div class="field"><label>Badge</label><input id="f-badge" placeholder="ex: Bestseller, Nouveau"></div>
@@ -1011,11 +1038,14 @@
   <script src="js/config.js"></script>
   <script src="js/admin-api.js"></script>
   <script src="js/colors.js"></script>
+  <script src="js/categories.js"></script>
   <script src="js/product-media.js"></script>
+  <script src="js/admin-catalog.js"></script>
   <script src="vendor/jsbarcode.min.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/admin-refunds.js"></script>
   <script src="js/admin-features.js"></script>
+  <script src="js/admin-cart-offer.js"></script>
   <script src="js/tiktok-xlsx.js"></script>
   <script src="js/admin-tiktok.js"></script>
   <script src="js/theme-toggle.js"></script>

@@ -27,6 +27,11 @@ test('les remboursements exigent leur journal privé avant publication, sans mig
   await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='admin_refunds_schema_version'?{error:{}}:{data:1};}}),/migration_partial_refunds/);
   assert.equal(calls.at(-1),'admin_refunds_schema_version');
 });
+test('les catégories étendues exigent leur migration avant publication sans modifier la base',async()=>{
+  const calls=[];
+  await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='catalog_categories_schema_version'?{error:{}}:{data:1};}}),/migration_catalog_categories/);
+  assert.equal(calls.at(-1),'catalog_categories_schema_version');
+});
 test('le marqueur du lot stock/préparation est obligatoire avant publication', async () => {
   const calls = [];
   await assert.rejects(preflight(env, { rpc: async name => { calls.push(name); return name === 'commerce_schema_version' ? { data: 1 } : { error: { code: 'PGRST202' } }; } }), /migration_admin_inventory/);

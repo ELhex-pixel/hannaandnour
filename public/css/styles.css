@@ -2551,6 +2551,8 @@ body[data-menu-open="true"] .nav-mobile {
   margin-top: var(--spacing-lg);
 }
 
+.cart-offer-notice { margin: var(--spacing-md) 0; padding: var(--spacing-md); background: var(--color-sage-light); border: 1px solid var(--color-gold); border-radius: var(--radius-sm); color: var(--color-charcoal); font-size: .875rem; line-height: 1.6; overflow-wrap: anywhere; }
+
 .cart-summary-shipping {
   font-size: 0.875rem;
   color: var(--color-emerald);
@@ -4902,6 +4904,24 @@ select.lang-switcher {
 .admin-page .admin-table small { color: var(--color-gray); font-size: 11px; }
 .admin-page .admin-table td[data-label="Prix"] { white-space: nowrap; }
 .admin-page .admin-table td:last-child span { white-space: normal !important; display: flex; flex-wrap: wrap; gap: 6px; }
+.admin-page .admin-compact-table td { padding-block: 10px; }
+.admin-page .admin-list-pagination { margin: 4px 0 24px; font-size: 12px; }
+.admin-page .admin-list-pagination [role="status"] { margin-right: auto; color: var(--color-gray); }
+.admin-page .admin-list-pagination select { flex: 0 0 auto; width: auto; }
+.admin-page .admin-list-hint { margin-bottom: 14px; }
+.admin-page .inventory-product { padding: 14px 0; border-bottom: 1px solid var(--admin-border); }
+.admin-page .inventory-product:first-child { padding-top: 0; }
+.admin-page .inventory-product:last-child { border-bottom: 0; padding-bottom: 0; }
+.admin-page .inventory-product summary, .admin-page .inventory-product-heading { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.admin-page .inventory-product summary { cursor: pointer; list-style: none; }
+.admin-page .inventory-product summary::-webkit-details-marker { display: none; }
+.admin-page .inventory-product summary::before { content: '▸'; color: var(--color-gold); }
+.admin-page .inventory-product[open] summary::before { content: '▾'; }
+.admin-page .inventory-product-name { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
+.admin-page .inventory-product-name small { display: block; margin-top: 4px; color: var(--color-gray); }
+.admin-page .inventory-variant-count { color: var(--color-gray); font-size: 11px; }
+.admin-page .inventory-product table { margin-top: 14px; }
+.admin-page .inventory-unconfigured p { margin-top: 10px; }
 .admin-page .thumb { width: 48px; height: 64px; }
 .admin-page input[type="checkbox"] { accent-color: var(--color-gold); width: 17px; height: 17px; }
 .admin-page :is(button, a, input, select, textarea, summary):focus-visible { outline: 2px solid var(--color-gold); outline-offset: 3px; }

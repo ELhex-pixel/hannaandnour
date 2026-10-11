@@ -18,6 +18,8 @@ test('les scripts locaux existent et les dépendances admin sont ordonnées', ()
   const $ = cheerio.load(fs.readFileSync('public/admin.html', 'utf8'));
   const scripts = $('script[src]').map((_, node) => $(node).attr('src')).get();
   assert(scripts.indexOf('js/admin-api.js') < scripts.indexOf('js/admin.js'));
+  assert(scripts.indexOf('js/admin-catalog.js') >= 0);
+  assert(scripts.indexOf('js/admin-catalog.js') < scripts.indexOf('js/admin.js'));
   assert(scripts.indexOf('js/admin.js') < scripts.indexOf('js/admin-features.js'));
 });
 test('l’admin modernisé conserve les rubriques et isole les opérations sensibles', () => {
@@ -33,7 +35,12 @@ test('l’admin modernisé conserve les rubriques et isole les opérations sensi
   assert.equal($('#productEditor').attr('role'), 'dialog');
   $('[data-editor-section]').each((_, node) => assert.equal($('#' + $(node).attr('data-editor-section')).parents('#productEditor').length, 1));
   assert($('#deleteProductBtn').text().includes('Archiver'));
-  for (const id of ['filterProducts', 'filterCategory', 'filterProductVisibility']) assert($('#' + id).attr('aria-label'));
+  for (const id of ['filterProducts', 'filterCategory', 'filterProductVisibility', 'filterProductStock', 'sortProducts', 'inventoryVisibility', 'inventoryFilter', 'inventorySort']) assert($('#' + id).attr('aria-label'));
+  for (const prefix of ['product', 'inventory']) {
+    assert.equal($('#' + prefix + 'Results').attr('role'),'status');
+    assert.equal($('label[for="' + prefix + 'PageSize"]').length,1);
+    assert.equal($('#' + prefix + 'Next').parents('nav[aria-label]').length,1);
+  }
   for (const id of ['f-price', 'f-compare', 'f-image']) assert.equal($('label[for="' + id + '"]').length, 1);
   for (const id of ['activateSelectedProducts', 'archiveSelectedProducts', 'clearProductSelection']) {
     assert.equal($('#' + id).parents('.admin-bulk-bar').length, 1);
@@ -70,6 +77,39 @@ test('la CSP autorise les images locales de compression sans ouvrir scripts ni c
   const generated=require('node:vm').runInNewContext('var headers='+JSON.stringify(headers)+';'+replacement+';headers',{ process:{env:{SUPABASE_URL:'https://images.example.test'}},URL });
   assert(generated.includes("img-src 'self' data: blob: https://images.example.test;"));
   assert(!generated.includes('rqgoawbzbgzuvpxnzxsu.supabase.co'));
+});
+test('la TVA est une ligne masquable sans flash initial, avec une case admin clairement étiquetée', () => {
+  const admin = cheerio.load(fs.readFileSync('public/admin.html', 'utf8'));
+  assert.equal(admin('#setShowTax').attr('type'), 'checkbox');
+  assert.equal(admin('#setShowTax').parents('#panel-settings').length, 1);
+  assert.equal(admin('label[for="setShowTax"]').length, 1);
+  assert.equal(admin('#setShowTax').attr('aria-describedby'), 'setShowTaxHelp');
+  for (const page of ['cart', 'checkout']) {
+    const $ = cheerio.load(fs.readFileSync('public/' + page + '.html', 'utf8'));
+    const row = $('#' + page + 'SummaryTax').parents('[data-tax-row]');
+    assert.equal(row.length, 1);
+    assert(row.is('[hidden]'));
+    assert.equal(row.find('[data-i18n="sumTax"]').length, 1);
+    assert.equal($('#' + page + 'SummaryTotal').parents('[data-tax-row]').length, 0);
+  }
+});
+test('la promotion surprise reste dans le panier et le paiement, avec des contrôles admin identifiés', () => {
+  const admin = cheerio.load(fs.readFileSync('public/admin.html', 'utf8'));
+  assert.equal(admin('#cartOfferForm').parents('#panel-promos').length, 1);
+  for (const id of ['cartOfferEnabled', 'cartOfferPercent']) {
+    assert.equal(admin('label[for="' + id + '"]').length, 1);
+    assert(admin('#' + id).is('[disabled]'));
+  }
+  assert.equal(admin('#cartOfferStatus').attr('role'), 'status');
+  for (const page of ['cart', 'checkout']) {
+    const $ = cheerio.load(fs.readFileSync('public/' + page + '.html', 'utf8'));
+    assert($('#' + page + 'OfferNotice').is('[hidden][role="status"]'));
+    assert.equal($('#' + page + 'DiscountLabel').length, 1);
+  }
+  for (const page of ['index', 'shop', 'product', 'collections']) {
+    const $ = cheerio.load(fs.readFileSync('public/' + page + '.html', 'utf8'));
+    assert.equal($('.cart-offer-notice').length, 0);
+  }
 });
 test('l’admin occupe la largeur disponible sans marge extérieure', () => {
   const css = fs.readFileSync('public/css/styles.css', 'utf8');

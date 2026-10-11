@@ -416,6 +416,9 @@
       checkoutErrorMsg: 'Please fill out all required fields.',
       emptyCatalog: 'No products match your selection.',
       sumDiscount: 'Discount',
+      cartOfferLabel: 'Surprise offer (−{pct}%)',
+      cartOfferMessage: 'A nice surprise: {pct}% off your items! You save {amount}, automatically and without a code.',
+      cartOfferBest: 'The automatic {pct}% offer is more advantageous or equal to this code and remains applied.',
       secureStripe: 'Secure 256-bit SSL encrypted checkout powered by Stripe',
       stripeNoteStrong: 'Secure payment: ',
       stripeNote: 'after placing your order you will be redirected securely to Stripe Checkout to complete your payment. Your card details never touch this site.',
@@ -858,6 +861,9 @@
       checkoutErrorMsg: 'Veuillez remplir tous les champs obligatoires.',
       emptyCatalog: 'Aucun produit ne correspond à votre sélection.',
       sumDiscount: 'Remise',
+      cartOfferLabel: 'Promotion surprise (−{pct} %)',
+      cartOfferMessage: 'Bonne surprise : −{pct} % sur vos articles ! Vous économisez {amount}, automatiquement et sans code.',
+      cartOfferBest: 'L’offre automatique de {pct} % est plus avantageuse ou équivalente à ce code et reste appliquée.',
       secureStripe: 'Paiement sécurisé chiffré SSL 256 bits propulsé par Stripe',
       stripeNoteStrong: 'Paiement sécurisé : ',
       stripeNote: 'après avoir passé commande, vous serez redirigée de façon sécurisée vers Stripe Checkout pour finaliser votre paiement. Vos données de carte ne transitent jamais par ce site.',
@@ -1300,6 +1306,9 @@
       checkoutErrorMsg: 'يرجى تعبئة جميع الحقول الإلزامية.',
       emptyCatalog: 'لا توجد منتجات تطابق اختيارك.',
       sumDiscount: 'الخصم',
+      cartOfferLabel: 'عرض مفاجأة (−{pct}%)',
+      cartOfferMessage: 'مفاجأة جميلة: خصم {pct}% على منتجاتك! توفر {amount} تلقائيًا وبدون رمز.',
+      cartOfferBest: 'العرض التلقائي بنسبة {pct}% أفضل من هذا الرمز أو مساوٍ له ويظل مطبقًا.',
       secureStripe: 'دفع آمن بتشفير SSL بمتانة 256 بت عبر سترايب',
       stripeNoteStrong: 'دفع آمن: ',
       stripeNote: 'بعد تأكيد طلبك، سيتم توجيهك بأمان إلى صفحة سترايب لإتمام الدفع. بيانات بطاقتك لا تصل إلى هذا الموقع أبدًا.',
@@ -1425,6 +1434,9 @@
     b4Body: 'يبدأ الأسلوب الشخصي بالقطع التي تمنح شعوراً بالراحة. قد تلهم صيحات الموضة الاختيار، لكنها لا تحل محله.\n\nاختيار الألوان والقصات والتنسيقات المفضلة يساعد على بناء مجموعة سهلة التنسيق لمختلف لحظات اليوم.\n\nالأهم هو تنسيق ملابس تعكس الشخصية وتناسب الاحتياجات والتفضيلات.',
     b6Body: 'للمناسبات الخاصة، يمكن البدء بقطعة محببة، مثل قصة انسيابية أو طقم متناسق أو سترة.\n\nيساعد التفكير في المكان والطقس والوقت المخصص للوقوف والتنقل على اختيار تنسيق يحافظ على الراحة.\n\nتكتمل الإطلالة بإكسسوارات وألوان مناسبة للذوق الشخصي. وقد تكفي تفاصيل بسيطة لمنح التنسيق طابعاً مختلفاً.'
   });
+  Object.assign(DICT.fr, { catSets: 'Ensembles', catJumpsuits: 'Combinaisons', catTracksuits: 'Survêtements', catTshirts: 'T-shirts', catShirts: 'Chemises', catBlouses: 'Blouses et tuniques', catCardigans: 'Gilets et cardigans', catSweatshirts: 'Sweats', catHoodies: 'Sweats à capuche', catCoats: 'Manteaux', catCapes: 'Capes et ponchos', catVests: 'Vestes sans manches', catJeans: 'Jeans', catShorts: 'Shorts et bermudas' });
+  Object.assign(DICT.en, { catSets: 'Matching sets', catJumpsuits: 'Jumpsuits', catTracksuits: 'Tracksuits', catTshirts: 'T-shirts', catShirts: 'Shirts', catBlouses: 'Blouses and tunics', catCardigans: 'Cardigans', catSweatshirts: 'Sweatshirts', catHoodies: 'Hoodies', catCoats: 'Coats', catCapes: 'Capes and ponchos', catVests: 'Sleeveless jackets', catJeans: 'Jeans', catShorts: 'Shorts' });
+  Object.assign(DICT.ar, { catSets: 'أطقم', catJumpsuits: 'بدلات قطعة واحدة', catTracksuits: 'أطقم رياضية', catTshirts: 'تيشيرتات', catShirts: 'قمصان', catBlouses: 'بلوزات وتونيكات', catCardigans: 'كارديغان', catSweatshirts: 'سويت شيرت', catHoodies: 'هوديز', catCoats: 'معاطف', catCapes: 'كابات وبونشو', catVests: 'سترات بلا أكمام', catJeans: 'جينز', catShorts: 'شورتات' });
   if (typeof module === 'object' && module.exports) { module.exports = DICT; return; }
   var pathLang = window.location.pathname.split('/')[1];
   var lang = SUPPORTED.indexOf(pathLang) >= 0 ? pathLang : localStorage.getItem('hn-lang');

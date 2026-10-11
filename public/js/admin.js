@@ -63,6 +63,7 @@
     closeProductEditor();
     productSelection = {};
     productsAll = [];
+    productPage = 1;
     productBulkBusy = false;
     productBulkRevision++;
     document.getElementById('productBulkStatus').textContent = '';
@@ -71,6 +72,8 @@
     productRequest++;
     document.getElementById('productsList').textContent = '';
     document.getElementById('productStats').textContent = '';
+    document.getElementById('selectProductPage').disabled = true;
+    catalogLists.updatePager(document, 'product', catalogLists.page([], 1, 10));
     prepRevision++;
     prepListRequest++;
     prepBusy = false;
@@ -270,10 +273,12 @@
   var productRequest = 0;
   var productBulkBusy = false;
   var productBulkRevision = 0;
+  var catalogLists = window.HN_ADMIN_CATALOG;
+  var productPage = 1;
 
   function updateProductSelection() {
     var count = Object.keys(productSelection).length;
-    document.getElementById('productSelectionCount').textContent = count ? count + ' produit(s) sélectionné(s), y compris hors filtre' : 'Aucun produit sélectionné';
+    document.getElementById('productSelectionCount').textContent = count ? count + ' produit(s) sélectionné(s), y compris hors page et hors filtre' : 'Aucun produit sélectionné';
     document.getElementById('activateSelectedProducts').disabled = !count || productBulkBusy;
     document.getElementById('archiveSelectedProducts').disabled = !count || productBulkBusy;
     document.getElementById('deleteSelectedProducts').disabled = !count || productBulkBusy;
@@ -281,17 +286,16 @@
   }
 
   function productRow(p) {
-    var cat = { hijab: 'Hijab', abaya: 'Abaya', prayer: 'Tenue de prière', dress: 'Robe', accessory: 'Accessoire', knitwear: 'Pull / maille', jacket: 'Veste', skirt: 'Jupe', top: 'Haut', trousers: 'Pantalon' }[p.category] || p.category;
-    var totalStock = (p.variants || []).reduce(function (n, v) { return n + (v.active === false ? 0 : (parseInt(v.stock, 10) || 0)); }, 0);
-    var managed = (p.variants || []).length > 0;
+    var cat = window.HN_CATEGORIES ? window.HN_CATEGORIES.label(p.category) : p.category;
+    var summary = catalogLists.stock(p);
     return '<tr>' +
       '<td data-label="Sélection"><input type="checkbox" class="select-product" data-id="' + esc(p.id) + '" aria-label="Sélectionner ' + esc(p.name_fr || p.name_en) + '"' + (productSelection[p.id] ? ' checked' : '') + (productBulkBusy ? ' disabled' : '') + '></td>' +
       '<td data-label=""><img class="thumb" src="' + esc(p.image || 'images/hero.jpg') + '" alt=""></td>' +
       '<td data-label="Produit"><strong>' + esc(p.name_fr || p.name_en) + '</strong><br><small>' + esc(p.sku || p.slug) + '</small></td>' +
       '<td data-label="Prix">' + money(p.price_cents) + '</td>' +
       '<td data-label="Cat\u00e9gorie">' + esc(cat) + '</td>' +
-      '<td data-label="Stock">' + (managed ? '<span class="badge ' + (totalStock ? 'badge-green' : 'badge-red') + '">' + (totalStock ? totalStock + ' disponibles' : 'Épuisé') + '</span>' : '<span class="badge badge-warn">Stock non configuré</span>') + '</td>' +
-      '<td data-label="Visibilité"><span class="badge ' + (p.active ? 'badge-green' : 'badge-gray') + '">' + (p.active ? 'En ligne' : 'Hors ligne / archivé') + '</span></td>' +
+      '<td data-label="Stock"><span class="badge ' + catalogLists.stockBadge(summary) + '">' + catalogLists.stockLabel(summary) + '</span></td>' +
+      '<td data-label="Visibilité"><span class="badge ' + (p.active !== false ? 'badge-green' : 'badge-gray') + '">' + (p.active !== false ? 'En ligne' : 'Hors ligne / archivé') + '</span></td>' +
       '<td data-label=""><span style="white-space:nowrap;">' +
       '<button class="btn btn-secondary btn-small edit-product" data-id="' + esc(p.id) + '">Modifier</button> ' +
       '<button class="btn btn-secondary btn-small dup-product" title="Dupliquer en brouillon avec un stock à zéro" data-id="' + esc(p.id) + '">Dupliquer</button>' +
@@ -314,25 +318,25 @@
 
   function renderProducts() {
     var box = document.getElementById('productsList');
-    var q = (document.getElementById('filterProducts').value || '').toLowerCase();
-    var cat = document.getElementById('filterCategory').value;
-    var visibility = document.getElementById('filterProductVisibility').value;
-    var active = productsAll.filter(function (p) { return p.active; }).length;
-    var missing = productsAll.filter(function (p) { return p.active && !(p.variants || []).length; }).length;
+    var options = { query: document.getElementById('filterProducts').value, category: document.getElementById('filterCategory').value, visibility: document.getElementById('filterProductVisibility').value, stock: document.getElementById('filterProductStock').value };
+    var active = productsAll.filter(function (p) { return p.active !== false; }).length;
+    var missing = productsAll.filter(function (p) { return !(p.variants || []).length; }).length;
     document.getElementById('productStats').innerHTML = [
-      [productsAll.length, 'Fiches catalogue'], [active, 'Produits en ligne'], [productsAll.length - active, 'Hors ligne / archivés'], [missing, 'En ligne sans stock configuré']
+      [productsAll.length, 'Fiches catalogue'], [active, 'Produits en ligne'], [productsAll.length - active, 'Hors ligne / archivés'], [missing, 'Stock non configuré (toutes visibilités)']
     ].map(function (item) { return '<div class="stat-card"><strong>' + item[0] + '</strong><span>' + item[1] + '</span></div>'; }).join('');
-    var list = productsAll.filter(function (p) {
-      if (visibility === 'active' && !p.active) return false;
-      if (visibility === 'inactive' && p.active) return false;
-      if (cat && p.category !== cat) return false;
-      if (!q) return true;
-      return (p.name_en + ' ' + p.slug + ' ' + (p.sku || '') + ' ' + (p.category || '') + ' ' + (p.name_fr || '') + ' ' + (p.name_ar || '')).toLowerCase().indexOf(q) >= 0;
-    });
+    var filtered = productsAll.filter(function (p) { return catalogLists.matchesProduct(p, options); });
+    var result = catalogLists.page(catalogLists.sort(filtered, document.getElementById('sortProducts').value), productPage, document.getElementById('productPageSize').value);
+    productPage = result.number;
+    catalogLists.updatePager(document, 'product', result);
+    var list = result.items;
+    var pageSelected = list.length > 0 && list.every(function (p) { return productSelection[p.id]; });
+    document.getElementById('selectProductPage').disabled = !list.length || productBulkBusy;
+    document.getElementById('selectProductPage').textContent = pageSelected ? 'Désélectionner cette page' : 'Sélectionner cette page';
     updateProductSelection();
     if (!list.length) { box.innerHTML = '<p class="empty">Aucun produit pour ces filtres. Changez la recherche ou créez une fiche.</p>'; return; }
-    box.innerHTML = '<table class="admin-table"><thead><tr><th><input type="checkbox" id="selectVisibleProducts" aria-label="Sélectionner les produits affichés"' + (list.every(function (p) { return productSelection[p.id]; }) ? ' checked' : '') + (productBulkBusy ? ' disabled' : '') + '></th><th>Photo</th><th>Produit</th><th>Prix</th><th>Catégorie</th><th>Stock</th><th>Visibilité</th><th>Actions</th></tr></thead><tbody>' +
+    box.innerHTML = '<table class="admin-table admin-compact-table"><thead><tr><th><input type="checkbox" id="selectVisibleProducts" aria-label="Sélectionner uniquement les produits de cette page"' + (list.every(function (p) { return productSelection[p.id]; }) ? ' checked' : '') + (productBulkBusy ? ' disabled' : '') + '></th><th>Photo</th><th>Produit</th><th>Prix</th><th>Catégorie</th><th>Stock</th><th>Visibilité</th><th>Actions</th></tr></thead><tbody>' +
       list.map(productRow).join('') + '</tbody></table>';
+    document.getElementById('selectVisibleProducts').indeterminate = list.some(function (p) { return productSelection[p.id]; }) && !list.every(function (p) { return productSelection[p.id]; });
   }
 
   // Copie un produit (nouveau slug unique, copie créée DÉSACTIVÉE pour
@@ -2188,6 +2192,7 @@
       setVal('setPickup', dollars(s.pickup_cents));
       setVal('setFree', dollars(s.free_threshold_cents));
       setVal('setTax', (parseFloat(s.tax_rate) || 0) * 100);
+      document.getElementById('setShowTax').checked = s.show_tax !== false;
       document.getElementById('setPickupEnabled').checked = s.pickup_enabled !== false;
       var cur = res.currency || {};
       ADMIN_CURRENCY_SYMBOL = cur.symbol || (cur.code === 'eur' ? '\u20AC' : '$');
@@ -2210,6 +2215,7 @@
           pickup_cents: toCents(getVal('setPickup')),
           free_threshold_cents: toCents(getVal('setFree')),
           tax_rate: (parseFloat(getVal('setTax')) || 0) / 100,
+          show_tax: document.getElementById('setShowTax').checked,
           pickup_enabled: document.getElementById('setPickupEnabled').checked
         },
         currency: { code: document.getElementById('setCurrency').value }
@@ -2999,9 +3005,26 @@
   /* ---------------- Filters ---------------- */
 
   function wireFilters() {
-    document.getElementById('filterProducts').addEventListener('input', renderProducts);
-    document.getElementById('filterCategory').addEventListener('change', renderProducts);
-    document.getElementById('filterProductVisibility').addEventListener('change', renderProducts);
+    function resetPage() { productPage = 1; renderProducts(); }
+    document.getElementById('filterProducts').addEventListener('input', resetPage);
+    ['filterCategory', 'filterProductVisibility', 'filterProductStock', 'sortProducts', 'productPageSize'].forEach(function (id) { document.getElementById(id).addEventListener('change', resetPage); });
+    document.getElementById('resetProductFilters').addEventListener('click', function () {
+      ['filterProducts', 'filterCategory', 'filterProductVisibility', 'filterProductStock'].forEach(function (id) { document.getElementById(id).value = ''; });
+      document.getElementById('sortProducts').value = 'name';
+      resetPage();
+    });
+    document.getElementById('productPrevious').addEventListener('click', function () { productPage--; renderProducts(); });
+    document.getElementById('productNext').addEventListener('click', function () { productPage++; renderProducts(); });
+    document.getElementById('selectProductPage').addEventListener('click', function () {
+      if (productBulkBusy) return;
+      var checkboxes = Array.prototype.slice.call(document.getElementById('productsList').querySelectorAll('.select-product'));
+      var selected = checkboxes.length && checkboxes.every(function (checkbox) { return productSelection[checkbox.getAttribute('data-id')]; });
+      checkboxes.forEach(function (checkbox) {
+        var id = checkbox.getAttribute('data-id');
+        if (selected) delete productSelection[id]; else productSelection[id] = true;
+      });
+      renderProducts();
+    });
     document.getElementById('productsList').addEventListener('change', function (e) {
       if (productBulkBusy) return;
       if (e.target.id === 'selectVisibleProducts') {

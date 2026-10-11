@@ -158,10 +158,11 @@
             <span class="cart-summary-shipping" id="cartSummaryShipping" data-i18n="free">Free</span>
           </div>
           <div class="cart-summary-row" id="cartDiscountRow" style="display: none;">
-            <span data-i18n="sumDiscount">Discount</span>
+            <span id="cartDiscountLabel">Discount</span>
             <span id="cartSummaryDiscount">-$0.00</span>
           </div>
-          <div class="cart-summary-row">
+          <p id="cartOfferNotice" class="cart-offer-notice" role="status" hidden></p>
+          <div class="cart-summary-row" data-tax-row hidden>
             <span data-i18n="sumTax">Tax (est.)</span>
             <span id="cartSummaryTax">$0.00</span>
           </div>

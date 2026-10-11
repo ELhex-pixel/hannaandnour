@@ -284,12 +284,12 @@ test('seules les teintes validées sont exposées depuis settings, jamais les r�
 
 function returnsDisplay(language = 'fr') {
   const dict = require('../public/js/i18n');
-  const footer = { textContent: '' }, events = [], requests = [], cache = {};
+  const footer = { textContent: '' }, events = [], requests = [], cache = {}, taxRows = [{ hidden: true }, { hidden: true }];
   const context = {
     CONFIG_DATA: {}, RETURN_DAYS: null, REVIEW_DEMO: false, DEMO_COUNT: 0, DEMO_SUM: 0,
     CURRENCY_SYMBOL: '€', CURRENCY_CODE: 'eur', CONFIG_CACHE_KEY: 'fixture-config', configPending: false, configPromise: null, configOnline: false,
     window: { I18n: { t: (key, args) => dict[language][key].replace('{n}', args ? args.n : '') } },
-    document: { getElementById: id => id === 'footerTrustReturns' ? footer : null, dispatchEvent: event => events.push(event) },
+    document: { getElementById: id => id === 'footerTrustReturns' ? footer : null, querySelectorAll: selector => selector === '[data-tax-row]' ? taxRows : [], dispatchEvent: event => events.push(event) },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
     readLS: () => cache.config, writeLS: (key, data) => { cache.config = data; }, apiUrl: name => '/api/' + name,
     fetch: async (url, options) => { requests.push({ url, options }); return { ok: true, json: async () => context.response }; }
@@ -301,7 +301,7 @@ function returnsDisplay(language = 'fr') {
   const trust = source.slice(source.indexOf('  function refreshFooterTrust('), source.indexOf('  function productName('));
   vm.createContext(context);
   vm.runInContext(loader + apply + trust, context);
-  return { context, footer, events, requests };
+  return { context, footer, events, requests, taxRows };
 }
 test('le pied de page utilise la politique actuelle et non le délai historique, dans les trois langues', () => {
   const dict = require('../public/js/i18n');
@@ -324,6 +324,18 @@ test('un délai nul, illégal ou absent n’invente jamais 30 jours dans l’aff
   }
   mock.context.applyConfigCopy({});
   assert.equal(mock.footer.textContent, 'Politique de retours');
+});
+test('le site masque puis réaffiche toute la ligne TVA au chargement d’une configuration fraîche', async () => {
+  const mock = returnsDisplay();
+  for (const choice of [false, true, false, undefined]) {
+    mock.context.response = { settings: { tax_rate: 0.2 } };
+    if (choice !== undefined) mock.context.response.settings.show_tax = choice;
+    await mock.context.loadConfig(true);
+    assert(mock.taxRows.every(row => row.hidden === (choice === false)));
+    assert.equal(mock.context.CONFIG_DATA.tax_rate, 0.2);
+  }
+  assert.equal(mock.requests.length, 4);
+  assert(mock.requests.every(request => request.options.cache === 'no-store'));
 });
 test('le rafraîchissement relit sans cache la politique et coalesce les requêtes simultanées', async () => {
   const mock = returnsDisplay();

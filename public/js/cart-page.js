@@ -18,8 +18,10 @@
   var PROMO_LOCAL = { WELCOME15: 0.15 };
   var PROMO_KEY = 'hn-promo';
   var ready = false;
+  var cartOffer = { enabled: false, percent_off: 0 };
 
   function applyConfig(cfg) {
+    cartOffer = window.HN_COMMERCE.cartOffer(cfg && cfg.cart_offer);
     if (!cfg || !cfg.settings) return;
     var s = cfg.settings;
     if (typeof s.tax_rate === 'number') TAX_RATE = s.tax_rate;
@@ -76,8 +78,10 @@
   function totals() {
     var items = HN.cart.list();
     if (!items.length) return { subtotal: 0, shipping: 0, discount: 0, tax: 0, total: 0 };
-    return window.HN_COMMERCE.calculate(items.map(function (item) { return { price_cents: item.priceCents, qty: Math.min(10, Math.max(1, parseInt(item.qty, 10) || 1)) }; }), { tax_rate: TAX_RATE, free_threshold_cents: FREE_SHIPPING_CENTS, standard_cents: STD_SHIPPING_CENTS }, 'standard', promoRate() * 100);
+    return window.HN_COMMERCE.calculate(items.map(function (item) { return { price_cents: item.priceCents, qty: Math.min(10, Math.max(1, parseInt(item.qty, 10) || 1)) }; }), { tax_rate: TAX_RATE, free_threshold_cents: FREE_SHIPPING_CENTS, standard_cents: STD_SHIPPING_CENTS }, 'standard', discount().percent_off);
   }
+
+  function discount() { return window.HN_COMMERCE.chooseDiscount(cartOffer, Math.round(promoRate() * 100)); }
 
   function renderItems() {
     if (!itemsEl || !ready) return;
@@ -142,6 +146,7 @@
     var discRow = document.getElementById('cartDiscountRow');
     if (discRow) discRow.style.display = t.discount > 0 ? '' : 'none';
     if (discEl) discEl.textContent = '-' + HN.money(t.discount);
+    HN.renderCartOffer('cart', discount(), t, HN.money);
 
     if (totalEl) totalEl.textContent = HN.money(t.total);
 
@@ -201,7 +206,8 @@
           : (PROMO_LOCAL[code] || 0);
         if (rate > 0) {
           setPromo(code);
-          showToast(tr('promoApplied'), tr('promoAppliedMsg', { pct: Math.round(rate * 100) }), 'success');
+          var applied = discount();
+          showToast(tr('promoApplied'), tr(applied.kind === 'surprise' ? 'cartOfferBest' : 'promoAppliedMsg', { pct: applied.percent_off }), 'success');
           renderSummary();
         } else {
           clearPromo();
@@ -213,6 +219,8 @@
 
     document.addEventListener('hn:cart', renderItems);
     document.addEventListener('langchange', renderItems);
+    document.addEventListener('hn:config', function (event) { applyConfig(event.detail); if (ready) renderSummary(); });
+    document.addEventListener('hn:promos', function () { if (ready) renderSummary(); });
   }
 
   function showToast(t, m, type) {
@@ -257,6 +265,7 @@
     ready = false;
     HN.loading(itemsEl, 'row', Math.max(1, HN.cart.list().length));
     document.querySelectorAll('[id^="cartSummary"]').forEach(function (el) { el.innerHTML = '<span class="live-amount" aria-hidden="true"></span>'; });
+    var notice = document.getElementById('cartOfferNotice'); if (notice) { notice.hidden = true; notice.textContent = ''; }
     var link = summaryBox && summaryBox.querySelector('.cart-checkout a');
     if (link) { link.style.pointerEvents = 'none'; link.setAttribute('aria-disabled', 'true'); link.setAttribute('tabindex', '-1'); }
     var apply = document.getElementById('applyPromo'); if (apply) apply.disabled = true;
