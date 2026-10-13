@@ -31,6 +31,9 @@
   .header .logo { font-size:20px; letter-spacing:0; color:var(--color-charcoal)!important; }
   .header-action-btn,.menu-toggle { min-width:44px; }
   .header-actions { gap:2px; }
+  .header .menu-toggle,
+  .header .header-actions a[href*="cart"] { display:none!important; }
+  .header .header-actions > .lang-switcher { display:block; min-height:44px; padding:8px 10px; border-radius:12px; }
   .header.header-overlay:not(.scrolled) { background:var(--color-off-white); }
   .header.header-overlay:not(.scrolled) .logo { color:var(--color-charcoal)!important; text-shadow:none!important; }
   .header.header-overlay:not(.scrolled) .header-action-btn svg { stroke:var(--color-charcoal)!important; filter:none; }
