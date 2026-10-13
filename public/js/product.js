@@ -139,7 +139,7 @@
       var colorsHtml = '';
       var lang = HN.lang();
       productColors.forEach(function (c, i) {
-        colorsHtml += '<span class="color-option' + (i === 0 ? ' active' : '') + '" style="background: ' + colorHex(c) + ';' + (String(c).toLowerCase() === 'white' ? ' border: 1px solid #ccc;' : '') + '" data-color="' + esc(c) + '" title="' + esc(COLORS.label(c, lang)) + '"></span>';
+        colorsHtml += '<button type="button" class="color-option' + (i === 0 ? ' active' : '') + '" style="background: ' + colorHex(c) + ';' + (String(c).toLowerCase() === 'white' ? ' border: 1px solid #ccc;' : '') + '" data-color="' + esc(c) + '" title="' + esc(COLORS.label(c, lang)) + '" aria-label="' + esc(COLORS.label(c, lang)) + '" aria-pressed="' + (i===0?'true':'false') + '"></button>';
       });
       colorWrap.innerHTML = colorsHtml;
       var colorLabel = document.getElementById('selectedColor');

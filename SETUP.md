@@ -345,6 +345,12 @@ Les libellés One Size et Taille unique correspondent à un seul choix dans l’
 
 La navigation mobile conserve la langue pour le panier, le compte et les favoris, et les liens créés par JavaScript restent dans /fr/, /en/ ou /ar/. Le changement de langue conserve le produit, les filtres et l’ancre. La langue de l’URL prime et le changement fonctionne aussi lorsque le navigateur refuse le stockage local.
 
+### Expérience mobile
+
+`mobile-ui.js` et `css/mobile.css` apportent les accès rapides Accueil / Boutique / Recherche / Panier / Compte en bas de l’écran, avec badge de panier actualisé sans lecture serveur supplémentaire. Les liens suivent la langue ; la barre s’efface sur ordinateur et devant le clavier du téléphone. Les zones tactiles font au moins 44 px, les formulaires utilisent des caractères de 16 px, les cartes produits restent sur deux colonnes, et les panneaux de filtres/ajout rapide sont adaptés au bas de l’écran. Les marges prennent en compte la zone sûre du téléphone.
+
+La fiche produit offre un accès permanent aux options quand les boutons d’achat ne sont pas visibles ; cet accès se contente de faire défiler/focaliser les vrais contrôles, sans ajouter au panier ni lancer de paiement. Les coloris sont des boutons accessibles. Le menu piège le focus, ferme avec Échap et restaure le focus ; les panneaux de recherche/filtres utilisent des dialogues natifs. La recherche ne télécharge plus le catalogue entier à l’ouverture : elle envoie une requête ciblée après deux caractères, avec debounce et exclusion des réponses obsolètes après fermeture. Le build injecte ces ressources sur les pages publiques, sans dépendance externe ni migration SQL.
+
 Les anciennes commandes payées n’ont pas de preuve fiable de débit de stock. La migration ne fabrique pas cette preuve : leur `order_items.stock_debited` reste faux. Réconcilier leur stock manuellement avant de tester un ancien remboursement. Les commandes nouvelles disposent du journal de débit ; retours et remboursements ne réapprovisionnent que les quantités réellement débitées.
 
 Les brouillons impayés de 72 h sont désormais **archivés de la liste admin**, pas détruits, afin de pouvoir réconcilier un événement Stripe tardif. Une anomalie de stock après paiement est conservée comme commande payée avec alerte `stock_issue`, jamais masquée comme paiement échoué. Ne pas expédier ces commandes sans vérification.

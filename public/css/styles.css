@@ -3770,6 +3770,7 @@ html[lang="ar"] .modal-title {
    ============================================ */
 
 .search-overlay {
+  width:100%; max-width:none; height:100%; max-height:none; margin:0; border:0;
   position: fixed;
   inset: 0;
   background-color: rgba(0,0,0,0.55);
@@ -3782,6 +3783,9 @@ html[lang="ar"] .modal-title {
   visibility: hidden;
   transition: opacity var(--transition-normal), visibility var(--transition-normal);
 }
+.search-overlay::backdrop { background:rgba(0,0,0,.55); }
+.search-overlay:not([open]) { display:none; }
+.search-overlay[open] { visibility:visible; opacity:1; }
 
 .search-overlay.active {
   opacity: 1;

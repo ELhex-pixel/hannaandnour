@@ -86,6 +86,8 @@
   const menuToggle = document.getElementById('menuToggle');
   const navClose = document.getElementById('navClose');
   const navMobile = document.getElementById('navMobile');
+  var menuOverflow = '', menuBackground = [];
+  function focusable(root) { return Array.from(root.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')).filter(function (node) { return node.getClientRects().length && !node.closest('[inert]'); }); }
 
   if (header) {
     window.addEventListener('scroll', function() {
@@ -99,11 +101,25 @@
 
   document.body.setAttribute('data-menu-open', 'false');
   if (menuToggle) menuToggle.setAttribute('aria-controls', 'navMobile');
-  if (menuToggle) menuToggle.setAttribute('aria-label', 'Menu');
+  if (menuToggle) menuToggle.setAttribute('aria-label', tr('mobileMenu'));
+  if (navClose) navClose.setAttribute('aria-label', tr('mobileClose'));
+  if (navMobile) { navMobile.inert = true; navMobile.setAttribute('aria-hidden','true'); navMobile.setAttribute('role','dialog'); navMobile.setAttribute('aria-modal','true'); navMobile.setAttribute('aria-label',tr('mobileMenu')); }
 
   function setMenuOpen(open) {
+    var wasOpen = document.body.getAttribute('data-menu-open') === 'true';
     document.body.setAttribute('data-menu-open', open ? 'true' : 'false');
     if (menuToggle) menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!navMobile) return;
+    navMobile.inert = !open; navMobile.setAttribute('aria-hidden',open?'false':'true');
+    if (open && !wasOpen) {
+      menuOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden';
+      menuBackground = Array.from(document.querySelectorAll('main,footer,#mobileBottomNav,#mobileProductBar,.hn-chat')).map(function (node) { var before=node.inert; node.inert=true; return {node:node,before:before}; });
+      (navClose || focusable(navMobile)[0] || navMobile).focus();
+    } else if (!open && wasOpen) {
+      document.body.style.overflow = menuOverflow;
+      menuBackground.forEach(function (item) { item.node.inert=item.before; }); menuBackground=[];
+      if (menuToggle) menuToggle.focus();
+    }
   }
 
   if (menuToggle && navMobile) {
@@ -111,6 +127,10 @@
       setMenuOpen(document.body.getAttribute('data-menu-open') !== 'true');
     });
     document.addEventListener('keydown', function(e) {
+      if (e.key === 'Tab' && document.body.getAttribute('data-menu-open') === 'true') {
+        var list=focusable(navMobile), first=list[0], last=list[list.length-1];
+        if (list.length && (e.shiftKey ? document.activeElement===first || !navMobile.contains(document.activeElement) : document.activeElement===last || !navMobile.contains(document.activeElement))) { e.preventDefault(); (e.shiftKey?last:first).focus(); }
+      }
       if (e.key === 'Escape' && document.body.getAttribute('data-menu-open') === 'true') {
         setMenuOpen(false);
       }
@@ -244,19 +264,20 @@
 
   function buildSearchModal() {
     if (document.getElementById('searchModal')) return;
-    const modal = document.createElement('div');
+    const modal = document.createElement('dialog');
     modal.className = 'search-overlay';
     modal.id = 'searchModal';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label',tr('menuSearch'));
     modal.innerHTML =
       '<div class="search-box" role="search">' +
       '  <div class="search-box-header">' +
       '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>' +
-      '    <input type="search" class="search-input" id="searchInput" autocomplete="off" spellcheck="false">' +
+       '    <input type="search" class="search-input" id="searchInput" autocomplete="off" spellcheck="false" aria-label="' + tr('menuSearch') + '">' +
       '    <button class="search-close" id="searchClose" aria-label="Close">\u00d7</button>' +
       '  </div>' +
-      '  <div class="search-results" id="searchResults"></div>' +
+      '  <div class="search-results" id="searchResults" aria-live="polite"></div>' +
       '</div>';
     document.body.appendChild(modal);
     return modal;
@@ -288,7 +309,7 @@
       const name = window.HN.productName(p);
       const url = window.HN && window.HN.productUrl ? window.HN.productUrl(p.slug) : 'product.html?slug=' + encodeURIComponent(p.slug);
       return '<a class="search-result" href="' + url + '">' +
-        '  <img class="search-result-img" src="' + escapeSearch(p.image || 'images/hero.jpg') + '" alt="' + escapeSearch(name) + '" loading="lazy">' +
+        '  <img class="search-result-img" src="' + escapeSearch(window.HN.image(p.image || 'images/hero.jpg',160)) + '" alt="" loading="lazy" decoding="async">' +
         '  <div class="search-result-body">' +
         '    <p class="search-result-name">' + escapeSearch(name) + '</p>' +
         '    <p class="search-result-meta">' + window.HN.money(p.price_cents) + '</p>' +
@@ -301,28 +322,36 @@
     const modal = buildSearchModal();
     if (!modal) return;
     const input = document.getElementById('searchInput');
+    input.setAttribute('autofocus','');
     const results = document.getElementById('searchResults');
     const closeBtn = document.getElementById('searchClose');
+    var searchOpener = null, searchOverflow = '';
 
     function setPlaceholder() {
       input.setAttribute('placeholder', tr('searchPlaceholder'));
+      input.setAttribute('aria-label',tr('menuSearch')); closeBtn.setAttribute('aria-label',tr('mobileClose')); modal.setAttribute('aria-label',tr('menuSearch'));
     }
 
     function openSearch() {
+      if (modal.open) return;
+      searchOpener=document.activeElement;
+      if (document.body.getAttribute('data-menu-open')==='true') { setMenuOpen(false); searchOpener=menuToggle; }
       setPlaceholder();
       modal.classList.add('active');
+      if (typeof modal.showModal==='function') modal.showModal();
+      searchOverflow=document.body.style.overflow;
       document.body.style.overflow = 'hidden';
-      setTimeout(function () { input.focus(); }, 30);
-      if (window.HN) {
-        window.HN.loadProducts()
-          .then(function () { if (input.value) runSearch(input.value); })
-          .catch(function () { /* offline: no catalog to search */ });
-      }
+      requestAnimationFrame(function () { if (modal.open && modal.classList.contains('active')) input.focus(); });
+      if (input.value.trim().length>=2) runSearch(input.value);
+      else results.textContent=tr('mobileSearchHint');
     }
 
     function closeSearch() {
+      searchRevision++; clearTimeout(debounceTimer);
       modal.classList.remove('active');
-      document.body.style.overflow = '';
+      if (modal.open) modal.close();
+      document.body.style.overflow = searchOverflow;
+      if (searchOpener && document.contains(searchOpener) && !searchOpener.closest('[inert]')) searchOpener.focus();
     }
 
     let searchRevision = 0;
@@ -330,10 +359,11 @@
       const revision = ++searchRevision;
       const query = String(q || '').trim();
       if (query.length < 2 || !window.HN) {
-        renderSearchResults([], query, results);
+        results.textContent=tr('mobileSearchHint');
         return;
       }
-      fetch(window.HN.api('products') + '?q=' + encodeURIComponent(query) + '&limit=12').then(function (res) { if (!res.ok) throw new Error('offline'); return res.json(); })
+      results.textContent=tr('mobileSearching');
+      window.HN.request(window.HN.api('products') + '?q=' + encodeURIComponent(query) + '&limit=12')
         .then(function (data) { if (revision !== searchRevision) return; window.HN.rememberProducts(data.products || []); renderSearchResults(data.products || [], query, results); })
         .catch(function () { if (revision !== searchRevision) return; const all = window.HN.products() || []; renderSearchResults(all.filter(function (p) { return searchMatches(p, query); }).slice(0, 12), query, results); });
     }
@@ -342,7 +372,6 @@
     input.addEventListener('input', function () {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(function () {
-        if (input.value.trim().length >= 2) renderSearchResults([], input.value, results);
         runSearch(input.value);
       }, 160);
     });
@@ -352,6 +381,7 @@
     });
 
     closeBtn.addEventListener('click', closeSearch);
+    modal.addEventListener('cancel',function(event){event.preventDefault();closeSearch();});
     modal.addEventListener('click', function (e) {
       if (e.target === modal) closeSearch();
     });
@@ -590,6 +620,7 @@
     if (color) {
       const name = color.getAttribute('data-color') || 'Gold';
       window.selectColor(color, name);
+      document.querySelectorAll('.color-option').forEach(function (option) { option.setAttribute('aria-pressed',option===color?'true':'false'); });
     }
   });
 

@@ -131,6 +131,8 @@ async function build() {
       if ($('script[src="js/store.js"]').length && !$('script[src="js/categories.js"]').length) $('script[src="js/store.js"]').before('<script src="js/categories.js"></script>');
       if ($('script[src="js/store.js"]').length && !$('script[src="js/product-sizes.js"]').length) $('script[src="js/store.js"]').after('<script src="js/product-sizes.js"></script>');
       if ($('script[src="js/store.js"]').length && $('script[src="js/main.js"]').length && !$('script[src="js/quick-add.js"]').length) $('script[src="js/main.js"]').before('<script src="js/quick-add.js"></script>');
+      if ($('script[src="js/main.js"]').length && !['admin.html','print.html','404.html'].includes(file) && !$('script[src="js/mobile-ui.js"]').length) $('script[src="js/main.js"]').after('<script src="js/mobile-ui.js"></script>');
+      if ($('script[src="js/main.js"]').length && !['admin.html','print.html','404.html'].includes(file) && !$('link[href="css/mobile.css"]').length) $('head').append('<link rel="stylesheet" href="css/mobile.css">');
       $('base').remove();
       $('head').prepend('<base href="/">');
       $('html').attr('lang', language).attr('dir', language === 'ar' ? 'rtl' : 'ltr');
