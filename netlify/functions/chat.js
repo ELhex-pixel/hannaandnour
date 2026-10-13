@@ -130,7 +130,7 @@ const RULES = [
         ? 'Bonjour \uD83D\uDC4B Bienvenue chez Hanna & Nour ! Je peux vous renseigner sur la livraison, les retours, les tailles, le suivi de commande ou nos codes promo. Que puis-je faire pour vous ?'
         : ctx.lang === 'en'
           ? 'Hello \uD83D\uDC4B Welcome to Hanna & Nour! I can help with shipping, returns, sizes, order tracking or promo codes. How can I help you today?'
-          : 'مرحبًا \uD83D\uDC4B أهلاً بك في حنا ونور! يمكنني مساعدتك في التوصيل والإرجاع والمقاسات وتتبع الطلب أو رموز الخصم. كيف يمكنني مساعدتك؟'
+          : 'مرحبًا \uD83D\uDC4B أهلاً بك في هناء و نور! يمكنني مساعدتك في التوصيل والإرجاع والمقاسات وتتبع الطلب أو رموز الخصم. كيف يمكنني مساعدتك؟'
     })
   },
   {
@@ -334,7 +334,7 @@ const RULES = [
         ? 'Hanna & Nour propose des vêtements et accessoires qui allient confort, élégance et simplicité. Découvrez les pièces et les collections disponibles dans notre boutique !'
         : ctx.lang === 'en'
           ? 'Hanna & Nour offers clothing and accessories that bring together comfort, elegance and simplicity. Explore the pieces and collections available in our shop!'
-          : 'تقدم حنا ونور ملابس وإكسسوارات تجمع الراحة والأناقة والبساطة. يمكن تصفح القطع والمجموعات المتوفرة في المتجر!';
+          : 'تقدم هناء و نور ملابس وإكسسوارات تجمع الراحة والأناقة والبساطة. يمكن تصفح القطع والمجموعات المتوفرة في المتجر!';
       return { text, links: [link(ctx.lang === 'fr' ? 'Boutique' : ctx.lang === 'en' ? 'Shop' : 'المتجر', 'shop.html'), link(ctx.lang === 'fr' ? 'Collections' : ctx.lang === 'en' ? 'Collections' : 'المجموعات', 'collections.html')] };
     }
   },
@@ -382,7 +382,7 @@ const RULES = [
         ? 'Avec plaisir ! Merci de votre visite chez Hanna & Nour, à bientôt ! \uD83D\uDE0A\n\nConversation terminée — notre équipe reste joignable à care@hannanour.com.'
         : ctx.lang === 'en'
           ? 'You\u2019re welcome! Thank you for visiting Hanna & Nour, see you soon! \uD83D\uDE0A\n\nConversation closed — our team remains reachable at care@hannanour.com.'
-          : 'على الرحب والسعة! شكرًا لزيارتك حنا ونور، إلى اللقاء! \uD83D\uDE0A\n\nانتهت المحادثة — فريقنا يبقى متاحًا على care@hannanour.com.'
+          : 'على الرحب والسعة! شكرًا لزيارتك هناء و نور، إلى اللقاء! \uD83D\uDE0A\n\nانتهت المحادثة — فريقنا يبقى متاحًا على care@hannanour.com.'
     })
   },
   {

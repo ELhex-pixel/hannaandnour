@@ -33,7 +33,11 @@
   .header-actions { gap:2px; }
   .header .menu-toggle,
   .header .header-actions a[href*="cart"] { display:none!important; }
+  .header-actions .header-action-btn:is([data-i18n-aria-label="menuSearch"],[data-i18n-aria-label="crumbAccount"],[data-i18n-aria-label="navWishlist"]) { display:none; }
   .header .header-actions > .lang-switcher { display:block; min-height:44px; padding:8px 10px; border-radius:12px; }
+  .header .language-picker { display:inline-flex; min-height:44px; padding-inline:9px; gap:5px; }
+  .header .language-picker select.lang-switcher { display:block!important; }
+  html[dir="rtl"] .header-actions { margin-left:0; margin-inline-start:auto; }
   .header.header-overlay:not(.scrolled) { background:var(--color-off-white); }
   .header.header-overlay:not(.scrolled) .logo { color:var(--color-charcoal)!important; text-shadow:none!important; }
   .header.header-overlay:not(.scrolled) .header-action-btn svg { stroke:var(--color-charcoal)!important; filter:none; }

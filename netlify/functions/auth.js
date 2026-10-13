@@ -16,6 +16,7 @@
  */
 const { json, getSupabase, isConfigured, readBody, requireUser, getBearer, CORS_HEADERS, siteUrl, rateLimit, sendEmail } = require('./shared');
 const crypto = require('crypto');
+const { locale, message } = require('./lib/customer-email');
 
 function isValidEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || ''));
@@ -63,7 +64,7 @@ exports.handler = async function (event) {
         const { data, error } = await sb.auth.signUp({
           email,
           password,
-          options: { data: { first_name: firstName }, emailRedirectTo: siteUrl + '/account.html' }
+          options: { data: { first_name: firstName, lang: locale(body.lang) }, emailRedirectTo: siteUrl + '/account.html' }
         });
         if (error) {
           if (/already registered|already been registered|email.*exists/i.test(error.message)) {
@@ -111,11 +112,9 @@ exports.handler = async function (event) {
             if (link.origin !== new URL(process.env.SUPABASE_URL).origin || link.pathname !== '/auth/v1/verify' || link.username || link.password || link.searchParams.get('type') !== 'recovery' || link.searchParams.get('redirect_to') !== redirectTo || !link.searchParams.get('token') || String(data.user.email || '').trim().toLowerCase() !== email) {
               throw new Error('Invalid recovery link');
             }
-            const href = link.href.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
             const sent = await sendEmail({
               to: email,
-              subject: 'Hanna & Nour — Réinitialisation de votre mot de passe',
-              html: '<h1>Réinitialiser votre mot de passe</h1><p>Vous avez demandé un nouveau mot de passe pour votre compte Hanna &amp; Nour.</p><p><a href="' + href + '">Choisir un nouveau mot de passe</a></p><p>Ce lien est temporaire et à usage unique. Si vous n’êtes pas à l’origine de cette demande, ignorez cet email : votre mot de passe reste inchangé.</p>'
+              ...message('recovery', body.lang, { href:link.href, siteUrl })
             });
             if (!sent || !sent.ok) throw new Error('Recovery email not accepted');
           } else {
@@ -182,7 +181,7 @@ exports.handler = async function (event) {
         const codeHash = crypto.createHash('sha256').update(auth.user.id + ':' + code).digest('hex');
         const { error } = await sb.from('order_claims').upsert({ user_id: auth.user.id, email: auth.user.email.toLowerCase().trim(), code_hash: codeHash, expires_at: new Date(Date.now() + 600000).toISOString(), attempts: 0 });
         if (error) throw error;
-        await sendEmail({ to: auth.user.email, subject: 'Hanna & Nour — confirmation de vos commandes', html: '<p>Votre code de confirmation : <strong>' + code + '</strong>. Il expire dans 10 minutes. Ne le partagez pas.</p>' });
+        await sendEmail({ to: auth.user.email, ...message('claim', body.lang, { code, siteUrl }) });
         return json(200, { ok: true });
       }
 

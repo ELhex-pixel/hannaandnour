@@ -68,7 +68,10 @@ function staticMetadata($, origin, file, lang) {
   if (file === 'index.html') {
     $('script[type="application/ld+json"]').each((_, node) => {
       const graph = JSON.parse($(node).text());
-      for (const entry of graph['@graph'] || []) if (entry['@type'] === 'WebSite') { entry.description = values.description; entry.inLanguage = lang; }
+      for (const entry of graph['@graph'] || []) {
+        if (['WebSite', 'Organization'].includes(entry['@type'])) entry.name = translations[lang].brandName;
+        if (entry['@type'] === 'WebSite') { entry.description = values.description; entry.inLanguage = lang; }
+      }
       $(node).text(JSON.stringify(graph).replace(/</g, '\\u003c'));
     });
   }

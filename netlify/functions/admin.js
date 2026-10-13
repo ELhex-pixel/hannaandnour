@@ -560,17 +560,10 @@ if (body.shipping_status !== undefined) {
             if (!oErr && ord && ord.email && ord.status === 'paid') {
               const { sendEmail } = require('./shared');
               const tracking = update.tracking_number || ord.tracking_number;
-              const html =
-                '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
-                'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande est exp\u00E9di\u00E9e !</h2>' +
-                '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(ord.customer_name) + ', votre commande <strong>' + esc(ord.order_number) + '</strong> a quitt\u00E9 notre atelier.</p>' +
-                (tracking ? '<p style="font-size:14px;color:#221f1a;">Num\u00E9ro de suivi : <strong>' + esc(tracking) + '</strong></p>' : '') +
-                '<p style="font-size:14px;color:#221f1a;">Vous pouvez suivre vos commandes sur la page <a href="' + siteUrl + '/account.html" style="color:#7d9b76;">Mon compte</a>.</p>' +
-                '<p style="font-size:12px;color:#8a7d66;">Merci de votre confiance.</p></div></div>';
+              const { orderLocale, message } = require('./lib/customer-email');
               await sendEmail({
                 to: ord.email,
-                subject: 'Commande ' + ord.order_number + ' exp\u00E9di\u00E9e \u2014 Hanna & Nour',
-                html
+                ...message('shipped', await orderLocale(ord), { order:ord, tracking, siteUrl })
               });
             }
           } catch (mailErr) {
@@ -599,22 +592,10 @@ if (body.shipping_status !== undefined) {
                 .select('id');
               if (claimed.error) throw claimed.error;
               if (claimed.data && claimed.data.length) {
-                const items = (ord.order_items || []).filter((it) => it.product_slug);
-                const links = items.map((it) => {
-                  const url = siteUrl + '/review.html?slug=' + encodeURIComponent(it.product_slug) + '&order=' + encodeURIComponent(ord.order_number);
-                  return '<li style="margin:0 0 8px 0;"><a href="' + url + '" style="display:inline-block;background:#8a2c2c;color:#fff;text-decoration:none;border-radius:6px;padding:8px 14px;font-size:13px;">Donner mon avis sur ' + esc(it.product_name || 'ce produit') + '</a></li>';
-                }).join('');
-                const html =
-                  '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
-                  'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande est livr\u00e9e, merci !</h2>' +
-                  '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(ord.customer_name) + ', votre commande <strong>' + esc(ord.order_number) + '</strong> est arriv\u00e9e. Votre avis aide d\u2019autres clientes \u00e0 choisir : notez vos articles en quelques \u00e9toiles et quelques mots.</p>' +
-                  '<ul style="list-style:none;padding:0;margin:12px 0;">' + links + '</ul>' +
-                  '<p style="font-size:14px;color:#221f1a;">Vous pouvez aussi retrouver vos commandes sur la page <a href="' + siteUrl + '/account.html" style="color:#7d9b76;">Mon compte</a>.</p>' +
-                  '<p style="font-size:12px;color:#8a7d66;">Merci de votre confiance.</p></div></div>';
+                const { orderLocale, message } = require('./lib/customer-email');
                 await sendEmail({
                   to: ord.email,
-                  subject: 'Votre avis compte \u2014 commande ' + ord.order_number + ' (Hanna & Nour)',
-                  html
+                  ...message('review', await orderLocale(ord), { order:ord, items:ord.order_items || [], siteUrl })
                 });
               }
             }
@@ -940,10 +921,10 @@ case 'deleteMessage': {
 
         try {
           const { sendEmail } = require('./shared');
+          const { orderLocale, message } = require('./lib/customer-email');
           await sendEmail({
             to: order.email,
-            subject: 'Votre commande ' + order.order_number + ' a \u00e9t\u00e9 annul\u00e9e \u2014 Hanna & Nour',
-            html: buildCancelEmail(order, reason, comment, ref.ok)
+            ...message('cancel', await orderLocale(order), { order, reason, comment, refunded:ref.ok, siteUrl })
           });
         } catch (mailErr) {
           console.error('Cancel email failed:', mailErr.message);
@@ -1583,23 +1564,4 @@ async function stripeRefund(sb,order) {
 async function restockOrder(sb, order) {
   const { error } = await sb.rpc('restock_order', { p_order_id: order.id });
   if (error) throw error;
-}
-
-function buildCancelEmail(order, reason, comment, refunded) {
-  const reasons = {
-    defective: 'un article de votre commande s\u2019est r\u00e9v\u00e9l\u00e9 d\u00e9fectueux',
-    out_of_stock: 'un article de votre commande n\u2019est plus disponible (rupture de stock)',
-    other: comment || 'en raison d\u2019une indisponibilit\u00e9 impr\u00e9vue'
-  };
-  const text = reasons[reason] || reasons.other;
-  const refundLine = refunded
-    ? 'Le remboursement de votre paiement a d\u00e9j\u00e0 \u00e9t\u00e9 lanc\u00e9 automatiquement.'
-    : 'Si un paiement a \u00e9t\u00e9 effectu\u00e9, celui-ci vous sera int\u00e9gralement rembours\u00e9 dans les plus brefs d\u00e9lais.';
-  return '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
-    'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Votre commande a \u00e9t\u00e9 annul\u00e9e</h2>' +
-    '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ',</p>' +
-    '<p style="font-size:14px;color:#221f1a;">Nous vous remercions pour votre commande <strong>' + esc(order.order_number) + '</strong>. Nous sommes sinc\u00e8rement navr\u00e9s de devoir vous informer que nous ne sommes malheureusement pas en mesure de la confirmer : ' + esc(text) + '.</p>' +
-    '<p style="font-size:14px;color:#221f1a;">' + refundLine + '</p>' +
-    '<p style="font-size:14px;color:#221f1a;">Nous vous pr\u00e9sentons nos sinc\u00e8res excuses pour ce d\u00e9sagr\u00e9ment et restons \u00e0 votre disposition pour toute question.</p>' +
-    '<p style="font-size:12px;color:#8a7d66;">L\u2019\u00e9quipe Hanna &amp; Nour</p></div></div>';
 }

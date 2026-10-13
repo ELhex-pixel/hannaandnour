@@ -16,7 +16,7 @@ function checkout(overrides = {}, stripeError = false) {
   class Stripe {
     constructor() { this.checkout = { sessions: { create: async payload => { state.stripe++; state.payload = payload; if (stripeError) throw new Error('Network timeout'); return { id: 'cs_test', url: 'https://checkout.stripe.com/test' }; }, expire: async () => {} } }; }
   }
-  vm.runInNewContext(fs.readFileSync('netlify/functions/checkout.js', 'utf8'), { exports, process: { env: { STRIPE_SECRET_KEY: 'test-key-not-a-secret' } }, require: name => name === 'crypto' ? crypto : name === 'stripe' ? Stripe : name === './shared' ? shared : { ...require('../public/js/commerce'), quote: async () => value, publicQuote: data => data } });
+  vm.runInNewContext(fs.readFileSync('netlify/functions/checkout.js', 'utf8'), { exports, process: { env: { STRIPE_SECRET_KEY: 'test-key-not-a-secret' } }, require: name => name === 'crypto' ? crypto : name === 'stripe' ? Stripe : name === './shared' ? shared : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : { ...require('../public/js/commerce'), quote: async () => value, publicQuote: data => data } });
   return { handler: exports.handler, state, value };
 }
 const event = payload => ({ httpMethod: 'POST', body: JSON.stringify(payload), headers: {} });
@@ -69,6 +69,23 @@ test('une réponse Stripe perdue ne libère pas aveuglément la réservation', a
   assert.equal(mock.state.releases, 0);
 });
 
+test('le checkout garde la langue Stripe et les retours localisés sans changer les montants', async () => {
+  for (const lang of ['fr','en','ar']) {
+    const mock = checkout();
+    mock.value.items[0].product.name_ar = 'سترة';
+    mock.value.items[0].product.name_fr = 'Veste';
+    assert.equal((await mock.handler(event({ ...customer, lang }))).statusCode, 200);
+    const payload = mock.state.payload;
+    assert.equal(payload.metadata.lang, lang);
+    assert.equal(payload.payment_intent_data.metadata.lang, lang);
+    assert.equal(payload.metadata.order_id, payload.client_reference_id);
+    assert.equal(payload.cancel_url, 'https://example.test/' + lang + '/cart.html');
+    assert.equal(payload.success_url, 'https://example.test/' + lang + '/success.html?session_id={CHECKOUT_SESSION_ID}');
+    assert.equal(payload.line_items[0].price_data.product_data.name, mock.value.items[0].product['name_' + lang]);
+    assert.equal(payload.line_items.reduce((sum, line) => sum + line.quantity * line.price_data.unit_amount, 0) + payload.shipping_options[0].shipping_rate_data.fixed_amount.amount, mock.value.totals.total);
+  }
+});
+
 function webhook(type, overrides = {}) {
   const exports = {};
   const state = { rpc: [], raw: null, mail: 0 };
@@ -82,7 +99,7 @@ function webhook(type, overrides = {}) {
       this.paymentIntents = { retrieve: async () => ({ metadata: { order_id: 'order' } }) };
     }
   }
-  vm.runInNewContext(fs.readFileSync('netlify/functions/stripe-webhook.js', 'utf8'), { exports, Buffer, console: { error() {} }, process: { env: { STRIPE_WEBHOOK_SECRET: 'test-only', STRIPE_SECRET_KEY: 'test-only' } }, require: name => name === 'stripe' ? Stripe : shared });
+  vm.runInNewContext(fs.readFileSync('netlify/functions/stripe-webhook.js', 'utf8'), { exports, Buffer, console: { error() {} }, process: { env: { STRIPE_WEBHOOK_SECRET: 'test-only', STRIPE_SECRET_KEY: 'test-only' } }, require: name => name === 'stripe' ? Stripe : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : shared });
   return { handler: exports.handler, state };
 }
 

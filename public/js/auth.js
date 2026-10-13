@@ -52,6 +52,7 @@
   }
 
   function call(payload, needsAuth) {
+    payload = Object.assign({}, payload || {}, { lang: window.I18n ? window.I18n.lang() : 'fr' });
     var headers = { 'Content-Type': 'application/json' };
     var token = getToken();
     if (needsAuth && token) headers['Authorization'] = 'Bearer ' + token;

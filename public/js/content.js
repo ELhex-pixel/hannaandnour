@@ -52,21 +52,22 @@
       '<span>' + esc(date(post.published_at, lang, true)) + ' &bull; ' + (parseInt(post.read_minutes, 10) || 5) + ' ' + esc(t('minRead')) + '</span></div></div></article>';
   }
   function metadata(origin, kind, row, lang) {
+    var brand = lang === 'ar' ? 'هناء و نور' : 'Hanna & Nour';
     origin = new URL(origin).origin;
     var title = localized(row, kind === 'product' ? 'name' : 'title', lang);
     var description = String(localized(row, kind === 'product' ? 'description' : 'excerpt', lang) || title).replace(/\s+/g, ' ').trim().slice(0, 160);
     var url = origin + path(kind, row.slug, lang), photo = image(row.image);
     var schema = { '@context': 'https://schema.org', '@type': kind === 'product' ? 'Product' : 'BlogPosting', name: title, description: description, url: url };
     if (photo) schema.image = [new URL(photo, origin + '/').href];
-    if (kind === 'product') { schema.sku = row.sku || row.slug; schema.brand = { '@type': 'Brand', name: 'Hanna & Nour' }; }
+    if (kind === 'product') { schema.sku = row.sku || row.slug; schema.brand = { '@type': 'Brand', name: brand }; }
     else {
       schema.headline = title;
       schema.mainEntityOfPage = url;
-      schema.publisher = { '@type': 'Organization', name: 'Hanna & Nour', url: origin };
+      schema.publisher = { '@type': 'Organization', name: brand, url: origin };
       if (row.author) schema.author = { '@type': 'Person', name: row.author };
       if (row.published_at && !isNaN(new Date(row.published_at).getTime())) schema.datePublished = new Date(row.published_at).toISOString();
     }
-    return { title: title + ' | Hanna & Nour', description: description, url: url, image: schema.image ? schema.image[0] : '', schema: schema,
+    return { title: title + ' | ' + brand, description: description, url: url, image: schema.image ? schema.image[0] : '', schema: schema,
       alternates: languages.map(function (value) { return { lang: value, url: origin + path(kind, row.slug, value) }; }) };
   }
   function applyMetadata(doc, meta, kind) {

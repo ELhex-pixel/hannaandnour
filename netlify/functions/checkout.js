@@ -2,6 +2,7 @@ const { randomUUID, randomBytes } = require('crypto');
 const Stripe = require('stripe');
 const { json, getSupabase, isConfigured, readBody, requireUser, getBearer, rateLimit, siteUrl, CORS_HEADERS } = require('./shared');
 const { quote, publicQuote, discountedLines } = require('./lib/commerce');
+const { locale } = require('./lib/customer-email');
 
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS_HEADERS };
@@ -24,6 +25,8 @@ exports.handler = async function (event) {
       return json(409, { error: 'quote_changed', ...publicQuote(value) });
     }
     const fields = {};
+    const lang = locale(body.lang);
+    const pagePrefix = ['fr', 'en', 'ar'].includes(body.lang) ? '/' + lang : '';
     const limits = { email: 254, customer_name: 120, phone: 40, address1: 250, address2: 250, city: 120, state: 120, postal_code: 20, country: 2, pickup_point: 250 };
     for (const [name, limit] of Object.entries(limits)) {
       fields[name] = String(body[name] || '').trim();
@@ -51,7 +54,7 @@ exports.handler = async function (event) {
     });
     if (orderError) throw orderError;
     const { error: itemsError } = await sb.from('order_items').insert(value.items.map(i => ({
-      order_id: orderId, product_id: i.product.id, product_slug: i.slug, product_name: i.product.name_en,
+      order_id: orderId, product_id: i.product.id, product_slug: i.slug, product_name: i.product['name_' + lang] || i.product.name_en,
       image: i.product.image, unit_price_cents: i.price_cents, net_total_cents: allocation.filter(line => line.item === i).reduce((sum, line) => sum + line.quantity * line.unit_amount, 0), quantity: i.qty, variant_id: i.variantId,
       variant: [i.color, i.size].filter(Boolean).join(' / ')
     })));
@@ -66,7 +69,7 @@ exports.handler = async function (event) {
     const lineItems = allocation.map(line => ({
       quantity: line.quantity,
       price_data: { currency: value.currency.code, unit_amount: line.unit_amount,
-        product_data: { name: line.item.product.name_en + (line.item.color || line.item.size ? ' - ' + [line.item.color, line.item.size].filter(Boolean).join(' / ') : '') }
+        product_data: { name: (line.item.product['name_' + lang] || line.item.product.name_en) + (line.item.color || line.item.size ? ' - ' + [line.item.color, line.item.size].filter(Boolean).join(' / ') : '') }
       }
     }));
     if (t.tax) lineItems.push({ quantity: 1, price_data: { currency: value.currency.code, unit_amount: t.tax, product_data: { name: 'Tax' } } });
@@ -78,8 +81,9 @@ exports.handler = async function (event) {
       mode: 'payment', client_reference_id: orderId, customer_email: fields.email, line_items: lineItems,
       expires_at: Math.floor(Date.now() / 1000) + 1800,
       shipping_options: [{ shipping_rate_data: { type: 'fixed_amount', fixed_amount: { amount: t.shipping, currency: value.currency.code }, display_name: value.method } }],
-      metadata: { order_id: orderId }, payment_intent_data: { metadata: { order_id: orderId } },
-      success_url: `${siteUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${siteUrl}/cart.html`
+      metadata: { order_id: orderId, lang }, payment_intent_data: { metadata: { order_id: orderId, lang } },
+      locale: lang === 'ar' ? 'auto' : lang,
+      success_url: `${siteUrl}${pagePrefix}/success.html?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${siteUrl}${pagePrefix}/cart.html`
     }, { idempotencyKey: 'checkout-' + orderId });
     const { error: bindError } = await sb.from('orders').update({ stripe_session_id: session.id }).eq('id', orderId);
     if (bindError) throw bindError;

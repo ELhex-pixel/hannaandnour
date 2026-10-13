@@ -35,13 +35,14 @@
     try { localStorage.setItem(KEY, theme); } catch (e) {}
     document.querySelectorAll('.theme-toggle').forEach(function (b) {
       b.innerHTML = dark ? SUN_SVG : MOON_SVG;
-      b.title = dark ? 'Passer en mode clair' : 'Passer en mode sombre';
+      b.title = window.I18n ? window.I18n.t(dark ? 'themeLight' : 'themeDark') : (dark ? 'Passer en mode clair' : 'Passer en mode sombre');
       b.setAttribute('aria-label', b.title);
     });
   }
 
   function wire() {
     applyTheme(currentTheme());
+    document.addEventListener('langchange', function () { applyTheme(currentTheme()); });
     document.querySelectorAll('.theme-toggle').forEach(function (b) {
       b.addEventListener('click', function () {
         applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');

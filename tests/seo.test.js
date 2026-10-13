@@ -30,7 +30,7 @@ test('le pré-rendu produit est lisible sans JS, sans prix ni stock figé, avec 
     assert.equal($('.product-price').text(), '');
     assert.equal($('link[rel=canonical]').attr('href'), url);
     assert.equal($('link[hreflang]').length, 4);
-    assert.equal($('meta[property="og:title"]').attr('content'), product['name_' + lang] + ' | Hanna & Nour');
+    assert.equal($('meta[property="og:title"]').attr('content'), product['name_' + lang] + ' | ' + (lang === 'ar' ? 'هناء و نور' : 'Hanna & Nour'));
     assert.equal($('meta[name="twitter:card"]').attr('content'), 'summary_large_image');
     const schema = JSON.parse($('#product-jsonld').text());
     assert.equal(schema['@type'], 'Product'); assert.equal(schema.offers, undefined);

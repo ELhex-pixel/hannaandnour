@@ -289,6 +289,7 @@
       var pickupPoint = val('pickupPoint');
 
       var payload = {
+        lang: HN.lang(),
         items: items.map(function (it) {
           return {
             slug: it.slug,

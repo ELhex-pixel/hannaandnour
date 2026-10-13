@@ -41,7 +41,7 @@ function auth(options = {}) {
   vm.runInNewContext(fs.readFileSync('netlify/functions/auth.js', 'utf8'), {
     exports, URL, process: { env: { SUPABASE_URL: 'https://project.supabase.co', ...(options.smtpOnly ? {} : { RESEND_API_KEY: 'test-only' }) } },
     console: { error: (...args) => state.logs.push(args) },
-    require: name => name === 'crypto' ? crypto : shared
+    require: name => name === 'crypto' ? crypto : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : shared
   });
   return { handler: exports.handler, state };
 }
@@ -60,6 +60,18 @@ test('la récupération envoie une seule fois le lien Supabase via Resend sans e
   assert.equal(mock.state.updates, 0);
   assert.equal(mock.state.logs.length, 0);
   assert.deepEqual(mock.state.limits[0], ['auth:forgotPassword', 10, 600, ' CUSTOMER@example.test ']);
+});
+
+test('la récupération arabe traduit le mail et conserve le lien autorisé et ses protections', async () => {
+  const mock = auth();
+  const response = await mock.handler(event({ action:'forgotPassword', email, lang:'ar' }));
+  assert.equal(response.statusCode, 200);
+  assert.equal(mock.state.links[0].options.redirectTo, redirectTo);
+  assert.match(mock.state.emails[0].subject, /هناء و نور/);
+  assert.match(mock.state.emails[0].html, /lang="ar" dir="rtl"/);
+  assert.match(mock.state.emails[0].html, /إعادة تعيين كلمة المرور/);
+  assert.equal(mock.state.smtp.length, 0);
+  assert.doesNotMatch(response.body, /token|customer@example/);
 });
 
 test('un compte absent reçoit la même réponse publique sans créer de compte ni envoyer', async () => {

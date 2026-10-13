@@ -11,26 +11,9 @@
  */
 const { schedule } = require('@netlify/functions');
 const { getSupabase, isConfigured, sendEmail, siteUrl } = require('./shared');
+const { orderLocale, message } = require('./lib/customer-email');
 
 const HOUR = 60 * 60 * 1000;
-
-function esc(s) {
-  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function buildHtml(order, link) {
-  return '<div style="background:#f6f1e8;padding:24px;"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;' +
-    'font-family:Helvetica,Arial,sans-serif;padding:28px;"><h2 style="color:#8a2c2c;font-size:18px;">Rappel : votre commande est en attente de r\u00e8glement</h2>' +
-    '<p style="font-size:14px;color:#221f1a;">Bonjour ' + esc(order.customer_name) + ',</p>' +
-    '<p style="font-size:14px;color:#221f1a;">Votre commande ' + esc(order.order_number) + ' chez Hanna &amp; Nour est toujours en attente de paiement. ' +
-    'Si vous l\u2019avez d\u00e9j\u00e0 r\u00e9gl\u00e9e, ignorez ce message.</p>' +
-    '<p style="font-size:14px;color:#221f1a;">Sinon, vous pouvez la finaliser quand vous le souhaitez :</p>' +
-    '<table style="margin:18px 0;" role="presentation" width="100%"><tr><td align="center">' +
-    '<a href="' + link + '" style="background:#221f1a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;display:inline-block;">Finaliser ma commande</a>' +
-    '</td></tr></table>' +
-    '<p style="font-size:12px;color:#8a7d66;">Ce lien est personnel et expire apr\u00e8s utilisation. Questions ? Utilisez la page ' +
-    '<a href="' + siteUrl + '/contact.html" style="color:#7d9b76;">contact</a>.</p></div></div>';
-}
 
 async function send24hEmails(sb) {
   if (!process.env.RESEND_API_KEY) return 0;
@@ -39,7 +22,7 @@ async function send24hEmails(sb) {
   const floor = new Date(now - 72 * HOUR).toISOString();
   const { data, error } = await sb
     .from('orders')
-    .select('id, order_number, email, customer_name, cart_restore_token')
+    .select('id, order_number, email, customer_name, cart_restore_token, stripe_session_id')
     .in('status', ['pending', 'abandoned'])
     .lte('created_at', oldest)
     .gt('created_at', floor)
@@ -51,7 +34,6 @@ async function send24hEmails(sb) {
   let sent = 0;
   for (const order of data || []) {
     if (!order.email || !order.cart_restore_token) continue;
-    const link = siteUrl + '/cart.html?restore=' + order.cart_restore_token;
     try {
       // Atomic claim BEFORE sending: only the run that sets
       // reminder_24h_sent_at first can email the order (no duplicates).
@@ -67,8 +49,7 @@ async function send24hEmails(sb) {
 
       await sendEmail({
         to: order.email,
-        subject: 'Rappel : votre commande ' + order.order_number + ' est en attente \u2014 Hanna & Nour',
-        html: buildHtml(order, link)
+        ...message('pending', await orderLocale(order), { order, siteUrl })
       });
       sent++;
     } catch (e) {

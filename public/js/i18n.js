@@ -1005,7 +1005,7 @@
       socialFacebook: 'فيسبوك',
       socialX: 'إكس (تويتر)',
       socialYoutube: 'يوتيوب',
-      footerCopyright: '© 2026 هناء ونور. جميع الحقوق محفوظة.',
+      footerCopyright: '© 2026 هناء و نور. جميع الحقوق محفوظة.',
       wishAdd: 'أُضيف إلى المفضلة',
       wishRemove: 'أُزيل من المفضلة',
       wishlistLoginRequired: 'سجّلي الدخول لحفظ المفضلة',
@@ -1166,7 +1166,7 @@
       dt2: 'فبراير 2026',
       rt2: 'تنسيقه مثالي ولا ينزلق إطلاقًا، وهذا ما غيّر كل شيء بالنسبة لي. يستحق كل قرش.',
       dt3: 'يناير 2026',
-      rt3: 'خامة جميلة جدًا، وصل بسرعة والتغليف أنيق. اللون الذهبي رائع. أنصح به بشدة من هناء ونور!',
+      rt3: 'خامة جميلة جدًا، وصل بسرعة والتغليف أنيق. اللون الذهبي رائع. أنصح به بشدة من هناء و نور!',
       writeAReview: 'اكتبي تقييمًا',
       reviewPageTitle: 'تقييمكِ',
       reviewHeading: 'رأيكِ يهمُّنا!',
@@ -1203,7 +1203,7 @@
       liveRetry: 'إعادة المحاولة',
       sgFooter: 'غير متأكدة من المقاس المناسب؟ فريق خدمة العملاء لدينا سعيد بمساعدتك في إيجاد المقاس المثالي. تواصلي معنا على care@hannanour.com',
       whereFaithMeetsFashion: 'أسلوب يجمع الأناقة والبساطة',
-      aboutP1: 'تقدم حنا ونور مجموعة من الملابس والإكسسوارات تجمع الراحة والأناقة والبساطة. قطع سهلة الارتداء لتنسيق أسلوب يعكس شخصيتكم.',
+      aboutP1: 'تقدم هناء و نور مجموعة من الملابس والإكسسوارات تجمع الراحة والأناقة والبساطة. قطع سهلة الارتداء لتنسيق أسلوب يعكس شخصيتكم.',
       aboutP2: 'نهتم بالقصات المريحة والتفاصيل المدروسة والتنسيقات السهلة، من الحياة اليومية إلى المناسبات الخاصة، مع مساحة لأذواق متنوعة وطرق مختلفة في ارتداء الملابس.',
       whatWeStandFor: 'ما نؤمن به',
       ourValues: 'قيمنا',
@@ -1223,7 +1223,7 @@
       ctaDesc: 'تصفحوا المجموعة واشتركوا في النشرة البريدية للاطلاع على المستجدات وأفكار التنسيق والأخبار.',
       startShopping: 'ابدأ التسوق',
       blogSubtitle: 'أسلوب وإلهام',
-      journalTitle: 'مجلة هناء ونور',
+      journalTitle: 'مجلة هناء و نور',
       catStyling: 'نصائح التنسيق',
       b1Title: '5 طرق بسيطة لتنسيق حجابك اليومي',
       b1Excerpt: 'من اللفّات الكلاسيكية إلى اللمسات العصرية، اكتشفي أساليب حجاب متعددة ترافقك من العمل إلى عطلة نهاية الأسبوع.',
@@ -1503,6 +1503,11 @@
   Object.assign(DICT.fr, { catSets: 'Ensembles', catJumpsuits: 'Combinaisons', catTracksuits: 'Survêtements', catTshirts: 'T-shirts', catShirts: 'Chemises', catBlouses: 'Blouses et tuniques', catCardigans: 'Gilets et cardigans', catSweatshirts: 'Sweats', catHoodies: 'Sweats à capuche', catCoats: 'Manteaux', catCapes: 'Capes et ponchos', catVests: 'Vestes sans manches', catJeans: 'Jeans', catShorts: 'Shorts et bermudas' });
   Object.assign(DICT.en, { catSets: 'Matching sets', catJumpsuits: 'Jumpsuits', catTracksuits: 'Tracksuits', catTshirts: 'T-shirts', catShirts: 'Shirts', catBlouses: 'Blouses and tunics', catCardigans: 'Cardigans', catSweatshirts: 'Sweatshirts', catHoodies: 'Hoodies', catCoats: 'Coats', catCapes: 'Capes and ponchos', catVests: 'Sleeveless jackets', catJeans: 'Jeans', catShorts: 'Shorts' });
   Object.assign(DICT.ar, { catSets: 'أطقم', catJumpsuits: 'بدلات قطعة واحدة', catTracksuits: 'أطقم رياضية', catTshirts: 'تيشيرتات', catShirts: 'قمصان', catBlouses: 'بلوزات وتونيكات', catCardigans: 'كارديغان', catSweatshirts: 'سويت شيرت', catHoodies: 'هوديز', catCoats: 'معاطف', catCapes: 'كابات وبونشو', catVests: 'سترات بلا أكمام', catJeans: 'جينز', catShorts: 'شورتات' });
+  Object.assign(DICT.fr, { brandName: 'Hanna & Nour', languageLabel: 'Choisir la langue', themeLight: 'Passer en mode clair', themeDark: 'Passer en mode sombre' });
+  Object.assign(DICT.en, { brandName: 'Hanna & Nour', languageLabel: 'Choose language', themeLight: 'Switch to light mode', themeDark: 'Switch to dark mode' });
+  Object.assign(DICT.ar, { brandName: 'هناء و نور', languageLabel: 'اختيار اللغة', themeLight: 'التبديل إلى الوضع الفاتح', themeDark: 'التبديل إلى الوضع الداكن' });
+  // Normalize legacy brand copy only; user-authored catalogue content is untouched.
+  Object.keys(DICT.ar).forEach(function (key) { DICT.ar[key] = DICT.ar[key].replace(/حنا ونور|هناء ونور/g, 'هناء و نور'); });
   if (typeof module === 'object' && module.exports) { module.exports = DICT; return; }
   var pathLang = window.location.pathname.split('/')[1];
   var savedLang = '';
@@ -1607,6 +1612,21 @@
   function applyTranslations() {
     applyDir();
     localizeLinks();
+    document.querySelectorAll('.logo, .footer-logo').forEach(function (el) {
+      if (lang === 'ar') el.textContent = t('brandName');
+      else el.innerHTML = 'Hanna<span class="logo-accent">&amp;</span>Nour';
+    });
+    document.querySelectorAll('[aria-label]').forEach(function (el) {
+      var keys = { Search: 'menuSearch', Account: 'crumbAccount', Wishlist: 'navWishlist', Cart: 'crumbCart', Close: 'mobileClose', 'Open menu': 'mobileMenu', 'Close menu': 'mobileClose', Language: 'languageLabel', 'Discount code': 'promoPlaceholder' };
+      var key = keys[el.getAttribute('aria-label')];
+      if (key && !el.hasAttribute('data-i18n-aria-label')) el.setAttribute('data-i18n-aria-label', key);
+    });
+    document.querySelectorAll('.header-actions a[href*="cart"] .sr-only').forEach(function (el) { el.textContent = t('crumbCart'); });
+    if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
+      var regions = new Intl.DisplayNames([lang], { type: 'region' });
+      document.querySelectorAll('#country option').forEach(function (option) { if (/^[A-Z]{2}$/.test(option.value)) option.textContent = regions.of(option.value); });
+    }
+    wireLanguagePickers();
 
     document.querySelectorAll('[data-i18n]').forEach(function(el) {
       var key = el.getAttribute('data-i18n');
@@ -1621,6 +1641,25 @@
     document.querySelectorAll('[data-i18n-aria-label]').forEach(function(el) {
       var key = el.getAttribute('data-i18n-aria-label');
       el.setAttribute('aria-label', t(key));
+    });
+  }
+
+  function wireLanguagePickers() {
+    document.querySelectorAll('select.lang-switcher').forEach(function (sel) {
+      var picker = sel.parentElement;
+      if (!picker.classList.contains('language-picker')) {
+        picker = document.createElement('span');
+        picker.className = 'language-picker';
+        sel.parentNode.insertBefore(picker, sel);
+        picker.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z"/></svg><span class="language-picker-code" aria-hidden="true"></span><svg class="language-picker-chevron" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m4 6 4 4 4-4"/></svg>';
+        picker.appendChild(sel);
+        sel.addEventListener('change', function () { setLang(sel.value); });
+        Array.prototype.forEach.call(sel.options, function (option) { option.textContent = { fr: 'Français', en: 'English', ar: 'العربية' }[option.value] || option.textContent; option.lang = option.value; });
+      }
+      sel.value = lang;
+      sel.setAttribute('aria-label', t('languageLabel'));
+      sel.setAttribute('data-i18n-aria-label', 'languageLabel');
+      picker.querySelector('.language-picker-code').textContent = { fr: 'FR', en: 'EN', ar: 'عربي' }[lang];
     });
   }
 
@@ -1654,13 +1693,6 @@
 
   document.addEventListener('DOMContentLoaded', function() {
     applyTranslations();
-
-    document.querySelectorAll('.lang-switcher').forEach(function(sel) {
-      sel.value = lang;
-      sel.addEventListener('change', function() {
-        setLang(this.value);
-      });
-    });
   });
   // Newly rendered cards and mobile links must keep the language too. Update
   // the actual href before native navigation, preserving modifier-key clicks.

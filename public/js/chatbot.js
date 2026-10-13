@@ -41,7 +41,7 @@
       chips: ['Shipping & returns', 'Track my order', 'Is there a promo code?']
     },
     ar: {
-      title: 'حنا ونور',
+      title: 'هناء و نور',
       sub: 'المساعد — رد فوري',
       intro: 'مرحبًا \uD83D\uDC4B أنا مساعد المتجر. اسأليني عن التوصيل أو الإرجاع أو المقاسات أو تتبع الطلب!',
       ph: 'اكتبي رسالتك\u2026',

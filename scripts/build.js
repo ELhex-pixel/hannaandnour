@@ -136,6 +136,8 @@ async function build() {
       $('base').remove();
       $('head').prepend('<base href="/">');
       $('html').attr('lang', language).attr('dir', language === 'ar' ? 'rtl' : 'ltr');
+      if (language === 'ar') $('.logo, .footer-logo').text(translations.ar.brandName);
+      $('.lang-switcher').val(language).attr('aria-label', translations[language].languageLabel);
       $('[data-i18n]').each((_, node) => { const key = $(node).attr('data-i18n'); if (translations[language][key]) $(node).text(translations[language][key]); });
       if (file === 'blog.html' && sb) {
         $('.blog-grid').html(catalog.posts.slice(0, 6).map(post => content.postCardHTML(post, language, key => translations[language][key])).join(''));
@@ -162,9 +164,10 @@ async function build() {
         if (lang) urls.push(origin + '/' + lang + '/' + file);
       }
       const names = { en: translations.en.brandTitle, fr: translations.fr.brandTitle, ar: translations.ar.brandTitle };
-      if (file === 'index.html') $('title').text('Hanna & Nour | ' + names[language]);
+      const brand = translations[language].brandName;
+      if (file === 'index.html') $('title').text(brand + ' | ' + names[language]);
       const title = $('h1').first().text().trim();
-      if (title && file !== 'index.html') $('title').text(title + ' | Hanna & Nour');
+      if (title && file !== 'index.html') $('title').text(title + ' | ' + brand);
       staticMetadata($, origin, file, language);
       $('meta[property="og:locale"]').attr('content', { fr: 'fr_FR', en: 'en_US', ar: 'ar_AR' }[language]);
       $('meta[property="og:url"]').attr('content', origin + '/' + language + '/' + file);

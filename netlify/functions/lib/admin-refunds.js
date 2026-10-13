@@ -74,14 +74,13 @@ async function findExistingRefund(stripe, intent, operation) {
   }
   throw new Error('Refund history requires reconciliation');
 }
-const esc = text => String(text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 async function notify(sb, order, operation) {
   if (!process.env.RESEND_API_KEY) return;
   const claimed = await rpc(sb, 'claim_order_refund_email', { p_id: operation.id });
   if (!claimed) return;
   try {
-    await sendEmail({ to: order.email, subject: 'Remboursement de votre commande ' + order.order_number + ' — Hanna & Nour',
-      html: '<h2>Remboursement confirmé</h2><p>Bonjour ' + esc(order.customer_name) + ',</p><p>Un remboursement de <strong>' + (operation.amount_cents / 100).toFixed(2) + ' ' + esc(operation.currency.toUpperCase()) + '</strong> a été confirmé pour votre commande <strong>' + esc(order.order_number) + '</strong>. Le délai d’apparition dépend de votre moyen de paiement.</p>' });
+    const { orderLocale, message } = require('./customer-email');
+    await sendEmail({ to:order.email, ...message('refund', await orderLocale(order), { order, amount_cents:operation.amount_cents, currency:operation.currency }) });
   } catch (error) { console.error('Refund confirmation email not delivered'); }
 }
 async function execute(sb, order, operation, stripe, email = true) {

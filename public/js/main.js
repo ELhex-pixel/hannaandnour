@@ -389,7 +389,7 @@
       if (e.key === 'Escape' && modal.classList.contains('active')) closeSearch();
     });
     document.addEventListener('click', function (e) {
-      const btn = e.target.closest('.header-action-btn[aria-label="Search"], [data-search-open]');
+      const btn = e.target.closest('.header-action-btn[data-i18n-aria-label="menuSearch"], .header-action-btn[aria-label="Search"], [data-search-open]');
       if (btn) {
         e.preventDefault();
         openSearch();
@@ -404,7 +404,7 @@
 
   // Header wishlist icon: favorites need an account, so it opens the login page.
   document.addEventListener('click', function(e) {
-    const hb = e.target.closest('.header-action-btn[aria-label="Wishlist"]');
+    const hb = e.target.closest('.header-action-btn[data-i18n-aria-label="navWishlist"], .header-action-btn[aria-label="Wishlist"]');
     if (hb && hb.tagName === 'BUTTON' && hb.classList.contains('header-action-btn') && !hb.closest('.product-wishlist')) {
       e.preventDefault();
       window.location.href = window.HN.pageUrl('account.html');

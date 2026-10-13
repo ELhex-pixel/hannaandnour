@@ -4293,7 +4293,7 @@ html[dir="rtl"] .model-footer .footer-grid { text-align: right; }
   align-items: flex-start;
   text-align: left;
 }
-html[dir="rtl"] .model-footer .footer-brand { align-items: flex-end; text-align: right; }
+html[dir="rtl"] .model-footer .footer-brand { align-items: flex-start; text-align: right; }
 .model-footer .footer-logo { margin-bottom: 16px; line-height: 1.2; }
 .model-footer .footer-description {
   color: rgba(248, 243, 236, 0.6);
@@ -5486,3 +5486,19 @@ html[data-theme="dark"] .hn-chat-send { background: #C79B54; color: #1B1814; }
 }
 [id="appView"] .admin-return-card button { margin: 8px 8px 0 0; }
 [id="appView"] .admin-return-card p { overflow-wrap: anywhere; }
+
+/* Shared language control: native, keyboard-accessible selection in a modern capsule. */
+.language-picker { position:relative; display:inline-flex; align-items:center; gap:8px; min-height:42px; padding:8px 12px; flex-shrink:0; border:1px solid var(--color-gold); border-radius:999px; background:var(--color-off-white); color:var(--color-charcoal); box-shadow:0 3px 12px rgba(0,0,0,.04); transition:border-color .2s,box-shadow .2s; }
+.language-picker:hover,.language-picker:focus-within { box-shadow:0 0 0 3px var(--color-cream-dark); }
+.language-picker > svg { width:18px; height:18px; flex-shrink:0; }
+.language-picker > .language-picker-chevron { width:12px; height:12px; }
+.language-picker-code { font-family:var(--font-body); font-weight:650; font-size:12px; letter-spacing:.04em; line-height:1.4; }
+html[lang="ar"] .language-picker-code { font-family:'Cairo',sans-serif; letter-spacing:0; }
+.language-picker select.lang-switcher { display:block!important; position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; font-size:16px; padding:0; }
+html[data-theme="dark"] .language-picker { background:#25211b; color:#ede6da; border-color:#8c7048; }
+html[dir="rtl"] :is(.form-group,.form-label,.checkout-section,.account-card,.account-services,.quick-add-dialog,.search-result-info,.contact-form) { text-align:start; }
+html[dir="rtl"] :is(input,textarea,select) { text-align:start; }
+html[dir="rtl"] :is(input[type="email"],input[type="tel"],input[autocomplete="one-time-code"],input[name="discount"],input[name="promo"],#discountInput,#promoInput) { direction:ltr; text-align:right; }
+html[dir="rtl"] :is(a[href^="mailto:"],.account-email:not([data-i18n])) { unicode-bidi:isolate; }
+html[dir="rtl"] .form-select { padding-right:var(--spacing-md); padding-left:calc(var(--spacing-md) + 20px); }
+html[dir="rtl"] .logo-accent { margin-inline:4px; }
