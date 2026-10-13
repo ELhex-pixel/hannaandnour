@@ -223,6 +223,7 @@
   function wireTabs() {
     var descriptions = {
       dashboard: 'Choisissez ce que vous voulez faire aujourd’hui.',
+      maintenance: 'Choisissez vos remises à zéro, archivages et suppressions avec aperçu et historique.',
       site: 'Retrouvez les contenus et les réglages de votre boutique.',
       products: 'Gérez vos fiches, vos photos et leur visibilité.',
       orders: 'Retrouvez les achats et suivez les étapes de chaque commande.',
@@ -1177,15 +1178,20 @@
   var ordersAll = [];
 
   function loadOrders() {
+    var owner = token(), request = (loadOrders.revision || 0) + 1;
+    loadOrders.revision = request;
     var status = document.getElementById('filterOrderStatus').value;
     var ship = document.getElementById('filterShippingStatus').value;
-    var data = {};
+    var archiveFilter = document.getElementById('filterOrderArchive');
+    var data = { archived: !!archiveFilter && archiveFilter.value === 'archived' };
     if (status) data.status = status;
     if (ship) data.shipping_status = ship;
     return call('listOrders', data).then(function (res) {
+      if (owner !== token() || request !== loadOrders.revision) return;
       ordersAll = res.orders || [];
       renderOrders();
     }).catch(function (e) {
+      if (owner !== token() || request !== loadOrders.revision) return;
       document.getElementById('ordersList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
     });
   }
@@ -1486,10 +1492,11 @@
 
   function wireOrders() {
     var viewRequest = 0;
-    document.addEventListener('hn:admin-logout', function () { viewRequest++; });
+    document.addEventListener('hn:admin-logout', function () { viewRequest++; loadOrders.revision = (loadOrders.revision || 0) + 1; document.getElementById('ordersList').textContent = ''; });
     document.getElementById('refreshOrdersBtn').addEventListener('click', loadOrders);
     document.getElementById('filterOrderStatus').addEventListener('change', loadOrders);
     document.getElementById('filterShippingStatus').addEventListener('change', loadOrders);
+    document.getElementById('filterOrderArchive').addEventListener('change', loadOrders);
     document.getElementById('closeOrderBtn').addEventListener('click', function () {
       viewRequest++;
       document.getElementById('orderModal').classList.remove('open');

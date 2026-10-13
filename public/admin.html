@@ -413,6 +413,7 @@
       <button class="admin-tab" data-tab="preparation">Préparer les colis</button>
       <button class="admin-tab" data-tab="sales">Bilan des ventes</button>
       <button class="admin-tab" data-tab="stats">Chiffres &amp; visites</button>
+      <button class="admin-tab" data-tab="maintenance">Mes commandes de gestion</button>
       <button class="admin-tab" data-tab="site">Modifier le site</button>
       <details class="management-nav-more"><summary>Contenus et autres outils</summary>
       <button class="admin-tab" data-tab="reviews">Avis</button>
@@ -443,6 +444,31 @@
         <a class="management-shortcut" href="#site"><span class="management-shortcut-icon" aria-hidden="true">✧</span><strong>Modifier le site</strong><span>Retrouver l’accueil du site, le blog, les avis et les promotions.</span><span class="management-shortcut-action">Ouvrir les contenus <span aria-hidden="true">→</span></span></a>
       </div>
       <details class="management-details management-help"><summary>Un repère pour chaque opération</summary><p><strong>Vendre :</strong> confirmer un paiement reçu à l’extérieur. <strong>Stock :</strong> ajouter, retirer ou corriger une quantité avec un motif. <strong>Préparer :</strong> vérifier les articles d’une commande déjà payée avant l’expédition.</p></details>
+    </section>
+    <section class="admin-panel" id="panel-maintenance" aria-label="Commandes de maintenance">
+      <div class="management-welcome"><span class="management-kicker">Vous gardez le contrôle</span><h2>Choisir une opération</h2><p>Chaque opération affiche un aperçu avant votre confirmation et garde une référence dans l’historique.</p></div>
+      <h3>Stock et listes affichées</h3>
+      <div class="management-shortcuts maintenance-shortcuts">
+        <button type="button" class="management-shortcut" data-maintenance-kind="zero_stock"><strong>Tout le stock disponible à zéro</strong><span>Catalogue actuel, y compris les produits archivés. Produits, commandes et ventes conservés.</span></button>
+        <button type="button" class="management-shortcut" data-maintenance-kind="archive_orders"><strong>Ranger les commandes terminées</strong><span>Les retirer de la liste courante et les retrouver dans les archives.</span></button>
+        <button type="button" class="management-shortcut" data-maintenance-kind="archive_returns"><strong>Ranger les retours traités</strong><span>Archiver les demandes reçues ou refusées, sans supprimer leur historique.</span></button>
+        <button type="button" class="management-shortcut" data-maintenance-kind="archive_journal"><strong>Vider le journal courant du stock</strong><span>Ranger les ajustements dans les archives, sans modifier les quantités.</span></button>
+      </div>
+      <h3>Suppression définitive — éléments choisis</h3>
+      <div class="management-shortcuts maintenance-shortcuts">
+        <button type="button" class="management-shortcut" data-maintenance-kind="purge_products"><strong>Produits inutilisés</strong><span>Fiches hors ligne, sans stock et sans historique lié. Sélection obligatoire.</span></button>
+        <button type="button" class="management-shortcut" data-maintenance-kind="purge_visits"><strong>Statistiques de visite</strong><span>Effacer les événements présents dans l’aperçu. Ventes et montants conservés.</span></button>
+        <button type="button" class="management-shortcut" data-maintenance-kind="purge_messages"><strong>Messages de contact</strong><span>Supprimer seulement les messages que vous sélectionnez.</span></button>
+        <button type="button" class="management-shortcut" data-maintenance-kind="purge_drafts"><strong>Brouillons impayés expirés</strong><span>Plus de 72 heures, sans stock réservé ni paiement lié. Paiements Stripe vérifiés avant suppression.</span></button>
+      </div>
+      <section id="maintenanceEditor" class="card" hidden><h3 id="maintenanceActionTitle"></h3><p id="maintenanceDescription" class="admin-muted"></p>
+        <div id="maintenanceSelection" hidden><p id="maintenanceSelectionCount" role="status"></p><div id="maintenanceTargets"></div><div class="toolbar"><button type="button" class="btn btn-secondary" id="maintenancePrevious">Précédente</button><span id="maintenancePage"></span><button type="button" class="btn btn-secondary" id="maintenanceNext">Suivante</button></div></div>
+        <button type="button" class="btn btn-primary" id="maintenancePreview">Voir l’aperçu avant confirmation</button><p id="maintenanceStatus" role="status" aria-live="polite"></p>
+        <section id="maintenanceQuote" hidden><p id="maintenanceSummary" class="admin-operation-status"></p><ul id="maintenanceSamples"></ul><form id="maintenanceForm"><div class="field"><label for="maintenanceReason">Motif à conserver dans l’historique</label><input id="maintenanceReason" minlength="3" maxlength="300" required></div><div class="field"><label for="maintenanceConfirmation" id="maintenanceConfirmationLabel">Confirmation</label><input id="maintenanceConfirmation" autocomplete="off" spellcheck="false" required maxlength="20"></div><button type="submit" class="btn btn-danger" id="maintenanceRun">Confirmer cette opération</button></form></section>
+        <div id="maintenancePending" hidden><p>Une réponse reste à vérifier. Les choix sont conservés ; reprenez cette même tentative.</p><button type="button" class="btn btn-primary" id="maintenanceRetry">Vérifier / reprendre la même opération</button></div>
+      </section>
+      <nav class="management-context-links" aria-label="Historique conservé"><button type="button" class="btn btn-secondary" data-maintenance-archive="orders">Archives des commandes</button><button type="button" class="btn btn-secondary" data-maintenance-archive="returns">Archives des retours</button><button type="button" class="btn btn-secondary" data-maintenance-archive="inventory">Archives du journal stock</button></nav>
+      <details class="management-details"><summary>Historique de mes commandes de gestion</summary><button type="button" class="btn btn-secondary" id="maintenanceHistoryRefresh">Actualiser l’historique</button><div id="maintenanceHistory"></div></details>
     </section>
     <section class="admin-panel" id="panel-site" aria-label="Contenus du site">
       <div class="management-shortcuts management-content-links">
@@ -519,6 +545,7 @@
     </div>
     <div class="admin-panel" id="panel-orders">
       <div class="toolbar">
+        <select id="filterOrderArchive" aria-label="Liste courante ou archives"><option value="current">Liste courante</option><option value="archived">Archives conservées</option></select>
         <select id="filterOrderStatus" style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
           <option value="">Tous les statuts</option>
           <option value="pending">En attente</option>
@@ -1098,6 +1125,7 @@
   <script src="js/admin-tiktok.js"></script>
   <script src="js/admin-dashboard-view.js"></script>
   <script src="js/admin-dashboard.js"></script>
+  <script src="js/admin-maintenance.js"></script>
   <script src="js/management.js"></script>
   <script src="js/theme-toggle.js"></script>
 </body>

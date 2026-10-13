@@ -215,6 +215,11 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     // ---- Everything below requires a valid admin session ----
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (['listMaintenanceTargets','quoteMaintenance','runMaintenance','listMaintenanceHistory'].includes(action)) {
+      const limited=await rateLimit(sb,event,'admin-maintenance',30,600,'admin');
+      if(limited)return limited;
+      return await require('./lib/admin-maintenance').adminMaintenance(sb,action,body);
+    }
     if (action === 'analyticsSummary') {
       const limited = await rateLimit(sb,event,'admin-analytics',60,600,'admin');
       if (limited) return limited;
@@ -485,7 +490,7 @@ if (!ext) return json(400, { error: 'Type de fichier non supporté (JPG, PNG ou 
         let q = sb
           .from('orders')
           .select('*, order_items(*)')
-          .eq('admin_archived', false)
+          .eq('admin_archived', body.archived === true)
           .order('created_at', { ascending: false })
           .limit(200);
         if (body.status) q = q.eq('status', body.status);

@@ -6,9 +6,9 @@ async function adminReturns(sb, action, body) {
     const page = Math.min(10000, Math.max(1, parseInt(body.page,10)||1));
     const limit = [5,10,25].includes(Number(body.limit)) ? Number(body.limit) : 10;
     const scope = body.scope || 'all';
-    if (!['all','open','requested','approved','received','rejected'].includes(scope)) return json(400, { error: 'Filtre de retour invalide.' });
+    if (!['all','open','requested','approved','received','rejected','archived'].includes(scope)) return json(400, { error: 'Filtre de retour invalide.' });
     try {
-      const { data, error } = await sb.rpc('admin_return_request_list', { p_query: String(body.query||'').trim().slice(0,100), p_scope: scope, p_offset: (page-1)*limit, p_limit: limit });
+      const { data, error } = await sb.rpc(scope === 'archived' ? 'admin_archived_return_list' : 'admin_return_request_list', { p_query: String(body.query||'').trim().slice(0,100), ...(scope === 'archived' ? {} : {p_scope:scope}), p_offset: (page-1)*limit, p_limit: limit });
       if (error || !data || !Array.isArray(data.requests) || !Number.isSafeInteger(data.total) || data.total<data.requests.length) throw new Error('Unconfirmed return list');
       await Promise.all(data.requests.map(async request => {
         request.evidence_urls = [];

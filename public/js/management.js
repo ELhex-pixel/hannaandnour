@@ -92,5 +92,6 @@
   quickLinks('panel-preparation',[['Voir les commandes','#orders']]);
   quickLinks('panel-inventory',[['Scanner un QR de stock','/stock.html?view=stock'],['Imprimer les étiquettes','/stock.html?view=labels']]);
   quickLinks('panel-sales',[['Vendre en magasin','/stock.html?view=sale'],['Historique magasin','/stock.html?view=history'],['Étiquettes et QR','/stock.html?view=labels']]);
+  quickLinks('panel-sales',[['Mes remises à zéro et nettoyages','#maintenance']]);
   quickLinks('panel-returns',[['Voir les commandes','#orders']]);
 })();

@@ -20,7 +20,7 @@ test('un schéma incomplet bloque la publication même si le marqueur existe', a
 test('un schéma à jour autorise la publication après des lectures seules', async () => {
   const tables = [];
   await preflight(env, { rpc: async () => ({ data: 1 }), from: table => { tables.push(table); return { select: () => ({ limit: async count => { assert.equal(count, 0); return { error: null }; } }) }; } });
-  assert.deepEqual(tables, ['orders', 'order_items', 'return_requests', 'order_returns', 'variant_costs', 'variant_cost_history', 'order_item_costs', 'products', 'inventory_adjustments', 'inventory_journal_resets', 'inventory_journal_archives', 'order_refund_operations','physical_sale_operations']);
+  assert.deepEqual(tables, ['orders', 'order_items', 'return_requests', 'order_returns', 'variant_costs', 'variant_cost_history', 'order_item_costs', 'products', 'inventory_adjustments', 'inventory_journal_resets', 'inventory_journal_archives', 'order_refund_operations','physical_sale_operations','admin_maintenance_operations']);
 });
 test('les remboursements exigent leur journal privé avant publication, sans migration automatique', async () => {
   const calls=[];
@@ -71,4 +71,7 @@ test('les ventes physiques exigent leur transaction privée avant publication sa
   const calls=[];
   await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='physical_sales_schema_version'?{error:{}}:{data:1};}}),/migration_physical_sales/);
   assert.equal(calls.at(-1),'physical_sales_schema_version');
+});
+test('les commandes de maintenance exigent leur migration sans déclencher de remise à zéro',async()=>{
+  const calls=[];await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='admin_maintenance_schema_version'?{error:{}}:{data:1};}}),/migration_admin_maintenance/);assert.equal(calls.at(-1),'admin_maintenance_schema_version');
 });

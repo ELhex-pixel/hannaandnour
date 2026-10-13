@@ -72,7 +72,7 @@
         }).catch(function (error) { if (version===revision&&owner===api.token()) { busy=false; controls(); button.disabled=false; status.textContent=error.message+' Réessayez la même décision ou actualisez pour vérifier.'; } });
       });
     });
-    if (['received','rejected'].includes(request.status)) {
+    if (['received','rejected'].includes(request.status) && !request.admin_hidden_at) {
       var remove=node('button','Supprimer de la liste',body); remove.type='button'; remove.className='btn btn-danger btn-small'; remove.disabled=frozen; remove.setAttribute('data-hide-return',request.id);
       remove.addEventListener('click',function () {
         if (busy||loading||pending[request.id]||!confirm('Retirer cette demande terminée de la liste admin ? La commande, le retour client et son historique restent conservés.')) return;

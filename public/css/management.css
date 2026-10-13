@@ -28,6 +28,17 @@ html[data-theme="dark"] .management-page { --mg-bg:#181612; --mg-surface:#25211b
 .management-content-links { grid-template-columns:repeat(3,minmax(0,1fr)); }
 .management-content-links .management-shortcut { min-height:145px; }
 .management-context-links { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+.admin-page.management-page #panel-sales > .admin-danger-zone { display:none; }
+.maintenance-shortcuts { margin-top:16px; }
+.maintenance-shortcuts .management-shortcut { text-align:start; min-height:160px; font:inherit; }
+.maintenance-shortcuts .management-shortcut[disabled] { opacity:.5; cursor:default; }
+#maintenanceStatus { white-space:pre-line; font-size:15px; margin:18px 0; }
+#maintenanceTargets label { display:flex; align-items:flex-start; gap:12px; padding:14px 0; border-bottom:1px solid var(--mg-line); font-size:15px; }
+#maintenanceTargets input { flex-shrink:0; margin-top:4px; }
+#maintenanceHistory article { padding:14px 0; border-bottom:1px solid var(--mg-line); font-size:14px; }
+#maintenanceSamples { font-size:14px; padding-left:22px; margin-bottom:18px; }
+#maintenancePending { background:var(--mg-soft); padding:18px; border:1px solid var(--mg-line); border-radius:14px; }
+#maintenanceForm .field { margin:14px 0; }
 .management-context-links a,.management-home-link { display:inline-flex; align-items:center; justify-content:center; min-height:46px; border:1px solid var(--mg-line); border-radius:12px; padding:10px 16px; color:var(--mg-ink); background:var(--mg-surface); font-size:14px; font-weight:600; text-decoration:none; }
 .admin-page.management-page { --admin-surface:var(--mg-surface); --admin-border:var(--mg-line); color:var(--mg-ink); }
 .admin-page.management-page .admin-sidebar { background:var(--mg-surface); border-right:1px solid var(--mg-line); padding:28px 16px; color:var(--mg-ink); }

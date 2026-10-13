@@ -32,8 +32,8 @@ test('les scripts locaux existent et les dépendances admin sont ordonnées', ()
 test('l’admin modernisé conserve les rubriques et isole les opérations sensibles', () => {
   const $ = cheerio.load(fs.readFileSync('public/admin.html', 'utf8'));
   assert.equal($('body.admin-page').length, 1);
-  assert.equal($('.admin-sidebar nav[aria-label] .admin-tab').length, 16);
-  assert.equal($('.admin-workspace > .admin-panel').length, 16);
+  assert.equal($('.admin-sidebar nav[aria-label] .admin-tab').length, 17);
+  assert.equal($('.admin-workspace > .admin-panel').length, 17);
   assert.equal($('#scanPrepare').parents('#panel-preparation').length, 1);
   assert.equal($('#inventoryForm').parents('#panel-inventory').length, 1);
   for (const id of ['resetStockBtn', 'resetAllBtn']) assert.equal($('#' + id).parents('details.admin-danger-zone').length, 1);
