@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr" dir="ltr"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#221f1a">
+  <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="HN Stock">
+  <title>Hanna &amp; Nour Stock</title>
+  <link rel="manifest" href="/stock.webmanifest"><link rel="apple-touch-icon" href="/images/stock-icon-192.png">
+  <link rel="stylesheet" href="css/stock.css">
+</head><body>
+  <header class="stock-header"><div><span class="eyebrow">Hanna &amp; Nour</span><h1>Ventes &amp; Stock</h1></div><button id="logout" type="button" hidden>Déconnexion</button></header>
+  <main>
+    <p id="status" role="status" aria-live="polite"></p>
+    <section id="loginPanel" class="card"><h2>Ton espace de gestion</h2><form id="loginForm">
+      <label for="password">Mot de passe administrateur</label><input id="password" type="password" autocomplete="current-password" required maxlength="256">
+      <button class="primary" type="submit">Se connecter</button>
+    </form><p>Sur iPhone : ouvre cette page dans Safari, puis Partager → Sur l’écran d’accueil. Une connexion Internet est nécessaire.</p><a href="/admin.html">Ouvrir l’admin</a></section>
+    <div id="app" hidden>
+      <nav class="tabs" aria-label="Parcours"><button type="button" data-mode="sale" aria-pressed="true">Ventes · code-barres</button><button type="button" data-mode="stock" aria-pressed="false">Stock · QR code</button><button type="button" data-mode="labels" aria-pressed="false">Étiquettes</button><button type="button" data-mode="history" aria-pressed="false">Historique</button></nav>
+      <section id="pendingPanel" class="card" hidden><h2>Opération à vérifier</h2><p id="pendingText"></p><p>La réponse n’a pas été confirmée. Reprends cette même opération : elle ne sera pas enregistrée deux fois.</p><button id="retry" class="primary" type="button">Vérifier / reprendre</button></section>
+      <section id="scanPanel" class="card"><h2 id="scanTitle">Scanner un code-barres de vente</h2><p id="scanHelp">Un scan identifie l’article. Ajoute-le ensuite au panier de vente.</p>
+        <button id="cameraStart" type="button" class="primary">Ouvrir la caméra</button><div id="cameraPanel" hidden><video id="camera" autoplay muted playsinline></video><button id="cameraStop" type="button">Fermer la caméra</button></div>
+        <form id="scanForm"><label for="code" id="codeLabel">Code-barres</label><div class="input-row"><input id="code" autocomplete="off" autocapitalize="off" spellcheck="false" required maxlength="500"><button type="submit">Rechercher</button></div></form>
+        <div id="variantPanel" hidden><h3 id="variantName"></h3><p id="variantDetails"></p><p id="variantStock"></p><button type="button" id="addSale">Ajouter une unité au panier</button>
+          <form id="adjustForm" hidden><label for="adjustMode">Opération de stock</label><select id="adjustMode"><option value="restock">Ajouter un arrivage</option><option value="remove">Retirer des unités</option><option value="count">Corriger le disponible après comptage</option></select>
+            <label for="quantity">Quantité</label><input id="quantity" type="number" inputmode="numeric" min="0" max="1000000" step="1" required>
+            <label for="reason">Motif</label><input id="reason" minlength="3" maxlength="300" required placeholder="Ex. arrivage reçu, article abîmé…"><p id="adjustPreview"></p><button class="primary" type="submit">Vérifier puis confirmer le stock</button>
+          </form><div class="label-actions"><button id="barcodeLabel" type="button">Étiquette vente · code-barres</button><button id="qrLabel" type="button">Étiquette stock · QR</button></div>
+        </div>
+      </section>
+      <section id="salePanel" class="card"><h2>Panier de vente physique</h2><div id="saleItems"></div><button type="button" id="quoteSale">Actualiser le récapitulatif</button><div id="saleSummary"></div>
+        <label for="payment">Paiement reçu à l’extérieur</label><select id="payment"><option value="">Choisir le moyen de paiement</option><option value="cash">Espèces</option><option value="card">Terminal bancaire</option><option value="other">Autre encaissement externe</option></select>
+        <label for="saleNote">Note (facultative)</label><input id="saleNote" maxlength="300" placeholder="Référence du ticket du terminal…">
+        <label class="check"><input id="collected" type="checkbox">J’ai reçu le montant affiché et remis les articles.</label>
+        <button class="primary" type="button" id="confirmSale" disabled>Confirmer la vente encaissée</button><p>La confirmation déduit le stock et enregistre la vente dans l’admin. Aucun paiement n’est débité par l’application.</p>
+      </section>
+      <section id="labelsPanel" class="card" hidden><h2>Étiquettes par variante</h2><p>Choisis une variante pour imprimer ses deux étiquettes séparées. Un code-barres manquant se génère dans l’admin, onglet Scanner.</p><div id="variantsList"></div><div class="input-row"><button id="labelsPrevious" type="button">Précédente</button><span id="labelsPage"></span><button id="labelsNext" type="button">Suivante</button></div></section>
+      <section id="historyPanel" class="card" hidden><h2>Ventes physiques</h2><button type="button" id="refreshHistory">Actualiser</button><div id="history"></div><div class="input-row"><button id="previous" type="button">Précédente</button><span id="historyPage"></span><button id="next" type="button">Suivante</button></div><a href="/admin.html">Commandes et journal de stock dans l’admin</a></section>
+      <aside class="card install"><strong>Hanna &amp; Nour Stock sur ton iPhone</strong><p>Safari → Partager → Sur l’écran d’accueil.</p><a href="/admin.html">Gestion complète et historique de stock</a></aside>
+    </div>
+  </main>
+  <dialog id="labelDialog"><h2 id="labelTitle"></h2><div id="labelSheet"><strong>Hanna &amp; Nour</strong><p id="labelName"></p><p id="labelVariant"></p><svg id="labelBarcode"></svg><img id="labelQr" alt="QR code de la variante"><p id="labelCode"></p><small id="labelKind"></small></div><div class="label-actions"><button id="printLabel" type="button">Imprimer cette étiquette</button><button id="closeLabel" type="button">Fermer</button></div></dialog>
+  <script src="js/config.js"></script><script src="js/vendor/jsbarcode.min.js"></script><script src="js/stock-codes.js"></script><script src="js/stock-app.js"></script>
+</body></html>

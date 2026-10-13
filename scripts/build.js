@@ -100,7 +100,11 @@ async function build() {
   for (const dir of ['js', 'css']) {
     const files = await fs.readdir(path.join('public', dir));
     for (const file of files.filter(file => /\.(js|css)$/.test(file))) {
-      const content = await fs.readFile(path.join('public', dir, file));
+      let content = await fs.readFile(path.join('public', dir, file));
+      if (dir === 'js' && file === 'stock-codes.js') {
+        const bundle = await require('esbuild').build({entryPoints:[path.join('public',dir,file)],bundle:true,write:false,platform:'browser',target:'safari15',minify:true});
+        content = Buffer.from(bundle.outputFiles[0].contents);
+      }
       const hash = crypto.createHash('sha256').update(content).digest('hex').slice(0, 12);
       const name = file.replace(/\.(js|css)$/, '.' + hash + '.$1');
       assets['/' + dir + '/' + file] = '/assets/' + name;
@@ -116,11 +120,12 @@ async function build() {
     optimized['/images/' + file] = '/images/' + name;
   }
   const files = (await fs.readdir('public')).filter(file => file.endsWith('.html'));
+  for (const size of [192,512]) await sharp('public/images/stock-icon.svg').resize(size,size).png().toFile('dist/images/stock-icon-' + size + '.png');
   const privatePages = new Set(['admin.html', 'print.html', 'account.html', 'cart.html', 'checkout.html', 'reset.html', 'review.html', 'success.html', '404.html', 'product.html', 'blog-post.html']);
   const urls = [];
   for (const file of files) {
     const source = await fs.readFile(path.join('public', file), 'utf8');
-    for (const lang of [null, 'fr', 'en', 'ar']) {
+    for (const lang of (file === 'stock.html' ? [null] : [null, 'fr', 'en', 'ar'])) {
       const language = lang || 'fr';
       const $ = cheerio.load(source);
       prepareLivePage($, file);
@@ -157,7 +162,7 @@ async function build() {
       $('img').attr('decoding', 'async');
       $('head link[rel="canonical"], head link[rel="alternate"][hreflang]').remove();
       $('head').append('<link rel="canonical" href="' + origin + '/' + language + '/' + file + '">');
-      if (preview || process.env.STAGING_MODE === 'true' || privatePages.has(file)) $('meta[name="robots"]').remove(), $('head').append('<meta name="robots" content="noindex, nofollow">');
+      if (preview || process.env.STAGING_MODE === 'true' || privatePages.has(file) || file === 'stock.html') $('meta[name="robots"]').remove(), $('head').append('<meta name="robots" content="noindex, nofollow">');
       else {
         for (const alternate of ['fr', 'en', 'ar']) $('head').append('<link rel="alternate" hreflang="' + alternate + '" href="' + origin + '/' + alternate + '/' + file + '">');
         $('head').append('<link rel="alternate" hreflang="x-default" href="' + origin + '/fr/' + file + '">');

@@ -215,6 +215,11 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     // ---- Everything below requires a valid admin session ----
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (['stockLookup','quotePhysicalSale','recordPhysicalSale','listPhysicalSales','listStockVariants'].includes(action)) {
+      const limited = await rateLimit(sb,event,'admin-stock-app',120,600,'admin');
+      if (limited) return limited;
+      return await require('./lib/stock-app').stockApp(sb,action,body);
+    }
     if (action === 'deleteProductsFromCatalog') {
       const limited = await rateLimit(sb, event, 'admin-delete-product-catalog', 30, 600, 'admin');
       if (limited) return limited;

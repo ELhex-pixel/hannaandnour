@@ -20,11 +20,14 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@xmldom/xmldom": "^0.9.12",
     "@electric-sql/pglite": "^0.3.14",
+    "@xmldom/xmldom": "^0.9.12",
+    "@zxing/browser": "^0.2.1",
     "cheerio": "^1.1.2",
-    "sharp": "^0.35.5",
-    "netlify-cli": "^27.10.2"
+    "esbuild": "^0.28.2",
+    "netlify-cli": "^27.10.2",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.35.5"
   },
   "overrides": {
     "sharp": "$sharp",

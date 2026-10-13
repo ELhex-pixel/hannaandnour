@@ -1,0 +1,55 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {randomUUID}=require('node:crypto');
+const {PGlite}=require('@electric-sql/pglite');
+test('ventes physiques : transaction atomique, taxe exacte, reprise, réservations web et historique privé',async()=>{
+  const db=new PGlite();
+  try{
+    await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql as $$select null::uuid$$;');
+    const names=['schema.sql','migration_variants_admin.sql','rls_accounts.sql','migration_promos_refunds.sql','migration_relance_analytics.sql','migration_blog_story.sql','migration_demo_reviews_home.sql','migration_order_cancel.sql','migration_promo_single_use.sql','migration_order_returns.sql','migration_guest_reviews.sql','migration_pending_order_lifecycle.sql','migration_barcode_scan.sql','migration_integrity_features.sql','migration_admin_inventory.sql','migration_admin_operations.sql','migration_return_policy_editor.sql','migration_catalog_cleanup.sql','migration_inventory_journal.sql','migration_partial_refunds.sql','migration_catalog_categories.sql','migration_catalog_return_cleanup.sql'];
+    for(const name of names)await db.exec(fs.readFileSync('supabase/'+name,'utf8').replace(/create extension if not exists pgcrypto;/gi,''));
+    const migration=fs.readFileSync('supabase/migration_physical_sales.sql','utf8');
+    await assert.rejects(db.exec(migration.replace(/commit;\s*$/,'select 1/0;commit;')),/division by zero/);await db.exec('rollback');
+    assert.equal((await db.query("select to_regclass('physical_sale_operations') as t")).rows[0].t,null);
+    await db.exec(migration);await db.exec(migration);
+    await db.exec("insert into settings(key,value) values('currency','{\"code\":\"eur\"}'),('shipping','{\"tax_rate\":0.2}') on conflict(key) do update set value=excluded.value;");
+    const p=randomUUID(),v=randomUUID(),v2=randomUUID();
+    await db.query("insert into products(id,slug,sku,name_en,name_fr,name_ar,description_en,description_fr,description_ar,price_cents,category,image)values($1,'physical-local','PL','Jacket','Veste','سترة','','','',1000,'jacket','images/hero.jpg')",[p]);
+    await db.query("insert into product_variants(id,product_id,color,size,stock,barcode)values($1,$3,'Noir','M',10,'HNLOCAL1'),($2,$3,'Blanc','M',1,'HNLOCAL2')",[v,v2,p]);
+    await db.query("insert into variant_costs(variant_id,unit_cost_cents,currency)values($1,300,'eur')",[v]);
+    const stock=async id=>(await db.query('select stock from product_variants where id=$1',[id])).rows[0].stock;
+    const quote=async items=>(await db.query('select quote_physical_sale($1) as r',[JSON.stringify(items)])).rows[0].r;
+    const record=async(id,items,q,method='cash')=>(await db.query("select record_physical_sale($1,$2,$3,$4,'Ticket local') as r",[id,JSON.stringify(items),JSON.stringify(q),method])).rows[0].r;
+    const items=[{variant_id:v,quantity:3}],q=await quote(items);
+    assert.equal(q.total_cents,3600);assert.equal(q.tax_cents,600);assert.equal(await stock(v),10);
+    const op=randomUUID(),responses=await Promise.all([record(op,items,q),record(op,items,q)]);
+    assert.equal(responses[0].order_id,responses[1].order_id);assert.equal(await stock(v),7);
+    const order=(await db.query('select * from orders where id=$1',[op])).rows[0];
+    assert.equal(order.status,'paid');assert.equal(order.sale_channel,'physical');assert.equal(order.external_payment_method,'cash');assert.equal(order.shipping_status,'delivered');assert.equal(order.payment_intent_id,null);assert.equal(order.shipping_cents,0);
+    const item=(await db.query('select i.*,c.unit_cost_cents as cost from order_items i join order_item_costs c on c.order_item_id=i.id where order_id=$1',[op])).rows[0];
+    assert.equal(item.stock_debited,true);assert.equal(item.net_total_cents,3000);assert.equal(item.cost,300);
+    await db.query('update products set price_cents=1100 where id=$1',[p]);
+    assert.equal((await record(op,items,q)).already,true);assert.equal(await stock(v),7);
+    await assert.rejects(record(op,items,q,'card'),/physical_operation_mismatch/);
+    const fresh=await quote(items);
+    await assert.rejects(record(randomUUID(),items,q),/physical_quote_changed/);assert.equal(await stock(v),7);
+    await assert.rejects(quote([{variant_id:v,quantity:1.5}]),/physical_invalid/);
+    await assert.rejects(quote([items[0],items[0]]),/physical_invalid/);
+    await assert.rejects(quote([{variant_id:v2,quantity:2}]),/physical_stock/);
+    // An online reservation consumes availability between quote and confirmation.
+    const online=randomUUID();
+    await db.query("insert into orders(id,order_number,email,customer_name,address1,city,state,postal_code,country,shipping_method,total_cents,currency)values($1,'HN-WEB-LOCAL','local@example.test','Local','Rue','Paris','','75000','FR','standard',1100,'eur')",[online]);
+    await db.query("insert into order_items(order_id,product_id,product_slug,product_name,unit_price_cents,quantity,variant_id)values($1,$2,'physical-local','Veste',1100,1,$3)",[online,p,v]);
+    await db.query('select reserve_order($1)',[online]);assert.equal(await stock(v),6);
+    await assert.rejects(record(randomUUID(),items,fresh),/physical_quote_changed/);assert.equal(await stock(v),6);
+    const before=(await db.query('select count(*)::int as n from orders')).rows[0].n;
+    const mixed=[{variant_id:v,quantity:1},{variant_id:v2,quantity:1}],mixedQuote=await quote(mixed);
+    await db.query('update product_variants set active=false where id=$1',[v2]);
+    await assert.rejects(record(randomUUID(),mixed,mixedQuote),/physical_unavailable/);assert.equal(await stock(v),6);assert.equal((await db.query('select count(*)::int as n from orders')).rows[0].n,before);
+    await db.query('update products set active=false,catalog_deleted_at=now() where id=$1',[p]);await assert.rejects(quote(items),/physical_unavailable/);
+    assert.equal((await record(op,items,q)).already,true);assert.equal(await stock(v),6);
+    for(const role of ['anon','authenticated'])for(const fn of ['quote_physical_sale(jsonb)','record_physical_sale(uuid,jsonb,jsonb,text,text)','physical_sales_schema_version()'])assert.equal((await db.query('select has_function_privilege($1,$2,\'execute\') as yes',[role,fn])).rows[0].yes,false);
+    assert.equal((await db.query("select has_table_privilege('service_role','physical_sale_operations','delete') as yes")).rows[0].yes,false);
+  }finally{await db.close();}
+});
