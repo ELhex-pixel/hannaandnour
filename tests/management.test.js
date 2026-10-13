@@ -69,3 +69,11 @@ test('un accès direct ne remplace pas une opération incertaine et une déconne
   assert.equal(app.context.pending,operation);assert.equal(app.context.mode,'sale');assert.equal(app.jobs.length,0);
   const labels=stockEntry('?view=labels');labels.context.revision++;labels.jobs.forEach(fn=>fn());assert.equal(labels.calls.length,1);
 });
+test('un QR ouvert par Safari conserve la variante après normalisation Netlify de stock.html vers stock', () => {
+  const source = fs.readFileSync('public/js/stock-app.js','utf8');
+  const id = '11111111-1111-4111-8111-111111111111';
+  const context = {URL,location:{origin:'https://hannanour.com'},ID:/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i};
+  vm.createContext(context);vm.runInContext(source.slice(source.indexOf('  function qrId('),source.indexOf('  function showVariant(')),context);
+  for (const route of ['https://hannanour.com/stock.html','https://hannanour.com/stock']) assert.equal(context.qrId(route+'#variant='+id),id);
+  for (const route of ['https://foreign.test/stock','https://hannanour.com/admin','https://hannanour.com/stock?variant=bad','https://user:password@hannanour.com/stock']) assert.throws(()=>context.qrId(route+'#variant='+id));
+});

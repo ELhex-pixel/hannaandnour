@@ -155,7 +155,8 @@ async function build() {
           const raw = $(node).attr(attribute);
           if (!raw || /^(https?:|data:|mailto:|tel:|#)/.test(raw)) continue;
           const absolute = raw.startsWith('/') ? raw : '/' + raw;
-          if (/^\/[a-z0-9-]+\.html(?:[?#]|$)/.test(absolute)) $(node).attr(attribute, (lang ? '/' + lang : '') + absolute);
+          if (/^\/stock\.html(?:[?#]|$)/.test(absolute)) $(node).attr(attribute, absolute);
+          else if (/^\/[a-z0-9-]+\.html(?:[?#]|$)/.test(absolute)) $(node).attr(attribute, (lang ? '/' + lang : '') + absolute);
           else $(node).attr(attribute, assets[absolute] || optimized[absolute] || absolute);
         }
       });

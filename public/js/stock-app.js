@@ -99,7 +99,7 @@
     raw = String(raw).trim(); if (ID.test(raw)) return raw.toLowerCase();
     var url;
     try { url = new URL(raw); } catch (error) { throw new Error('Scanne le QR code de stock ou saisis l’identifiant de la variante.'); }
-    if (url.origin !== location.origin || url.pathname !== '/stock.html' || url.search || url.username || url.password || !/^#variant=[0-9a-f-]+$/i.test(url.hash)) throw new Error('Ce QR code ne correspond pas au stock Hanna & Nour.');
+    if (url.origin !== location.origin || !/^\/stock(?:\.html)?$/.test(url.pathname) || url.search || url.username || url.password || !/^#variant=[0-9a-f-]+$/i.test(url.hash)) throw new Error('Ce QR code ne correspond pas au stock Hanna & Nour.');
     var value = url.hash.slice(9); if (!ID.test(value)) throw new Error('QR code de variante invalide.'); return value.toLowerCase();
   }
   function showVariant() {
