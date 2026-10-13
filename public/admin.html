@@ -338,12 +338,13 @@
     .admin-table .thumb { margin-top: 6px; }
   }
 </style>
+  <link rel="stylesheet" href="css/management.css">
   <meta property="og:image" content="https://hannanour.com/images/hero.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="800">
   <meta name="twitter:card" content="summary_large_image">
 </head>
-<body class="admin-page">
+<body class="admin-page management-page">
   <!-- LOGIN -->
   <div id="loginView" class="login-box">
     <h1>Espace administrateur</h1>
@@ -388,10 +389,11 @@
     <div class="admin-header">
       <div>
         <p class="admin-eyebrow">Gestion de la boutique</p>
-        <h1 id="adminSectionTitle">Produits</h1>
-        <p id="adminSectionDescription" class="admin-muted">Gérez vos fiches, vos photos et leur visibilité.</p>
+        <h1 id="adminSectionTitle" tabindex="-1">Accueil de gestion</h1>
+        <p id="adminSectionDescription" class="admin-muted">Choisissez ce que vous voulez faire aujourd’hui.</p>
       </div>
       <div class="admin-header-actions">
+        <a href="#dashboard" class="btn btn-secondary btn-small management-home-link">Accueil de gestion</a>
         <button type="button" class="theme-toggle" id="themeToggleBtn" title="Mode sombre" aria-label="Basculer le thème clair/sombre"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
         <a href="index.html" class="btn btn-secondary btn-small">Voir le site</a>
         <button class="btn btn-secondary btn-small" id="logoutBtn">D&eacute;connexion</button>
@@ -400,30 +402,60 @@
 
     <aside class="admin-sidebar">
       <div class="admin-logo">Hanna <span>&amp;</span> Nour<small>Espace de gestion</small></div>
-      <p class="admin-nav-caption">Votre boutique</p>
+      <details id="adminNavigation" class="management-navigation" open><summary>Ouvrir les rubriques</summary>
     <nav class="admin-tabs" aria-label="Rubriques de l’administration">
-      <button class="admin-tab active" data-tab="products">Produits</button>
+      <button class="admin-tab active" data-tab="dashboard">Accueil de gestion</button>
+      <button class="admin-tab" data-tab="products">Produits</button>
       <button class="admin-tab" data-tab="orders">Commandes</button>
       <button class="admin-tab" data-tab="returns">Retours clients</button>
-      <button class="admin-tab" data-tab="tiktok">Export TikTok</button>
-      <button class="admin-tab" data-tab="inventory">Stock</button>
-      <button class="admin-tab" data-tab="preparation">Préparation</button>
-      <button class="admin-tab" data-tab="sales">Ventes</button>
+      <button class="admin-tab" data-tab="inventory">Stock détaillé</button>
+      <button class="admin-tab" data-tab="preparation">Préparer les colis</button>
+      <button class="admin-tab" data-tab="sales">Bilan des ventes</button>
+      <button class="admin-tab" data-tab="site">Modifier le site</button>
+      <details class="management-nav-more"><summary>Contenus et autres outils</summary>
       <button class="admin-tab" data-tab="reviews">Avis</button>
-      <button class="admin-tab" data-tab="home">Accueil</button>
+      <button class="admin-tab" data-tab="home">Page d’accueil du site</button>
       <button class="admin-tab" data-tab="blog">Blog</button>
-      <button class="admin-tab" data-tab="promos">Promos</button>
-      <button class="admin-tab" data-tab="stats">Stats</button>
+      <button class="admin-tab" data-tab="promos">Promotions</button>
+      <button class="admin-tab" data-tab="stats">Visites du site</button>
       <button class="admin-tab" data-tab="messages">Messages</button>
       <button class="admin-tab" data-tab="settings">Param&egrave;tres</button>
-    </nav>
-      <div class="admin-sidebar-help"><strong>Besoin d’un repère ?</strong><p>Les explications sont affichées dans chaque rubrique. Aucune étiquette transporteur n’est achetée automatiquement.</p></div>
+      <button class="admin-tab" data-tab="tiktok">Export TikTok</button>
+      </details>
+    </nav></details>
+      <a href="/stock.html?view=sale" class="management-sidebar-action">Vendre avec un code-barres <span aria-hidden="true">↗</span></a>
+      <a href="/stock.html?view=stock" class="management-sidebar-action">Stock avec un QR code <span aria-hidden="true">↗</span></a>
     </aside>
 
     <main class="admin-workspace">
 
+    <section class="admin-panel active" id="panel-dashboard" aria-label="Accueil commun de gestion">
+      <div class="management-welcome"><span class="management-kicker">Votre boutique, simplement</span><h2>Que voulez-vous faire ?</h2><p>Vos huit accès sont ici. La vente et le stock utilisent les mêmes données que l’admin.</p></div>
+      <div class="management-shortcuts">
+        <a class="management-shortcut" href="/stock.html?view=sale"><span class="management-shortcut-icon" aria-hidden="true">▥</span><strong>Vendre en magasin</strong><span>Scanner un code-barres et confirmer une vente encaissée.</span><span class="management-shortcut-action">Ouvrir les ventes <span aria-hidden="true">↗</span></span></a>
+        <a class="management-shortcut" href="/stock.html?view=stock"><span class="management-shortcut-icon" aria-hidden="true">▦</span><strong>Gérer le stock</strong><span>Scanner un QR code et enregistrer un arrivage ou un ajustement.</span><span class="management-shortcut-action">Ouvrir le stock <span aria-hidden="true">↗</span></span></a>
+        <a class="management-shortcut" href="#orders"><span class="management-shortcut-icon" aria-hidden="true">▤</span><strong>Gérer les commandes</strong><span>Retrouver les achats, préparer les colis et suivre l’expédition.</span><span class="management-shortcut-action">Voir les commandes <span aria-hidden="true">→</span></span></a>
+        <a class="management-shortcut" href="/stock.html?view=labels"><span class="management-shortcut-icon" aria-hidden="true">▧</span><strong>Imprimer les étiquettes</strong><span>Choisir une variante, puis imprimer son code-barres et son QR.</span><span class="management-shortcut-action">Choisir une étiquette <span aria-hidden="true">↗</span></span></a>
+        <a class="management-shortcut" href="#products"><span class="management-shortcut-icon" aria-hidden="true">◇</span><strong>Gérer les produits</strong><span>Modifier les photos, les prix, les tailles et les coloris.</span><span class="management-shortcut-action">Voir les produits <span aria-hidden="true">→</span></span></a>
+        <a class="management-shortcut" href="#sales"><span class="management-shortcut-icon" aria-hidden="true">↗</span><strong>Voir les ventes</strong><span>Consulter le bilan des ventes en ligne et en magasin.</span><span class="management-shortcut-action">Ouvrir le bilan <span aria-hidden="true">→</span></span></a>
+        <a class="management-shortcut" href="#returns"><span class="management-shortcut-icon" aria-hidden="true">↶</span><strong>Gérer les retours</strong><span>Examiner les demandes et enregistrer les articles reçus.</span><span class="management-shortcut-action">Voir les retours <span aria-hidden="true">→</span></span></a>
+        <a class="management-shortcut" href="#site"><span class="management-shortcut-icon" aria-hidden="true">✧</span><strong>Modifier le site</strong><span>Retrouver l’accueil du site, le blog, les avis et les promotions.</span><span class="management-shortcut-action">Ouvrir les contenus <span aria-hidden="true">→</span></span></a>
+      </div>
+      <details class="management-details management-help"><summary>Un repère pour chaque opération</summary><p><strong>Vendre :</strong> confirmer un paiement reçu à l’extérieur. <strong>Stock :</strong> ajouter, retirer ou corriger une quantité avec un motif. <strong>Préparer :</strong> vérifier les articles d’une commande déjà payée avant l’expédition.</p></details>
+    </section>
+    <section class="admin-panel" id="panel-site" aria-label="Contenus du site">
+      <div class="management-shortcuts management-content-links">
+        <a class="management-shortcut" href="#home"><strong>Page d’accueil du site</strong><span>Visuels, collections et présentation de la boutique.</span></a>
+        <a class="management-shortcut" href="#blog"><strong>Blog et notre histoire</strong><span>Articles, photos et textes de présentation.</span></a>
+        <a class="management-shortcut" href="#reviews"><strong>Avis clients</strong><span>Lire et modérer les avis.</span></a>
+        <a class="management-shortcut" href="#promos"><strong>Promotions</strong><span>Codes de réduction et offre du panier.</span></a>
+        <a class="management-shortcut" href="#messages"><strong>Messages reçus</strong><span>Questions envoyées depuis le site.</span></a>
+        <a class="management-shortcut" href="#settings"><strong>Réglages de la boutique</strong><span>Devise, livraison et paramètres du site.</span></a>
+      </div>
+    </section>
+
     <!-- PRODUCTS -->
-    <div class="admin-panel active" id="panel-products">
+    <div class="admin-panel" id="panel-products">
       <div class="stat-cards admin-product-stats" id="productStats" aria-label="Résumé du catalogue"></div>
       <div class="toolbar">
         <input type="text" id="filterProducts" aria-label="Rechercher un produit" placeholder="Nom, référence ou catégorie..." style="padding:8px 12px; border:1px solid #ddd5c4; border-radius:8px;">
@@ -1061,6 +1093,7 @@
   <script src="js/admin-cart-offer.js"></script>
   <script src="js/tiktok-xlsx.js"></script>
   <script src="js/admin-tiktok.js"></script>
+  <script src="js/management.js"></script>
   <script src="js/theme-toggle.js"></script>
 </body>
 </html>

@@ -24,7 +24,8 @@
     el('password').value = ''; el('app').hidden = true; el('logout').hidden = true; el('loginPanel').hidden = false;
     el('variantPanel').hidden = true; el('history').textContent = ''; el('saleItems').textContent = ''; el('saleSummary').textContent = '';
     ['code','quantity','reason','saleNote'].forEach(function (id) { el(id).value = ''; });
-    ['variantName','variantDetails','variantStock','pendingText','variantsList','labelName','labelVariant','labelCode'].forEach(function (id) { el(id).textContent = ''; });
+    ['variantName','variantOptions','variantDetails','variantStock','pendingText','variantsList','labelName','labelVariant','labelCode','saleCount'].forEach(function (id) { el(id).textContent = ''; });
+    el('saleTotal').textContent = 'À calculer'; el('paymentStep').hidden = true;
     el('labelQr').removeAttribute('src'); el('labelBarcode').textContent = '';
     if (el('labelDialog').open) el('labelDialog').close();
     say(message || 'Déconnecté. Une tentative non confirmée sera retrouvée à la prochaine connexion.');
@@ -61,7 +62,7 @@
     try { await task(); } catch (error) { if (!error.stale && current === revision) say(error.message || 'Impossible de terminer.'); }
     finally { if (current === revision) { busy = false; controls(); } }
   }
-  function invalidateQuote() { quote = null; el('collected').checked = false; el('saleSummary').textContent = 'Actualise le récapitulatif avant de confirmer.'; controls(); }
+  function invalidateQuote() { quote = null; el('collected').checked = false; el('saleSummary').textContent = 'Vérifie les prix et le total avant de confirmer.'; el('saleTotal').textContent = 'À calculer'; el('paymentStep').hidden = true; var count = cart.reduce(function (sum, line) { return sum + line.quantity; }, 0); el('saleCount').textContent = count ? count + ' article' + (count > 1 ? 's' : '') : ''; controls(); }
   function drawCart() {
     el('saleItems').textContent = '';
     cart.forEach(function (line) {
@@ -76,17 +77,24 @@
       row.append(input,remove); box.append(title,details,row); el('saleItems').appendChild(box);
     });
     if (!cart.length) el('saleItems').textContent = 'Scanne un code-barres, puis ajoute l’article au panier.';
+    var count = cart.reduce(function (sum, line) { return sum + line.quantity; }, 0);
+    el('saleCount').textContent = count ? count + ' article' + (count > 1 ? 's' : '') : '';
     controls();
   }
-  function setMode(next) {
+  function setMode(next, keepLocation) {
     stopCamera(); lookupRevision++; mode = next; variant = null; el('variantPanel').hidden = true;
+    el('app').setAttribute('data-view', mode);
+    (mode === 'labels' ? el('labelSelection') : el('scanPanel')).appendChild(el('variantPanel'));
+    el('variantExtra').open = mode === 'labels';
+    if (!keepLocation) { try { historyReplace(mode); } catch (error) {} }
     document.querySelectorAll('[data-mode]').forEach(function (button) { button.setAttribute('aria-pressed',String(button.getAttribute('data-mode') === mode)); });
     el('scanPanel').hidden = mode === 'history' || mode === 'labels'; el('salePanel').hidden = mode !== 'sale'; el('historyPanel').hidden = mode !== 'history'; el('labelsPanel').hidden = mode !== 'labels';
-    el('scanTitle').textContent = mode === 'stock' ? 'Scanner le QR code de stock' : 'Scanner un code-barres de vente';
-    el('codeLabel').textContent = mode === 'stock' ? 'QR code ou identifiant de variante' : 'Code-barres';
-    el('scanHelp').textContent = mode === 'stock' ? 'Le QR ouvre une variante précise. Aucun stock ne change au scan.' : 'Un scan identifie l’article. Ajoute-le ensuite au panier de vente.';
+    el('scanTitle').textContent = mode === 'stock' ? 'Identifier la variante' : 'Choisir les articles';
+    el('codeLabel').textContent = mode === 'stock' ? 'QR code ou identifiant de variante' : 'Code-barres de vente';
+    el('scanHelp').textContent = mode === 'stock' ? 'Scanne le QR code, puis choisis l’ajustement de stock.' : 'Scanne un code-barres, puis ajoute l’article au panier de vente.';
     el('code').value = ''; controls();
   }
+  function historyReplace(view) { window.history.replaceState(null, '', location.pathname + '?view=' + encodeURIComponent(view)); }
   function qrId(raw) {
     raw = String(raw).trim(); if (ID.test(raw)) return raw.toLowerCase();
     var url;
@@ -97,17 +105,19 @@
   function showVariant() {
     var p = variant.products || {};
     el('variantPanel').hidden = false; el('variantName').textContent = p.name_fr || p.name_en || 'Variante';
-    el('variantDetails').textContent = [variant.color,variant.size,variant.barcode].filter(Boolean).join(' · ');
+    el('variantOptions').textContent = [variant.color,variant.size].filter(Boolean).join(' · ');
+    el('variantDetails').textContent = variant.barcode ? 'Code-barres : ' + variant.barcode : 'Aucun code-barres enregistré. Le QR code reste disponible.';
     el('variantStock').textContent = 'Stock disponible : ' + variant.stock + ((!p.active || !variant.active || p.catalog_deleted_at) ? ' · Vente indisponible' : '');
     el('addSale').hidden = mode !== 'sale'; el('adjustForm').hidden = mode !== 'stock';
     el('quantity').value = ''; el('reason').value = ''; el('adjustPreview').textContent = ''; controls();
+    if (mode === 'labels') el('variantPanel').scrollIntoView({block:'start',behavior:'auto'});
   }
   async function lookup(raw) {
     var current = ++lookupRevision, selectedMode = mode;
     variant = null; el('variantPanel').hidden = true;
-    var code = selectedMode === 'stock' ? qrId(raw) : String(raw).trim();
+    var code = selectedMode === 'stock' || selectedMode === 'labels' ? qrId(raw) : String(raw).trim();
     if (selectedMode === 'sale' && !/^[\x21-\x7e]{1,80}$/.test(code)) throw new Error('Scanne un code-barres de vente, pas un QR code de stock.');
-    var data = await call('stockLookup',{kind:selectedMode === 'stock' ? 'qr' : 'barcode',code:code});
+    var data = await call('stockLookup',{kind:selectedMode === 'stock' || selectedMode === 'labels' ? 'qr' : 'barcode',code:code});
     if (current !== lookupRevision || selectedMode !== mode) return;
     variant = data.variant; if (!variant || !ID.test(variant.id) || !Number.isInteger(variant.stock)) throw new Error('Fiche de variante incomplète.');
     showVariant(); say('Variante identifiée. Aucun stock modifié.');
@@ -119,6 +129,8 @@
     var result = data.result;
     if (!result || !Array.isArray(result.items) || !Number.isInteger(result.total_cents) || !['eur','usd'].includes(result.currency)) throw new Error('Récapitulatif incomplet.');
     quote = result;
+    el('saleTotal').textContent = money(result.total_cents,result.currency);
+    el('paymentStep').hidden = false;
     el('saleSummary').textContent = result.items.map(function (i) { return i.name + ' · ' + i.quantity + ' × ' + money(i.unit_price_cents,result.currency); }).join('\n') + '\nSous-total : ' + money(result.subtotal_cents,result.currency) + '\nTVA : ' + money(result.tax_cents,result.currency) + '\nTotal à encaisser : ' + money(result.total_cents,result.currency);
     say('Prix, TVA et stock vérifiés. Encaisse le total affiché avant confirmation.');
   }
@@ -141,14 +153,34 @@
   async function history() {
     var data = await call('listPhysicalSales',{page:page});
     total = data.total; el('history').textContent = '';
-    (data.orders || []).forEach(function (order) { var box = document.createElement('article'); box.className = 'sale-line'; var title = document.createElement('strong'); title.textContent = order.order_number + ' · ' + money(order.total_cents,order.currency); var text = document.createElement('p'); text.textContent = new Date(order.paid_at).toLocaleString('fr-FR') + ' · ' + ({cash:'Espèces',card:'Terminal bancaire',other:'Autre'}[order.external_payment_method] || '') + '\n' + (order.order_items || []).map(function (i) { return i.quantity + ' × ' + i.product_name + ' · ' + i.variant; }).join('\n'); box.append(title,text); el('history').appendChild(box); });
+    (data.orders || []).forEach(function (order) {
+      var box = document.createElement('details'); box.className = 'stock-history-order';
+      var summary = document.createElement('summary'), heading = document.createElement('span');
+      var title = document.createElement('strong'); title.textContent = order.order_number;
+      var date = document.createElement('small'); date.textContent = new Date(order.paid_at).toLocaleString('fr-FR') + ' · ' + ({cash:'Espèces',card:'Terminal bancaire',other:'Autre'}[order.external_payment_method] || '');
+      var amount = document.createElement('b'); amount.textContent = money(order.total_cents,order.currency);
+      var text = document.createElement('p'); text.textContent = (order.order_items || []).map(function (i) { return i.quantity + ' × ' + i.product_name + ' · ' + i.variant; }).join('\n');
+      heading.append(title,date); summary.append(heading,amount); box.append(summary,text); el('history').appendChild(box);
+    });
     el('historyPage').textContent = 'Page ' + page + ' / ' + Math.max(1,Math.ceil(total/20));
   }
   function openApp() {
     el('loginPanel').hidden = true; el('app').hidden = false; el('logout').hidden = false;
-    pending = readPending(); drawCart(); controls();
+    pending = readPending(); drawCart();
+    var requested = new URLSearchParams(location.search).get('view');
+    var nativeQr = location.hash.indexOf('#variant=') === 0;
+    var view = pending ? (pending.action === 'adjustInventory' ? 'stock' : 'sale') : nativeQr ? 'stock' : ['sale','stock','labels','history'].indexOf(requested) >= 0 ? requested : 'sale';
+    setMode(view, true); controls();
     if (pending) say('Une opération non confirmée est conservée. Vérifie-la avant de continuer.');
-    else if (location.hash.indexOf('#variant=') === 0) { setMode('stock'); var current = revision; setTimeout(function () { if (current === revision && token() && !pending) run(function () { return lookup(location.href); }); },0); }
+    else {
+      var current = revision, qrLink = location.href;
+      setTimeout(function () {
+        if (current !== revision || !token() || pending || mode !== view) return;
+        if (nativeQr) run(function () { return lookup(qrLink); });
+        else if (view === 'labels') run(listVariants);
+        else if (view === 'history') run(history);
+      }, 0);
+    }
   }
   el('loginForm').addEventListener('submit',function (event) { event.preventDefault(); run(async function () { var password = el('password').value; el('password').value = ''; var data = await call('login',{password:password}); if (!data.token) throw new Error('Connexion non confirmée.'); sessionStorage.setItem('hn-admin-token',data.token); say('Connecté.'); openApp(); }); });
   el('logout').addEventListener('click',function () { logout(); });
@@ -194,7 +226,7 @@
   el('next').addEventListener('click',function () { if (page*20<total) { page++; run(history); } });
   async function listVariants() {
     var data = await call('listStockVariants',{page:labelsPage}); labelsTotal = data.total; el('variantsList').textContent = '';
-    (data.variants || []).forEach(function (v) { var box = document.createElement('div'); box.className = 'sale-line'; var text = document.createElement('p'); text.textContent = (v.products.name_fr || v.products.name_en) + ' · ' + v.color + ' · ' + v.size; var button = document.createElement('button'); button.type = 'button'; button.textContent = 'Ouvrir / imprimer'; button.addEventListener('click',function () { if (busy || pending) return; setMode('stock'); run(function () { return lookup(v.id); }); }); box.append(text,button); el('variantsList').appendChild(box); });
+    (data.variants || []).forEach(function (v) { var box = document.createElement('div'); box.className = 'sale-line stock-label-choice'; var text = document.createElement('p'); text.textContent = (v.products.name_fr || v.products.name_en) + ' · ' + v.color + ' · ' + v.size; var button = document.createElement('button'); button.type = 'button'; button.textContent = 'Choisir'; button.addEventListener('click',function () { if (busy || pending) return; run(function () { return lookup(v.id); }); }); box.append(text,button); el('variantsList').appendChild(box); });
     el('labelsPage').textContent = 'Page ' + labelsPage + ' / ' + Math.max(1,Math.ceil(labelsTotal/20));
   }
   el('labelsPrevious').addEventListener('click',function () { if (labelsPage>1) { labelsPage--; run(listVariants); } });
@@ -219,7 +251,7 @@
   el('closeLabel').addEventListener('click',function () { el('labelDialog').close(); });
   document.addEventListener('visibilitychange',function () { if (document.hidden) stopCamera(); });
   window.addEventListener('pagehide',stopCamera);
-  window.addEventListener('hashchange',function () { if (token() && !busy && !pending) { setMode('stock'); run(function () { return lookup(location.href); }); } });
+  window.addEventListener('hashchange',function () { if (token() && !busy && !pending && location.hash.indexOf('#variant=') === 0) { setMode('stock',true); run(function () { return lookup(location.href); }); } });
   window.addEventListener('storage',function (event) { if (event.key === KEY && token() && !busy) { pending = readPending(); controls(); } });
   if (token()) openApp();
 })();

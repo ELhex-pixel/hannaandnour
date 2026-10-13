@@ -222,11 +222,13 @@
 
   function wireTabs() {
     var descriptions = {
+      dashboard: 'Choisissez ce que vous voulez faire aujourd’hui.',
+      site: 'Retrouvez les contenus et les réglages de votre boutique.',
       products: 'Gérez vos fiches, vos photos et leur visibilité.',
       orders: 'Retrouvez les achats et suivez les étapes de chaque commande.',
       returns: 'Consultez les demandes liées aux comptes clients et décidez de leur traitement.',
       tiktok: 'Préparez un fichier officiel sans modifier le stock du site.',
-      sales: 'Comprenez les ventes, le stock disponible et la préparation.',
+      sales: 'Consultez le bilan des ventes en ligne et en magasin.',
       inventory: 'Suivez les quantités disponibles par taille et coloris, les arrivages et les ajustements.',
       preparation: 'Vérifiez les articles payés et préparez les colis sans modifier le stock.',
       reviews: 'Consultez et modérez les avis de la boutique.',
@@ -251,9 +253,10 @@
         var id = 'panel-' + btn.getAttribute('data-tab');
         var panel = document.getElementById(id);
         panel.classList.add('active');
+        try { if (window.location.hash !== '#' + btn.getAttribute('data-tab')) window.history.pushState(null, '', window.location.pathname + window.location.search + '#' + btn.getAttribute('data-tab')); } catch (error) {}
         if (id === 'panel-products') loadProducts();
         if (id === 'panel-orders') loadOrders();
-        if (id === 'panel-sales') { loadSales(); focusScan(); }
+        if (id === 'panel-sales') loadSales();
         if (id === 'panel-preparation') prepLoadOrders();
         if (id === 'panel-reviews') loadReviews();
         if (id === 'panel-home') loadHome();
@@ -1618,15 +1621,15 @@
     var t = salesAll.totals || {};
     var cur = (salesAll.currency && salesAll.currency.code) || 'usd';
     var html = salesKpis(t, cur);
-    html += '<p>Lecture par date de paiement : les retours et remboursements connus à ce jour sont rattachés aux commandes de cette période, même reçus plus tard. Les montants encaissés incluent livraison et taxes ; ils ne sont pas votre bénéfice.</p>';
-    html += '<p>Marge articles = valeur après remise et retours physiques − coût d’achat des unités non remises en stock. Hors transport, emballage, frais de paiement, charges et impôts. Une commande remboursée ou un coût historique absent rend sa marge inconnue ; aucun coût manquant n’est remplacé par zéro.</p>';
+    html += '<details class="management-details management-help"><summary>Comment lire ces chiffres</summary><p>Lecture par date de paiement : les retours et remboursements connus à ce jour sont rattachés aux commandes de cette période, même reçus plus tard. Les montants encaissés incluent livraison et taxes ; ils ne sont pas votre bénéfice.</p>';
+    html += '<p>Marge articles = valeur après remise et retours physiques − coût d’achat des unités non remises en stock. Hors transport, emballage, frais de paiement, charges et impôts. Une commande remboursée ou un coût historique absent rend sa marge inconnue ; aucun coût manquant n’est remplacé par zéro.</p></details>';
     if (t.marginMissingUnits) html += '<p class="admin-notice">Marge incomplète : ' + t.marginMissingUnits + ' unité(s) non calculables. Sous-total des lignes calculables : ' + money(t.marginKnownCents || 0,cur) + ' — ne représente pas la marge totale.</p>';
     if (salesAll.limited) html += '<p class="admin-notice">Résultat partiel : limite de lecture atteinte. Ces chiffres ne sont pas exhaustifs.</p>';
     if ((salesAll.excluded_currencies || []).length) html += '<p class="admin-notice">Autres devises exclues, sans conversion : ' + esc(salesAll.excluded_currencies.join(', ')) + '. Sélectionnez leur devise pour les consulter.</p>';
-    html += '<h3 style="margin:16px 0 6px;">Encaissements bruts par mois de paiement — 12 derniers mois</h3>' +
-      salesChart(salesAll.monthly || [], cur);
-    html += '<h3 style="margin:20px 0 8px;">Produits (' + periodLabel(salesAll.period) + ')</h3>' +
-      salesProductsTable(salesAll.products || [], cur);
+    html += '<details class="management-details"><summary>Évolution des encaissements — 12 derniers mois</summary>' +
+      salesChart(salesAll.monthly || [], cur) + '</details>';
+    html += '<details class="management-details"><summary>Détail par produit (' + periodLabel(salesAll.period) + ')</summary>' +
+      salesProductsTable(salesAll.products || [], cur) + '</details>';
     box.innerHTML = html;
   }
 
@@ -2032,7 +2035,7 @@
           '<button class="btn btn-secondary btn-small" data-scan="prepClose">Fermer la pr\u00e9paration</button>' +
         '</div>';
     } else {
-      body = '<p class="admin-muted">Chargez une commande. Scannez chaque unité ou vérifiez manuellement la quantité de chaque ligne. La progression est enregistrée, même si vous fermez la préparation. Liste limitée aux 200 dernières commandes payées renvoyées par l’API.</p>';
+      body = '<p class="admin-muted">Choisissez une commande payée, puis cliquez sur Charger.</p><details class="management-details management-help"><summary>Comment vérifier les articles</summary><p>Scannez chaque unité ou vérifiez manuellement la quantité de chaque ligne. La progression est enregistrée, même si vous fermez la préparation. Liste limitée aux 200 dernières commandes payées renvoyées par l’API.</p></details>';
     }
     box.style.display = 'block';
     box.innerHTML = head + body;
@@ -3109,8 +3112,15 @@
   /* ---------------- Boot ---------------- */
 
   function boot() {
-    loadProducts();
     loadSettings();
+    var owner = token();
+    setTimeout(function () {
+      if (owner !== token()) return;
+      var tab = window.location.hash.slice(1) || 'dashboard';
+      var buttons = document.querySelectorAll('.admin-tab');
+      var selected = Array.prototype.find.call(buttons, function (button) { return button.getAttribute('data-tab') === tab; });
+      (selected || document.querySelector('.admin-tab[data-tab="dashboard"]')).click();
+    }, 0);
   }
 
   wireLogin();

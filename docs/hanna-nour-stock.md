@@ -16,13 +16,17 @@ Une connexion Internet est nécessaire. Si la caméra n’est pas disponible, sa
 
 ## Deux étiquettes séparées, par variante
 
+L’**accueil de gestion** (`/admin.html#dashboard`) rassemble huit accès : vente magasin, stock, commandes, étiquettes, produits, bilan des ventes, retours et contenus du site. Le bouton « Accueil de gestion » est visible dans les deux espaces. Sur iPhone, les rubriques de l’admin se déplient ; sur ordinateur, elles restent dans la barre latérale.
+
+Les accès « Vendre », « Stock » et « Étiquettes » ouvrent directement le bon écran, y compris après connexion. Les filtres, aides, références et détails de calcul sont repliés ; ils restent disponibles en ouvrant leur titre. Une opération incertaine passe toujours avant un changement de parcours.
+
 Dans **Étiquettes**, choisir le modèle + coloris + taille, puis imprimer séparément :
 - **VENTE · CODE-BARRES** : code CODE128 correspondant au code-barres existant de la variante.
 - **STOCK · QR CODE** : lien vers la variante dans l’application, avec son UUID.
 
-Le modèle, le coloris et la taille figurent sur les deux étiquettes. Les étiquettes sont conçues pour une largeur d’environ 70 mm ; choisir le papier, l’imprimante et l’échelle dans la boîte de dialogue d’impression. Une imprimante accessible depuis l’iPhone peut utiliser AirPrint ; l’impression est également possible depuis un ordinateur.
+Le modèle, le coloris et la taille figurent sur les deux étiquettes. Le choix d’une variante dans Étiquettes affiche directement les deux boutons d’impression, sans ouvrir le formulaire d’ajustement du stock. Les étiquettes sont conçues pour une largeur d’environ 70 mm ; choisir le papier, l’imprimante et l’échelle dans la boîte de dialogue d’impression. Une imprimante accessible depuis l’iPhone peut utiliser AirPrint ; l’impression est également possible depuis un ordinateur.
 
-Un code-barres manquant doit être généré dans l’admin → Scanner. Le QR code n’a pas besoin de changer ce code-barres. Scanner un QR avec la caméra native de l’iPhone ouvre la page ; l’authentification admin reste obligatoire. Le QR ne donne aucun droit d’accès et ne contient aucun token ni mot de passe.
+Un code-barres manquant doit être généré dans l’admin → Bilan des ventes → Générer les codes manquants. Le QR code n’a pas besoin de changer ce code-barres. Scanner un QR avec la caméra native de l’iPhone ouvre la page ; l’authentification admin reste obligatoire. Le QR ne donne aucun droit d’accès et ne contient aucun token ni mot de passe.
 
 ## Vente physique — encaissement externe
 

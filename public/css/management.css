@@ -1,0 +1,101 @@
+/* Readable, shared management design. Business controls retain their original IDs. */
+.management-page { --mg-bg:#f8f4ed; --mg-surface:#fffdf9; --mg-ink:#29231c; --mg-muted:#655d53; --mg-line:#e3d8c8; --mg-soft:#f0e7d7; --mg-accent:#825f2c; background:var(--mg-bg); color:var(--mg-ink); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:16px; line-height:1.6; }
+html[data-theme="dark"] .management-page { --mg-bg:#181612; --mg-surface:#25211b; --mg-ink:#f3ecdf; --mg-muted:#d2c4b0; --mg-line:#534634; --mg-soft:#382f24; --mg-accent:#dfbd87; }
+.management-page :is(button,input,select,textarea) { font:inherit; }
+.management-page :is(button,.btn,summary) { min-height:46px; touch-action:manipulation; }
+.management-page :is(a,button,input,select,textarea,summary):focus-visible { outline:3px solid var(--mg-accent); outline-offset:3px; }
+.management-page :is(p,strong,span,small,h1,h2,h3,a) { overflow-wrap:anywhere; }
+.management-page .management-details { border:1px solid var(--mg-line); border-radius:16px; background:var(--mg-surface); margin:0 0 16px; padding:0 16px; }
+.management-details > summary { display:flex; align-items:center; gap:12px; padding:12px 0; font-size:15px; font-weight:600; list-style:none; cursor:pointer; color:var(--mg-ink); }
+.management-details > summary::-webkit-details-marker { display:none; }
+.management-details > summary::after { content:'+'; margin-inline-start:auto; font-size:22px; color:var(--mg-accent); }
+.management-details[open] > summary::after { content:'−'; }
+.management-details[open] > summary { border-bottom:1px solid var(--mg-line); margin-bottom:14px; }
+.management-help { color:var(--mg-muted); }
+.management-help > p { margin:0 0 16px; }
+.management-kicker { text-transform:uppercase; letter-spacing:.12em; font-size:12px; font-weight:600; color:var(--mg-accent); }
+.management-welcome { padding:12px 0 26px; max-width:740px; }
+.management-welcome h2 { font:650 clamp(24px,3vw,34px)/1.25 Inter,system-ui,sans-serif; color:var(--mg-ink); margin:10px 0 12px; }
+.management-welcome p { color:var(--mg-muted); font-size:16px; margin:0; }
+.management-shortcuts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-bottom:24px; }
+.management-shortcut { display:flex; flex-direction:column; align-items:flex-start; gap:12px; min-width:0; min-height:226px; padding:22px; border:1px solid var(--mg-line); border-radius:20px; background:var(--mg-surface); color:var(--mg-ink); text-decoration:none; box-shadow:0 4px 16px rgba(65,45,20,.035); transition:border-color .18s,box-shadow .18s; }
+.management-shortcut:hover { border-color:var(--mg-accent); box-shadow:0 8px 22px rgba(65,45,20,.08); color:var(--mg-ink); }
+.management-shortcut strong { font-size:18px; line-height:1.35; }
+.management-shortcut > span:not(.management-shortcut-icon):not(.management-shortcut-action) { color:var(--mg-muted); font-size:14px; line-height:1.65; }
+.management-shortcut-icon { width:42px; height:42px; display:grid; place-items:center; border-radius:13px; background:var(--mg-soft); color:var(--mg-accent); font-size:25px; }
+.management-shortcut-action { display:flex; align-items:center; gap:12px; width:100%; color:var(--mg-accent); font-size:13px; font-weight:650; margin-top:auto; padding-top:8px; }
+.management-shortcut-action > span { margin-left:auto; }
+.management-content-links { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.management-content-links .management-shortcut { min-height:145px; }
+.management-context-links { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+.management-context-links a,.management-home-link { display:inline-flex; align-items:center; justify-content:center; min-height:46px; border:1px solid var(--mg-line); border-radius:12px; padding:10px 16px; color:var(--mg-ink); background:var(--mg-surface); font-size:14px; font-weight:600; text-decoration:none; }
+.admin-page.management-page { --admin-surface:var(--mg-surface); --admin-border:var(--mg-line); color:var(--mg-ink); }
+.admin-page.management-page .admin-sidebar { background:var(--mg-surface); border-right:1px solid var(--mg-line); padding:28px 16px; color:var(--mg-ink); }
+.admin-page.management-page .admin-sidebar .admin-logo { color:var(--mg-ink); font-size:23px; font-family:Georgia,serif; font-weight:600; padding:0 8px 20px; }
+.admin-page.management-page .admin-sidebar .admin-logo small { color:var(--mg-muted); font-size:12px; letter-spacing:0; text-transform:none; }
+.admin-page.management-page .admin-sidebar .admin-logo span { color:var(--mg-accent); }
+.management-navigation > summary,.management-nav-more > summary { cursor:pointer; padding:12px 8px; font-size:14px; font-weight:650; color:var(--mg-muted); }
+.admin-page.management-page .admin-sidebar .admin-tabs { display:grid; gap:6px; margin-bottom:12px; }
+.admin-page.management-page .admin-sidebar .admin-tab { width:100%; min-height:46px; color:var(--mg-ink); background:transparent; border-radius:12px; font-size:14px; font-weight:500; padding:12px; text-align:start; }
+.admin-page.management-page .admin-sidebar .admin-tab::before { display:none; }
+.admin-page.management-page .admin-sidebar .admin-tab:hover { background:var(--mg-bg); color:var(--mg-ink); }
+.admin-page.management-page .admin-sidebar .admin-tab.active { background:var(--mg-soft); color:var(--mg-ink); border-color:var(--mg-line); font-weight:650; }
+.management-nav-more { border-top:1px solid var(--mg-line); margin-top:8px; padding-top:8px; }
+.management-sidebar-action { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 8px; color:var(--mg-accent); font-size:13px; font-weight:600; text-decoration:none; }
+.admin-page.management-page .admin-header h1 { font:650 clamp(25px,3vw,34px)/1.25 Inter,system-ui,sans-serif; font-style:normal; color:var(--mg-ink); }
+.admin-page.management-page .admin-header h1:focus { outline:none; }
+.admin-page.management-page .admin-header { padding-top:28px; align-items:flex-start; }
+.admin-page.management-page .admin-muted { font-size:15px; color:var(--mg-muted); line-height:1.65; }
+.admin-page.management-page .admin-notice { font-size:14px; color:var(--mg-muted); background:var(--mg-bg); }
+.admin-page.management-page .card,.admin-page.management-page .editor,.admin-page.management-page .login-box { border-radius:18px; background:var(--mg-surface); }
+.admin-page.management-page .management-details > .card { margin:0 0 14px; box-shadow:none; }
+.admin-page.management-page .management-help .admin-notice { margin-bottom:14px; }
+.admin-page.management-page .btn { font-size:14px; letter-spacing:0; text-transform:none; min-height:46px; border-radius:12px; padding:10px 14px; }
+.admin-page.management-page .btn-primary { background:#825f2c; color:#fff; }
+.admin-page.management-page .btn-secondary { background:var(--mg-soft); color:var(--mg-ink); }
+.admin-page.management-page .toolbar :is(input:not([type=checkbox]),select),.admin-page.management-page .field :is(input,select,textarea) { font-size:16px; min-height:48px; border-radius:12px; }
+.admin-page.management-page .field label { font-size:14px; color:var(--mg-ink); }
+.admin-page.management-page .admin-table :is(th,td,small) { font-size:14px; color:var(--mg-ink); }
+.admin-page.management-page .admin-table th { font-size:12px; color:var(--mg-muted); text-transform:none; }
+.admin-page.management-page .admin-return-card summary small,.admin-page.management-page .inventory-product-name small { font-size:14px; }
+.admin-page.management-page .management-filters .toolbar { margin:0 0 16px; }
+.admin-page.management-page .management-bulk-actions { flex-basis:100%; }
+.admin-page.management-page .management-bulk-actions[open] { display:block; }
+.admin-page.management-page .management-bulk-actions > button { margin:0 8px 12px 0; }
+.admin-page.management-page .admin-list-pagination { font-size:14px; gap:10px; }
+.admin-page.management-page .admin-operation-status { font-size:14px; }
+@media (min-width:900px) { .management-navigation > summary { display:none; } }
+@media (max-width:1250px) { .management-shortcuts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:899.98px) {
+  .admin-page.management-page .admin-shell { display:flex; flex-direction:column; padding:0; gap:0; }
+  .admin-page.management-page .admin-sidebar { position:static; order:-1; height:auto; width:100%; padding:16px; border:0; border-bottom:1px solid var(--mg-line); }
+  .admin-page.management-page .admin-sidebar .admin-logo { padding:0 0 8px; font-size:22px; }
+  .admin-page.management-page .admin-sidebar .admin-logo small { display:inline-block; font-size:12px; margin:0 0 0 10px; }
+  .admin-page.management-page .management-sidebar-action { display:none; }
+  .admin-page.management-page .admin-sidebar .admin-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); overflow:visible; padding:8px 0; gap:6px; }
+  .management-nav-more { grid-column:1/-1; }
+  .management-nav-more[open] { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .management-nav-more > summary { grid-column:1/-1; }
+  .admin-page.management-page .admin-header { padding:22px 16px 18px; gap:14px; }
+  .admin-page.management-page .admin-workspace { padding:0 16px 30px; }
+  .admin-page.management-page .admin-header-actions { gap:8px; }
+  .management-welcome { padding:0 0 20px; }
+  .management-shortcut { padding:18px; min-height:220px; }
+  .management-context-links a { flex:1 1 140px; }
+  .admin-page.management-page .editor { padding:16px; }
+}
+@media (max-width:760px) {
+  .admin-page.management-page #productsList table { min-width:0; width:100%; }
+  .admin-page.management-page .admin-table td::before { font-size:12px; color:var(--mg-muted); }
+  .admin-page.management-page .toolbar { align-items:stretch; }
+  .admin-page.management-page .management-filters .toolbar > :is(input,select) { flex:1 1 100%; width:100%; }
+}
+@media (max-width:479px) {
+  .management-shortcuts { gap:10px; }
+  .management-shortcut { padding:15px; min-height:215px; gap:10px; }
+  .management-shortcut strong { font-size:16px; }
+  .management-shortcut > span:not(.management-shortcut-icon):not(.management-shortcut-action) { font-size:14px; }
+  .management-shortcut-action { font-size:13px; }
+}
+@media (max-width:359px) { .management-shortcuts { grid-template-columns:1fr; } .management-shortcut { min-height:0; } }
+@media (prefers-reduced-motion:reduce) { .management-shortcut { transition:none; } }

@@ -126,7 +126,7 @@ async function build() {
   for (const file of files) {
     const source = await fs.readFile(path.join('public', file), 'utf8');
     for (const lang of (file === 'stock.html' ? [null] : [null, 'fr', 'en', 'ar'])) {
-      const language = lang || 'fr';
+      const language = ['admin.html','stock.html'].includes(file) ? 'fr' : lang || 'fr';
       const $ = cheerio.load(source);
       prepareLivePage($, file);
       cleanPublicLinks($);
