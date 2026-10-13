@@ -215,6 +215,11 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     // ---- Everything below requires a valid admin session ----
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (action === 'analyticsSummary') {
+      const limited = await rateLimit(sb,event,'admin-analytics',60,600,'admin');
+      if (limited) return limited;
+      return await require('./lib/admin-analytics').adminAnalytics(sb);
+    }
     if (['stockLookup','quotePhysicalSale','recordPhysicalSale','listPhysicalSales','listStockVariants'].includes(action)) {
       const limited = await rateLimit(sb,event,'admin-stock-app',120,600,'admin');
       if (limited) return limited;
@@ -1459,50 +1464,6 @@ case 'deleteMessage': {
         }
 
         return json(200, { ok: true, refundCents });
-      }
-
-      case 'analyticsSummary': {
-        const day = 24 * 60 * 60 * 1000;
-        const summary = {};
-        const ranges = { all: 0, d7: 7 * day, d30: 30 * day };
-        for (const key of Object.keys(ranges)) {
-          let q = sb.from('analytics_events').select('event_type, product_slug');
-          if (ranges[key] > 0) q = q.gte('created_at', new Date(Date.now() - ranges[key]).toISOString());
-          // Cap huge tables so the summary stays responsive.
-          q = q.limit(20000);
-          const { data, error } = await q;
-          if (error) throw error;
-          const counts = { pageview: 0, product_view: 0, add_to_cart: 0, checkout_attempt: 0, purchase: 0 };
-          const topBySlug = {};
-          for (const e of data || []) {
-            if (typeof counts[e.event_type] === 'number') counts[e.event_type]++;
-            if (e.event_type === 'product_view' && e.product_slug) topBySlug[e.product_slug] = (topBySlug[e.product_slug] || 0) + 1;
-          }
-          summary[key] = {
-            counts,
-            topProducts: Object.keys(topBySlug)
-              .sort((a, b) => topBySlug[b] - topBySlug[a])
-              .slice(0, 10)
-              .map((slug) => ({ slug, views: topBySlug[slug] }))
-          };
-        }
-        const { data: paths, error: pathsErr } = await sb
-          .from('analytics_events')
-          .select('path')
-          .eq('event_type', 'pageview')
-          .gte('created_at', new Date(Date.now() - 30 * day).toISOString())
-          .limit(2000);
-        if (pathsErr) throw pathsErr;
-        const byPath = {};
-        for (const p of paths || []) {
-          const k = p.path || '(vide)';
-          byPath[k] = (byPath[k] || 0) + 1;
-        }
-summary.d30.topPaths = Object.keys(byPath)
-          .sort((a, b) => byPath[b] - byPath[a])
-          .slice(0, 10)
-          .map((path) => ({ path, views: byPath[path] }));
-        return json(200, { summary });
       }
 
       case 'resetStats': {

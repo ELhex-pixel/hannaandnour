@@ -1,0 +1,66 @@
+.dashboard-toolbar { display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; }
+.dashboard-toolbar .field { flex:1 1 190px; margin:0; }
+.dashboard-toolbar select { width:100%; }
+.dashboard-caption { color:var(--mg-muted); font-size:14px; line-height:1.65; margin:0 0 18px; }
+.admin-page.management-page .dashboard-section { padding:26px; margin-bottom:24px; }
+.dashboard-section-heading { display:flex; gap:16px; justify-content:space-between; align-items:center; margin-bottom:24px; }
+.dashboard-section h2 { font:650 clamp(21px,2vw,27px)/1.35 Inter,system-ui,sans-serif; margin:6px 0 0; color:var(--mg-ink); }
+.dashboard-section h3 { font:650 18px/1.4 Inter,system-ui,sans-serif; color:var(--mg-ink); margin:0 0 12px; }
+.dashboard-currency { flex-shrink:0; font-size:12px; font-weight:600; border:1px solid var(--mg-line); background:var(--mg-bg); border-radius:999px; padding:8px 12px; color:var(--mg-muted); }
+.dashboard-finance-grid,.dashboard-traffic-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.dashboard-kpi { min-width:0; padding:20px; border:1px solid var(--mg-line); background:var(--mg-bg); border-radius:16px; display:flex; flex-direction:column; gap:12px; }
+.dashboard-kpi-label { color:var(--mg-muted); font-size:14px; line-height:1.5; font-weight:600; }
+.dashboard-kpi strong { color:var(--mg-ink); font-size:clamp(22px,2.1vw,30px); line-height:1.3; font-weight:650; letter-spacing:-.025em; font-variant-numeric:tabular-nums; }
+.dashboard-kpi p { color:var(--mg-muted); font-size:13px; line-height:1.6; margin:0; }
+.dashboard-kpi-primary { background:var(--mg-soft); border-color:var(--mg-line); }
+.dashboard-kpi-primary strong { color:var(--mg-accent); }
+.dashboard-mini-grid,.dashboard-ratios { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:14px; }
+.dashboard-mini-grid .dashboard-kpi,.dashboard-ratios .dashboard-kpi { background:var(--mg-surface); padding:16px 20px; }
+.dashboard-mini-grid .dashboard-kpi strong,.dashboard-ratios .dashboard-kpi strong { font-size:24px; }
+.dashboard-alert { font-size:14px; padding:14px 16px; border:1px solid var(--mg-line); border-left:3px solid var(--mg-accent); border-radius:12px; color:var(--mg-ink); background:var(--mg-soft); margin:20px 0; line-height:1.7; }
+.dashboard-actions { display:flex; gap:10px; flex-wrap:wrap; margin:20px 0; }
+.admin-page.management-page #panel-stats .btn-secondary { background:var(--mg-soft)!important; color:var(--mg-ink)!important; }
+.dashboard-help p { color:var(--mg-muted); font-size:14px; line-height:1.7; margin-bottom:16px; }
+.dashboard-product-section { margin-top:26px; border-top:1px solid var(--mg-line); padding-top:24px; }
+.dashboard-table-wrap { overflow-x:auto; max-width:100%; }
+.dashboard-table { border-collapse:collapse; width:100%; font-size:14px; }
+.dashboard-table th { text-align:start; font-size:12px; color:var(--mg-muted); background:var(--mg-bg); padding:14px 12px; font-weight:600; white-space:nowrap; }
+.dashboard-table td { text-align:start; padding:16px 12px; border-bottom:1px solid var(--mg-line); color:var(--mg-ink); vertical-align:top; font-variant-numeric:tabular-nums; }
+.dashboard-table td:first-child { min-width:160px; width:28%; }
+.dashboard-table small { display:block; margin-top:6px; font-size:12px; line-height:1.5; color:var(--mg-muted); }
+.dashboard-rankings { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:28px; margin-top:28px; padding-top:24px; border-top:1px solid var(--mg-line); }
+.dashboard-ranking { margin:0; padding:0; list-style:none; }
+.dashboard-ranking li { display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid var(--mg-line); }
+.dashboard-rank { display:grid; place-items:center; width:28px; height:28px; flex-shrink:0; background:var(--mg-soft); color:var(--mg-accent); font-size:12px; font-weight:600; border-radius:8px; }
+.dashboard-ranking-item { flex:1; min-width:0; }
+.dashboard-ranking-item strong { display:block; font-size:14px; font-weight:500; line-height:1.5; }
+.dashboard-ranking li>b { text-align:end; font-size:16px; flex-shrink:0; font-variant-numeric:tabular-nums; }
+.dashboard-ranking small { display:block; color:var(--mg-muted); font-size:11px; font-weight:400; }
+.dashboard-bar { display:block; width:100%; height:5px; border-radius:99px; background:var(--mg-soft); margin-top:8px; overflow:hidden; }
+.dashboard-bar>span { display:block; height:100%; background:var(--mg-accent); border-radius:99px; }
+.dashboard-empty { color:var(--mg-muted); font-size:15px; line-height:1.7; padding:12px 0; margin:0; }
+.dashboard-reset p { color:var(--mg-muted); font-size:14px; }
+.dashboard-reset button { margin-bottom:16px; }
+@media(max-width:1250px) { .dashboard-finance-grid,.dashboard-traffic-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:899.98px) { .dashboard-rankings { grid-template-columns:1fr; } .dashboard-section-heading { flex-wrap:wrap; gap:12px; } .admin-page.management-page .dashboard-section { padding:20px; } }
+@media(max-width:600px) {
+  .dashboard-toolbar .field { flex-basis:100%; }
+  .dashboard-toolbar>button { width:100%; }
+  .dashboard-mini-grid,.dashboard-ratios { grid-template-columns:1fr; }
+  .dashboard-finance-grid,.dashboard-traffic-grid { gap:10px; }
+  .dashboard-kpi { padding:15px; gap:10px; }
+  .dashboard-kpi strong { font-size:23px; }
+  .dashboard-kpi-label { font-size:13px; }
+  .dashboard-kpi p { font-size:12px; }
+  .dashboard-actions>.btn { flex:1 1 100%; }
+  .dashboard-table :is(thead,th) { display:none; }
+  .dashboard-table,.dashboard-table tbody,.dashboard-table tr,.dashboard-table td { display:block; width:100%; min-width:0!important; }
+  .dashboard-table tr { border:1px solid var(--mg-line); border-radius:14px; margin:0 0 12px; padding:4px 14px; }
+  .dashboard-table td { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:4px 14px; padding:12px 0; }
+  .dashboard-table td::before { content:attr(data-label); color:var(--mg-muted); font-size:12px; }
+  .dashboard-table td:first-child { display:block; width:100%; }
+  .dashboard-table td:first-child::before { display:none; }
+  .dashboard-table td small { grid-column:2; margin-top:2px; }
+  .dashboard-table td:last-child { border-bottom:0; }
+}
+@media(max-width:359px) { .dashboard-finance-grid,.dashboard-traffic-grid { grid-template-columns:1fr; } .admin-page.management-page .dashboard-section { padding:16px; } }

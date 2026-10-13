@@ -235,7 +235,7 @@
       home: 'Organisez les contenus et les visuels de la page d’accueil.',
       blog: 'Gérez les articles du journal de la boutique.',
       promos: 'Gérez vos codes et leurs conditions d’utilisation.',
-      stats: 'Consultez les visites et les étapes du parcours d’achat.',
+      stats: 'Suivez le chiffre d’affaires, les achats, la marge et les visites du site.',
       messages: 'Retrouvez les messages reçus depuis le site.',
       settings: 'Vérifiez vos paramètres de livraison, devise et services.'
     };
@@ -2934,72 +2934,8 @@
 
   /* ---------------- Stats (in-house analytics) ---------------- */
 
-  var statsAll = null;
-
   function loadStats() {
-    return call('analyticsSummary').then(function (res) {
-      statsAll = res.summary || null;
-      renderStats();
-    }).catch(function (e) {
-      document.getElementById('statsList').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
-    });
-  }
-
-  function prodName(slug) {
-    for (var i = 0; i < productsAll.length; i++) {
-      if (productsAll[i].slug === slug) return productsAll[i].name_en || productsAll[i].name || slug;
-    }
-    return slug;
-  }
-
-  function renderStats() {
-    var box = document.getElementById('statsList');
-    if (!box) return;
-    if (!statsAll) { box.innerHTML = '<p class="empty">Aucune donnée.</p>'; return; }
-
-    var periods = [
-      { key: 'all', label: 'Total' },
-      { key: 'd30', label: '30 jours' },
-      { key: 'd7', label: '7 jours' }
-    ];
-
-    function cards(key) {
-      var s = statsAll[key];
-      if (!s || !s.counts) return '';
-      var c = s.counts;
-      var conv = c.add_to_cart > 0 ? Math.round((c.purchase / c.add_to_cart) * 100) : 0;
-      var convPv = c.pageview > 0 ? Math.round((c.purchase / c.pageview) * 100) : 0;
-      return '<div class="stat-cards">' +
-        '<div class="stat-card"><strong>' + c.pageview + '</strong><span>Pages vues</span></div>' +
-        '<div class="stat-card"><strong>' + c.product_view + '</strong><span>Vues produit</span></div>' +
-        '<div class="stat-card"><strong>' + c.add_to_cart + '</strong><span>Ajouts panier</span></div>' +
-        '<div class="stat-card"><strong>' + c.checkout_attempt + '</strong><span>Checkouts</span></div>' +
-        '<div class="stat-card"><strong>' + c.purchase + '</strong><span>Ventes</span></div>' +
-        '<div class="stat-card"><strong>' + conv + '&nbsp;%</strong><span>Taux panier&rarr;vente</span></div>' +
-        '<div class="stat-card"><strong>' + convPv + '&nbsp;%</strong><span>Taux page&rarr;vente</span></div>' +
-        '</div>';
-    }
-
-    function topTable(rows, emptyText) {
-      if (!rows || !rows.length) return '<p class="empty">' + emptyText + '</p>';
-      return '<table class="admin-table"><thead><tr><th>Vue</th><th>Nombre</th></tr></thead><tbody>' +
-        rows.map(function (r) {
-          var label = r.slug ? esc(prodName(r.slug)) : r.path ? esc(r.path).replace(/\?.*$/, '') : esc(String(r.path || r.slug));
-          var n = r.views != null ? r.views : r.count;
-          return '<tr><td data-label="Vue">' + label + '</td><td data-label="Nombre">' + n + '</td></tr>';
-        }).join('') + '</tbody></table>';
-    }
-
-    var html = periods.map(function (p) {
-      return '<h3 style="margin:14px 0 8px;">' + p.label + '</h3>' + cards(p.key);
-    }).join('');
-
-    html += '<h3 style="margin:20px 0 8px;">Produits les plus vus (30 jours)</h3>' +
-      topTable(statsAll.d30 && statsAll.d30.topProducts, 'Aucune vue produit.');
-    html += '<h3 style="margin:20px 0 8px;">Pages les plus visitées (30 jours)</h3>' +
-      topTable(statsAll.d30 && statsAll.d30.topPaths, 'Aucune page.');
-
-    box.innerHTML = html;
+    return window.HN_DASHBOARD ? window.HN_DASHBOARD.load() : Promise.resolve();
   }
 
   function wireStats() {
@@ -3007,7 +2943,7 @@
     if (btn) btn.addEventListener('click', loadStats);
     var reset = document.getElementById('resetStatsBtn');
     if (reset) reset.addEventListener('click', function () {
-      if (!confirm('Remettre les statistiques \u00e0 z\u00e9ro ?\nToutes les donn\u00e9es d\u2019analyse seront d\u00e9finitivement supprim\u00e9es.')) return;
+      if (!confirm('Effacer les événements de visite du site ?\nLes commandes, ventes, prix d’achat et stocks restent conservés.')) return;
       call('resetStats', { confirm: true })
         .then(function () {
           toast('Statistiques remises \u00e0 z\u00e9ro', 'ok');

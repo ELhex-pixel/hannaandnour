@@ -339,6 +339,7 @@
   }
 </style>
   <link rel="stylesheet" href="css/management.css">
+  <link rel="stylesheet" href="css/admin-dashboard.css">
   <meta property="og:image" content="https://hannanour.com/images/hero.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="800">
@@ -411,13 +412,13 @@
       <button class="admin-tab" data-tab="inventory">Stock détaillé</button>
       <button class="admin-tab" data-tab="preparation">Préparer les colis</button>
       <button class="admin-tab" data-tab="sales">Bilan des ventes</button>
+      <button class="admin-tab" data-tab="stats">Chiffres &amp; visites</button>
       <button class="admin-tab" data-tab="site">Modifier le site</button>
       <details class="management-nav-more"><summary>Contenus et autres outils</summary>
       <button class="admin-tab" data-tab="reviews">Avis</button>
       <button class="admin-tab" data-tab="home">Page d’accueil du site</button>
       <button class="admin-tab" data-tab="blog">Blog</button>
       <button class="admin-tab" data-tab="promos">Promotions</button>
-      <button class="admin-tab" data-tab="stats">Visites du site</button>
       <button class="admin-tab" data-tab="messages">Messages</button>
       <button class="admin-tab" data-tab="settings">Param&egrave;tres</button>
       <button class="admin-tab" data-tab="tiktok">Export TikTok</button>
@@ -437,7 +438,7 @@
         <a class="management-shortcut" href="#orders"><span class="management-shortcut-icon" aria-hidden="true">▤</span><strong>Gérer les commandes</strong><span>Retrouver les achats, préparer les colis et suivre l’expédition.</span><span class="management-shortcut-action">Voir les commandes <span aria-hidden="true">→</span></span></a>
         <a class="management-shortcut" href="/stock.html?view=labels"><span class="management-shortcut-icon" aria-hidden="true">▧</span><strong>Imprimer les étiquettes</strong><span>Choisir une variante, puis imprimer son code-barres et son QR.</span><span class="management-shortcut-action">Choisir une étiquette <span aria-hidden="true">↗</span></span></a>
         <a class="management-shortcut" href="#products"><span class="management-shortcut-icon" aria-hidden="true">◇</span><strong>Gérer les produits</strong><span>Modifier les photos, les prix, les tailles et les coloris.</span><span class="management-shortcut-action">Voir les produits <span aria-hidden="true">→</span></span></a>
-        <a class="management-shortcut" href="#sales"><span class="management-shortcut-icon" aria-hidden="true">↗</span><strong>Voir les ventes</strong><span>Consulter le bilan des ventes en ligne et en magasin.</span><span class="management-shortcut-action">Ouvrir le bilan <span aria-hidden="true">→</span></span></a>
+        <a class="management-shortcut" href="#stats"><span class="management-shortcut-icon" aria-hidden="true">↗</span><strong>Voir les ventes</strong><span>Chiffre d’affaires, net après remboursements et prix d’achat.</span><span class="management-shortcut-action">Voir les chiffres <span aria-hidden="true">→</span></span></a>
         <a class="management-shortcut" href="#returns"><span class="management-shortcut-icon" aria-hidden="true">↶</span><strong>Gérer les retours</strong><span>Examiner les demandes et enregistrer les articles reçus.</span><span class="management-shortcut-action">Voir les retours <span aria-hidden="true">→</span></span></a>
         <a class="management-shortcut" href="#site"><span class="management-shortcut-icon" aria-hidden="true">✧</span><strong>Modifier le site</strong><span>Retrouver l’accueil du site, le blog, les avis et les promotions.</span><span class="management-shortcut-action">Ouvrir les contenus <span aria-hidden="true">→</span></span></a>
       </div>
@@ -747,12 +748,14 @@
 
     <!-- STATS (in-house analytics) -->
     <div class="admin-panel" id="panel-stats">
-      <div class="toolbar">
-        <span style="color:#8a7d66;">Analyse de visite (maison &ndash; pas de GA4). P&eacute;riodes : 7 jours, 30 jours, total.</span>
-        <button class="btn btn-danger" id="resetStatsBtn">Remettre &agrave; z&eacute;ro</button>
-        <button class="btn btn-secondary" id="refreshStatsBtn">Actualiser</button>
+      <div class="dashboard-toolbar card">
+        <div class="field"><label for="statsPeriod">Période</label><select id="statsPeriod"><option value="d7">7 derniers jours</option><option value="d30" selected>30 derniers jours</option><option value="all">Depuis le début</option></select></div>
+        <div class="field"><label for="statsCurrency">Devise des montants</label><select id="statsCurrency"><option value="">Devise de la boutique</option><option value="eur">EUR · euro</option><option value="usd">USD · dollar</option></select></div>
+        <button class="btn btn-secondary" id="refreshStatsBtn" type="button">Actualiser les chiffres</button>
       </div>
-      <div class="card" id="statsList"><p class="empty">Chargement...</p></div>
+      <p id="dashboardStatus" role="status" aria-live="polite" class="dashboard-caption"></p>
+      <div id="statsList"><section class="card dashboard-section" id="dashboardFinance" aria-label="Chiffre d’affaires et coûts d’achat"><p class="empty">Ouvrez la rubrique pour charger les montants.</p></section><section class="card dashboard-section" id="dashboardTraffic" aria-label="Visites du site"><p class="empty">Ouvrez la rubrique pour charger les visites.</p></section></div>
+      <details class="management-details dashboard-reset"><summary>Gestion de l’historique des visites</summary><p>La remise à zéro efface uniquement les événements de visite. Les commandes, ventes, coûts d’achat et stocks sont conservés.</p><button class="btn btn-danger" id="resetStatsBtn" type="button">Effacer l’historique des visites</button></details>
     </div>
 
     <!-- MESSAGES (client contact form) -->
@@ -1093,6 +1096,8 @@
   <script src="js/admin-cart-offer.js"></script>
   <script src="js/tiktok-xlsx.js"></script>
   <script src="js/admin-tiktok.js"></script>
+  <script src="js/admin-dashboard-view.js"></script>
+  <script src="js/admin-dashboard.js"></script>
   <script src="js/management.js"></script>
   <script src="js/theme-toggle.js"></script>
 </body>

@@ -6,7 +6,7 @@ const cheerio = require('cheerio');
 
 test('l’accueil commun expose les huit tâches et les liens ciblent des parcours existants', () => {
   const $ = cheerio.load(fs.readFileSync('public/admin.html','utf8'));
-  const expected = ['/stock.html?view=sale','/stock.html?view=stock','#orders','/stock.html?view=labels','#products','#sales','#returns','#site'];
+  const expected = ['/stock.html?view=sale','/stock.html?view=stock','#orders','/stock.html?view=labels','#products','#stats','#returns','#site'];
   assert.deepEqual($('#panel-dashboard .management-shortcut').map((_,node)=>$(node).attr('href')).get(),expected);
   assert.equal($('.admin-panel.active').attr('id'),'panel-dashboard');
   assert.equal($('.admin-tab.active').attr('data-tab'),'dashboard');
