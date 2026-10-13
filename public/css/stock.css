@@ -8,6 +8,10 @@
 .eyebrow { display:block; font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--mg-accent); margin-bottom:5px; }
 .stock-header { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:20px max(20px,env(safe-area-inset-left)); background:var(--mg-surface); border-bottom:1px solid var(--mg-line); }
 .stock-header-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.management-stock .stock-header-actions .theme-toggle { display:inline-grid; place-items:center; width:48px; height:48px; padding:0; border-radius:50%; flex-shrink:0; }
+.stock-header-actions .theme-toggle svg { width:20px; height:20px; }
+.management-stock { color-scheme:light; }
+html[data-theme="dark"] .management-stock { color-scheme:dark; }
 .management-stock main { max-width:1080px; margin:auto; padding:24px; }
 .management-stock .card { padding:24px; background:var(--mg-surface); border:1px solid var(--mg-line); border-radius:20px; margin-bottom:20px; box-shadow:0 4px 16px rgba(65,45,20,.035); }
 .management-stock button { min-height:48px; border:1px solid var(--mg-line); border-radius:12px; background:var(--mg-surface); padding:11px 16px; cursor:pointer; color:var(--mg-ink); font-weight:600; }

@@ -4,10 +4,11 @@
   <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#f8f4ed">
   <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="HN Stock">
   <title>Hanna &amp; Nour Stock</title>
+  <script src="js/theme.js"></script>
   <link rel="manifest" href="/stock.webmanifest"><link rel="apple-touch-icon" href="/images/stock-icon-192.png">
   <link rel="stylesheet" href="css/management.css"><link rel="stylesheet" href="css/stock.css">
 </head><body class="management-page management-stock">
-  <header class="stock-header"><div><span class="eyebrow">Hanna &amp; Nour</span><h1>Ventes &amp; Stock</h1></div><div class="stock-header-actions"><a href="/admin.html#dashboard" class="management-home-link">Accueil de gestion</a><button id="logout" type="button" hidden>Déconnexion</button></div></header>
+  <header class="stock-header"><div><span class="eyebrow">Hanna &amp; Nour</span><h1>Ventes &amp; Stock</h1></div><div class="stock-header-actions"><a href="/admin.html#dashboard" class="management-home-link">Accueil de gestion</a><button id="stockThemeToggle" class="theme-toggle" type="button" title="Passer en mode sombre" aria-label="Passer en mode sombre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button><button id="logout" type="button" hidden>Déconnexion</button></div></header>
   <main>
     <p id="status" role="status" aria-live="polite"></p>
     <section id="loginPanel" class="card"><span class="management-kicker">Votre boutique, simplement</span><h2>Connexion à la gestion</h2><p>Utilise le même mot de passe que dans l’admin.</p><form id="loginForm">
@@ -40,5 +41,5 @@
     <details class="management-details install"><summary>Installer sur iPhone et comprendre les codes</summary><p>Dans Safari : Partager → Sur l’écran d’accueil. Une connexion Internet est nécessaire.</p><p><strong>Code-barres :</strong> identifier un article à vendre. <strong>QR code :</strong> ouvrir le stock d’une variante. Scanner seul ne modifie aucune quantité.</p></details>
   </main>
   <dialog id="labelDialog"><h2 id="labelTitle"></h2><div id="labelSheet"><strong>Hanna &amp; Nour</strong><p id="labelName"></p><p id="labelVariant"></p><svg id="labelBarcode"></svg><img id="labelQr" alt="QR code de la variante"><p id="labelCode"></p><small id="labelKind"></small></div><div class="label-actions"><button id="printLabel" type="button" class="primary">Imprimer cette étiquette</button><button id="closeLabel" type="button">Fermer</button></div></dialog>
-  <script src="js/config.js"></script><script src="js/vendor/jsbarcode.min.js"></script><script src="js/stock-codes.js"></script><script src="js/stock-app.js"></script>
+  <script src="js/config.js"></script><script src="js/vendor/jsbarcode.min.js"></script><script src="js/stock-codes.js"></script><script src="js/stock-app.js"></script><script src="js/theme-toggle.js"></script>
 </body></html>
