@@ -75,3 +75,6 @@ test('les ventes physiques exigent leur transaction privée avant publication sa
 test('les commandes de maintenance exigent leur migration sans déclencher de remise à zéro',async()=>{
   const calls=[];await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='admin_maintenance_schema_version'?{error:{}}:{data:1};}}),/migration_admin_maintenance/);assert.equal(calls.at(-1),'admin_maintenance_schema_version');
 });
+test('les prix personnalisés exigent leurs snapshots avant publication, sans modifier une vente',async()=>{
+  const calls=[];await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='physical_prices_schema_version'?{error:{}}:{data:1};}}),/migration_physical_prices/);assert.equal(calls.at(-1),'physical_prices_schema_version');
+});

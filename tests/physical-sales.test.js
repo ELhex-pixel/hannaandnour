@@ -29,6 +29,12 @@ test('ventes physiques : transaction atomique, taxe exacte, reprise, réservatio
     assert.equal(order.status,'paid');assert.equal(order.sale_channel,'physical');assert.equal(order.external_payment_method,'cash');assert.equal(order.shipping_status,'delivered');assert.equal(order.payment_intent_id,null);assert.equal(order.shipping_cents,0);
     const item=(await db.query('select i.*,c.unit_cost_cents as cost from order_items i join order_item_costs c on c.order_item_id=i.id where order_id=$1',[op])).rows[0];
     assert.equal(item.stock_debited,true);assert.equal(item.net_total_cents,3000);assert.equal(item.cost,300);
+    const priceMigration=fs.readFileSync('supabase/migration_physical_prices.sql','utf8');
+    await assert.rejects(db.exec(priceMigration.replace(/commit;\s*$/,'select 1/0;commit;')),/division by zero/);await db.exec('rollback');
+    assert.equal((await db.query("select to_regprocedure('physical_prices_schema_version()') as marker")).rows[0].marker,null);
+    await db.exec(priceMigration);await db.exec(priceMigration);
+    assert.equal((await record(op,items,q)).already,true);assert.equal(await stock(v),7);
+    assert.equal((await db.query('select catalog_unit_price_cents from order_items where id=$1',[item.id])).rows[0].catalog_unit_price_cents,null);
     await db.query('update products set price_cents=1100 where id=$1',[p]);
     assert.equal((await record(op,items,q)).already,true);assert.equal(await stock(v),7);
     await assert.rejects(record(op,items,q,'card'),/physical_operation_mismatch/);
@@ -49,6 +55,25 @@ test('ventes physiques : transaction atomique, taxe exacte, reprise, réservatio
     await assert.rejects(record(randomUUID(),mixed,mixedQuote),/physical_unavailable/);assert.equal(await stock(v),6);assert.equal((await db.query('select count(*)::int as n from orders')).rows[0].n,before);
     await db.query('update products set active=false,catalog_deleted_at=now() where id=$1',[p]);await assert.rejects(quote(items),/physical_unavailable/);
     assert.equal((await record(op,items,q)).already,true);assert.equal(await stock(v),6);
+    const customProduct=randomUUID(),customVariant=randomUUID();
+    await db.query("insert into products(id,slug,sku,name_en,name_fr,name_ar,description_en,description_fr,description_ar,price_cents,category,image)values($1,'negotiated-price','NP','Custom','Prix libre','سعر','','','',1000,'jacket','images/hero.jpg')",[customProduct]);
+    await db.query("insert into product_variants(id,product_id,color,size,stock)values($1,$2,'Noir','M',20)",[customVariant,customProduct]);
+    await db.query("insert into variant_costs(variant_id,unit_cost_cents,currency)values($1,300,'eur')",[customVariant]);
+    for(const amount of [700,1500,0]){
+      const priced=[{variant_id:customVariant,quantity:2,unit_price_cents:amount,price_note:'Prix choisi '+amount}],pricedQuote=await quote(priced),priceOp=randomUUID(),beforeStock=await stock(customVariant);
+      assert.equal(pricedQuote.subtotal_cents,amount*2);assert.equal(pricedQuote.tax_cents,Math.round(amount*2*.2));assert.equal(pricedQuote.items[0].catalog_unit_price_cents,1000);assert.equal(pricedQuote.items[0].custom_price,true);
+      await record(priceOp,priced,pricedQuote);assert.equal(await stock(customVariant),beforeStock-2);await record(priceOp,priced,pricedQuote);assert.equal(await stock(customVariant),beforeStock-2);
+      const saved=(await db.query('select i.unit_price_cents,i.catalog_unit_price_cents,i.physical_price_note,i.net_total_cents,c.unit_cost_cents from order_items i join order_item_costs c on c.order_item_id=i.id where i.order_id=$1',[priceOp])).rows[0];
+      assert.equal(saved.unit_price_cents,amount);assert.equal(saved.catalog_unit_price_cents,1000);assert.equal(saved.physical_price_note,'Prix choisi '+amount);assert.equal(saved.net_total_cents,amount*2);assert.equal(saved.unit_cost_cents,300);
+      await assert.rejects(record(priceOp,[{...priced[0],unit_price_cents:amount+1}],pricedQuote),/physical_operation_mismatch/);
+    }
+    assert.equal((await db.query('select price_cents from products where id=$1',[customProduct])).rows[0].price_cents,1000);
+    for(const value of [-1,1.5,'700',100000001,null])await assert.rejects(quote([{variant_id:customVariant,quantity:1,unit_price_cents:value}]),/physical_price_invalid/);
+    await assert.rejects(quote([{variant_id:customVariant,quantity:1,unit_price_cents:700,price_note:'a'.repeat(301)}]),/physical_price_invalid/);
+    const staleItems=[{variant_id:customVariant,quantity:1,unit_price_cents:700}],staleQuote=await quote(staleItems),beforePriceStock=await stock(customVariant);
+    await db.query('update products set price_cents=1100 where id=$1',[customProduct]);await assert.rejects(record(randomUUID(),staleItems,staleQuote),/physical_quote_changed/);assert.equal(await stock(customVariant),beforePriceStock);
+    const updated=await quote(staleItems);assert.equal(updated.items[0].unit_price_cents,700);assert.equal(updated.items[0].catalog_unit_price_cents,1100);
+    for(const role of ['anon','authenticated'])assert.equal((await db.query("select has_function_privilege($1,'physical_prices_schema_version()','execute') as yes",[role])).rows[0].yes,false);
     for(const role of ['anon','authenticated'])for(const fn of ['quote_physical_sale(jsonb)','record_physical_sale(uuid,jsonb,jsonb,text,text)','physical_sales_schema_version()'])assert.equal((await db.query('select has_function_privilege($1,$2,\'execute\') as yes',[role,fn])).rows[0].yes,false);
     assert.equal((await db.query("select has_table_privilege('service_role','physical_sale_operations','delete') as yes")).rows[0].yes,false);
   }finally{await db.close();}

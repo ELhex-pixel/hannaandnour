@@ -1239,7 +1239,9 @@
         ? '<button class="btn btn-secondary btn-small return-line" data-item="' + esc(it.id) + '" data-remaining="' + remaining + '" data-name="' + esc(it.product_name) + '">Retour</button>'
         : (canReturn ? '<span style="color:#8a7d66;font-size:12px;">\u2014</span>' : '');
       return '<tr>' +
-        '<td data-label="Article">' + esc(it.product_name) + (it.variant ? '<br><small style="color:#8a7d66;">' + esc(it.variant) + '</small>' : '') + retInfo + '</td>' +
+        '<td data-label="Article">' + esc(it.product_name) + (it.variant ? '<br><small style="color:#8a7d66;">' + esc(it.variant) + '</small>' : '') +
+        (Number.isInteger(it.catalog_unit_price_cents)&&it.catalog_unit_price_cents!==it.unit_price_cents?'<br><small>Prix catalogue : '+money(it.catalog_unit_price_cents,o.currency)+' · prix de vente : '+money(it.unit_price_cents,o.currency)+'</small>':'')+
+        (it.physical_price_note?'<br><small>Note de prix : '+esc(it.physical_price_note)+'</small>':'')+retInfo + '</td>' +
         '<td data-label="Qt\u00e9">' + returned + ' / ' + qty + '</td>' +
         '<td data-label="Total">' + money(it.unit_price_cents * qty, o.currency) + '</td>' +
         (canReturn ? '<td data-label="Retour">' + btn + '</td>' : '') +

@@ -4,6 +4,11 @@
   var KEY = 'hn-stock-pending', mode = 'sale', variant = null, cart = [], quote = null, pending = null;
   var revision = 0, busy = false, page = 1, total = 0, lookupRevision = 0;
   var labelsPage = 1, labelsTotal = 0;
+  var PRICES = window.HN_STOCK_PRICES;
+  var labelsQuery = '', labelOpen = Object.create(null);
+  var COLORS = window.HN_COLORS, SIZES = window.HN_SIZES;
+  function sizeLabel(value) { return SIZES && SIZES.unique(value) ? 'Taille unique' : value || 'Taille non renseignée'; }
+  function colorLabel(value) { return COLORS ? COLORS.label(value,'fr') : value || 'Coloris non renseigné'; }
   var ID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
   function el(id) { return document.getElementById(id); }
   function token() { try { return sessionStorage.getItem('hn-admin-token') || ''; } catch (error) { return ''; } }
@@ -23,7 +28,8 @@
     variant = null; cart = []; quote = null; pending = null;
     el('password').value = ''; el('app').hidden = true; el('logout').hidden = true; el('loginPanel').hidden = false;
     el('variantPanel').hidden = true; el('history').textContent = ''; el('saleItems').textContent = ''; el('saleSummary').textContent = '';
-    ['code','quantity','reason','saleNote'].forEach(function (id) { el(id).value = ''; });
+    ['code','quantity','reason','saleNote','labelsSearch'].forEach(function (id) { el(id).value = ''; });
+    labelsQuery=''; labelOpen=Object.create(null); el('labelsResults').textContent='';
     ['variantName','variantOptions','variantDetails','variantStock','pendingText','variantsList','labelName','labelVariant','labelCode','saleCount'].forEach(function (id) { el(id).textContent = ''; });
     el('saleTotal').textContent = 'À calculer'; el('paymentStep').hidden = true;
     el('labelQr').removeAttribute('src'); el('labelBarcode').textContent = '';
@@ -45,6 +51,8 @@
   function controls() {
     var blocked = busy || !!pending;
     el('app').querySelectorAll('button,input,select').forEach(function (node) { node.disabled = blocked; });
+    el('variantsList').querySelectorAll('[data-missing-barcode]').forEach(function(node){node.disabled=true;});
+    el('saleItems').querySelectorAll('[data-sale-price-note]').forEach(function (node) { var line=cart.find(function (entry) { return entry.variant_id === node.getAttribute('data-sale-price-note'); }); node.disabled=blocked||!line||!line.price_override; });
     el('pendingPanel').hidden = !pending;
     el('retry').disabled = busy;
     el('pendingText').textContent = pending ? pending.summary : '';
@@ -68,13 +76,25 @@
     cart.forEach(function (line) {
       var box = document.createElement('div'); box.className = 'sale-line';
       var title = document.createElement('strong'); title.textContent = line.name;
-      var details = document.createElement('p'); details.textContent = [line.color,line.size].filter(Boolean).join(' · ');
+      var details = document.createElement('p'); details.textContent = [colorLabel(line.color),sizeLabel(line.size)].join(' · ');
+      var priceBox = document.createElement('div'); priceBox.className = 'sale-price-controls';
+      var priceId = 'salePrice-' + line.variant_id, noteId = 'salePriceNote-' + line.variant_id;
+      var priceLabel = document.createElement('label'); priceLabel.htmlFor=priceId; priceLabel.textContent='Prix unitaire pour cette vente (hors TVA)';
+      var price = document.createElement('input'); price.id=priceId; price.type='text'; price.inputMode='decimal'; price.maxLength=12; price.autocomplete='off'; price.setAttribute('data-sale-price',line.variant_id); price.value=line.price_text;
+      var original = document.createElement('small'); original.className='sale-catalog-price'; original.textContent='Prix catalogue : '+(line.price_currency ? money(line.catalog_price_cents,line.price_currency) : (line.catalog_price_cents/100).toFixed(2))+' · '+(line.price_override?'prix personnalisé pour cette vente':'prix de la boutique');
+      var reset = document.createElement('button'); reset.type='button'; reset.textContent='Revenir au prix catalogue'; reset.className='sale-price-reset';
+      var noteLabel = document.createElement('label'); noteLabel.htmlFor=noteId; noteLabel.textContent='Note sur le prix (facultatif)';
+      var note = document.createElement('input'); note.id=noteId; note.type='text'; note.maxLength=300; note.value=line.price_note; note.placeholder='Ex. remise magasin ou tarif personnalisé'; note.setAttribute('data-sale-price-note',line.variant_id);
+      price.addEventListener('input',function () { if(busy||pending)return; line.price_text=price.value; line.price_override=true; price.setAttribute('aria-invalid',String(PRICES.parse(price.value)===null)); original.textContent='Prix catalogue : '+(line.price_currency?money(line.catalog_price_cents,line.price_currency):(line.catalog_price_cents/100).toFixed(2))+' · prix personnalisé pour cette vente'; invalidateQuote(); });
+      note.addEventListener('input',function () { if(busy||pending)return; line.price_note=note.value; invalidateQuote(); });
+      reset.addEventListener('click',function () { if(busy||pending)return; line.price_override=false; line.price_text=(line.catalog_price_cents/100).toFixed(2); line.price_note=''; invalidateQuote(); drawCart(); });
+      priceBox.append(priceLabel,price,original,reset,noteLabel,note);
       var row = document.createElement('div'); row.className = 'input-row';
       var input = document.createElement('input'); input.type = 'number'; input.min = '1'; input.max = '100'; input.step = '1'; input.value = line.quantity; input.setAttribute('aria-label','Quantité de ' + line.name);
       input.addEventListener('change',function () { var quantity = Number(input.value); if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100) { input.value = line.quantity; return; } line.quantity = quantity; invalidateQuote(); });
       var remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Retirer';
       remove.addEventListener('click',function () { cart = cart.filter(function (item) { return item !== line; }); invalidateQuote(); drawCart(); });
-      row.append(input,remove); box.append(title,details,row); el('saleItems').appendChild(box);
+      row.append(input,remove); box.append(title,details,row,priceBox); el('saleItems').appendChild(box);
     });
     if (!cart.length) el('saleItems').textContent = 'Scanne un code-barres, puis ajoute l’article au panier.';
     var count = cart.reduce(function (sum, line) { return sum + line.quantity; }, 0);
@@ -105,7 +125,7 @@
   function showVariant() {
     var p = variant.products || {};
     el('variantPanel').hidden = false; el('variantName').textContent = p.name_fr || p.name_en || 'Variante';
-    el('variantOptions').textContent = [variant.color,variant.size].filter(Boolean).join(' · ');
+    el('variantOptions').textContent = [colorLabel(variant.color),sizeLabel(variant.size)].join(' · ');
     el('variantDetails').textContent = variant.barcode ? 'Code-barres : ' + variant.barcode : 'Aucun code-barres enregistré. Le QR code reste disponible.';
     el('variantStock').textContent = 'Stock disponible : ' + variant.stock + ((!p.active || !variant.active || p.catalog_deleted_at) ? ' · Vente indisponible' : '');
     el('addSale').hidden = mode !== 'sale'; el('adjustForm').hidden = mode !== 'stock';
@@ -122,16 +142,18 @@
     variant = data.variant; if (!variant || !ID.test(variant.id) || !Number.isInteger(variant.stock)) throw new Error('Fiche de variante incomplète.');
     showVariant(); say('Variante identifiée. Aucun stock modifié.');
   }
-  function items() { return cart.map(function (line) { return {variant_id:line.variant_id,quantity:line.quantity}; }); }
+  function items() { return cart.map(function (line) { return PRICES.item(line); }); }
   async function refreshQuote() {
     invalidateQuote(); if (!cart.length) throw new Error('Le panier de vente est vide.');
     var data = await call('quotePhysicalSale',{items:items()});
     var result = data.result;
-    if (!result || !Array.isArray(result.items) || !Number.isInteger(result.total_cents) || !['eur','usd'].includes(result.currency)) throw new Error('Récapitulatif incomplet.');
+    if (!result || !Array.isArray(result.items) || !Number.isInteger(result.total_cents) || !['eur','usd'].includes(result.currency) || result.items.some(function (row) { return !Number.isInteger(row.unit_price_cents)||!Number.isInteger(row.catalog_unit_price_cents); })) throw new Error('Récapitulatif incomplet.');
     quote = result;
+    result.items.forEach(function (row) { var line=cart.find(function (entry) { return entry.variant_id===row.variant_id; }); if(!line)return; line.catalog_price_cents=row.catalog_unit_price_cents; line.price_currency=result.currency; if(!line.price_override)line.price_text=(row.unit_price_cents/100).toFixed(2); });
+    drawCart();
     el('saleTotal').textContent = money(result.total_cents,result.currency);
     el('paymentStep').hidden = false;
-    el('saleSummary').textContent = result.items.map(function (i) { return i.name + ' · ' + i.quantity + ' × ' + money(i.unit_price_cents,result.currency); }).join('\n') + '\nSous-total : ' + money(result.subtotal_cents,result.currency) + '\nTVA : ' + money(result.tax_cents,result.currency) + '\nTotal à encaisser : ' + money(result.total_cents,result.currency);
+    el('saleSummary').textContent = result.items.map(function (i) { return i.name + ' · ' + i.quantity + ' × ' + money(i.unit_price_cents,result.currency)+(i.custom_price?' · catalogue '+money(i.catalog_unit_price_cents,result.currency):'')+(i.price_note?' · '+i.price_note:''); }).join('\n') + '\nSous-total : ' + money(result.subtotal_cents,result.currency) + '\nTVA : ' + money(result.tax_cents,result.currency) + '\nTotal à encaisser : ' + money(result.total_cents,result.currency);
     say('Prix, TVA et stock vérifiés. Encaisse le total affiché avant confirmation.');
   }
   async function executePending() {
@@ -159,7 +181,7 @@
       var title = document.createElement('strong'); title.textContent = order.order_number;
       var date = document.createElement('small'); date.textContent = new Date(order.paid_at).toLocaleString('fr-FR') + ' · ' + ({cash:'Espèces',card:'Terminal bancaire',other:'Autre'}[order.external_payment_method] || '');
       var amount = document.createElement('b'); amount.textContent = money(order.total_cents,order.currency);
-      var text = document.createElement('p'); text.textContent = (order.order_items || []).map(function (i) { return i.quantity + ' × ' + i.product_name + ' · ' + i.variant; }).join('\n');
+      var text = document.createElement('p'); text.textContent = (order.order_items || []).map(function (i) { return i.quantity + ' × ' + i.product_name + ' · ' + i.variant+(Number.isInteger(i.unit_price_cents)?' · vente '+money(i.unit_price_cents,order.currency):'')+(Number.isInteger(i.catalog_unit_price_cents)&&i.catalog_unit_price_cents!==i.unit_price_cents?' · catalogue '+money(i.catalog_unit_price_cents,order.currency):'')+(i.physical_price_note?' · '+i.physical_price_note:''); }).join('\n');
       heading.append(title,date); summary.append(heading,amount); box.append(summary,text); el('history').appendChild(box);
     });
     el('historyPage').textContent = 'Page ' + page + ' / ' + Math.max(1,Math.ceil(total/20));
@@ -198,7 +220,7 @@
     if (busy || pending || el('addSale').disabled || !variant) return;
     var line = cart.find(function (i) { return i.variant_id === variant.id; });
     if ((line ? line.quantity : 0) >= Math.min(100,variant.stock)) { say('La quantité disponible est déjà dans le panier.'); return; }
-    if (line) line.quantity++; else { if (cart.length >= 50) { say('Maximum 50 variantes par vente.'); return; } cart.push({variant_id:variant.id,quantity:1,name:variant.products.name_fr || variant.products.name_en,color:variant.color,size:variant.size}); }
+    if (line) line.quantity++; else { if (cart.length >= 50) { say('Maximum 50 variantes par vente.'); return; } cart.push({variant_id:variant.id,quantity:1,name:variant.products.name_fr || variant.products.name_en,color:variant.color,size:variant.size,catalog_price_cents:variant.products.price_cents,price_text:(variant.products.price_cents/100).toFixed(2),price_override:false,price_note:''}); }
     invalidateQuote(); drawCart(); say('Article ajouté au panier de vente. Aucun stock déduit.');
   });
   el('quoteSale').addEventListener('click',function () { if (!pending) run(refreshQuote); });
@@ -225,10 +247,36 @@
   el('previous').addEventListener('click',function () { if (page>1) { page--; run(history); } });
   el('next').addEventListener('click',function () { if (page*20<total) { page++; run(history); } });
   async function listVariants() {
-    var data = await call('listStockVariants',{page:labelsPage}); labelsTotal = data.total; el('variantsList').textContent = '';
-    (data.variants || []).forEach(function (v) { var box = document.createElement('div'); box.className = 'sale-line stock-label-choice'; var text = document.createElement('p'); text.textContent = (v.products.name_fr || v.products.name_en) + ' · ' + v.color + ' · ' + v.size; var button = document.createElement('button'); button.type = 'button'; button.textContent = 'Choisir'; button.addEventListener('click',function () { if (busy || pending) return; run(function () { return lookup(v.id); }); }); box.append(text,button); el('variantsList').appendChild(box); });
+    var data = await call('listStockVariants',{page:labelsPage,query:labelsQuery});
+    if(!Array.isArray(data.variants)||!Number.isInteger(data.total)||data.total<data.variants.length)throw new Error('Liste des étiquettes non confirmée. Actualise pour réessayer.');
+    labelsTotal = data.total; el('variantsList').textContent = '';
+    var groups=Object.create(null);
+    (data.variants || []).forEach(function(v){var p=v.products||{},key=p.id||p.slug;if(!groups[key])groups[key]={product:p,variants:[]};groups[key].variants.push(v);});
+    Object.keys(groups).sort(function(a,b){return (groups[a].product.name_fr||groups[a].product.name_en||'').localeCompare(groups[b].product.name_fr||groups[b].product.name_en||'','fr');}).forEach(function(key){
+      var group=groups[key],p=group.product,box=document.createElement('details');box.className='stock-label-model';box.open=!!labelOpen[key];
+      box.addEventListener('toggle',function(){labelOpen[key]=box.open;});
+      var summary=document.createElement('summary'),title=document.createElement('div');title.className='stock-label-model-title';
+      var name=document.createElement('strong');name.textContent=p.name_fr||p.name_en||p.slug;
+      var meta=document.createElement('small');meta.textContent=group.variants.length+' variante(s) sur cette page'+(p.active===false?' · produit hors ligne':'');title.append(name,meta);summary.appendChild(title);
+      var arrow=document.createElement('span');arrow.className='stock-label-expand';arrow.setAttribute('aria-hidden','true');arrow.textContent='+';summary.appendChild(arrow);box.appendChild(summary);
+      var body=document.createElement('div');body.className='stock-label-variants';
+      group.variants.slice().sort(function(a,b){return colorLabel(a.color).localeCompare(colorLabel(b.color),'fr')||sizeLabel(a.size).localeCompare(sizeLabel(b.size),'fr');}).forEach(function(v){
+        var row=document.createElement('article');row.className='stock-label-variant';
+        var text=document.createElement('div'),color=document.createElement('strong');color.textContent=colorLabel(v.color);text.appendChild(color);
+        var chips=document.createElement('div');chips.className='stock-label-chips';
+        [sizeLabel(v.size),Number.isInteger(v.stock)?v.stock+' disponible(s)':'Stock à vérifier'].forEach(function(label){var chip=document.createElement('span');chip.textContent=label;chips.appendChild(chip);});text.appendChild(chips);
+        var actions=document.createElement('div');actions.className='stock-label-variant-actions';
+        [['barcode','Code-barres · vente'],['qr','QR code · stock']].forEach(function(entry){var button=document.createElement('button');button.type='button';button.textContent=entry[1];button.setAttribute('data-label-kind',entry[0]);button.disabled=busy||!!pending||(entry[0]==='barcode'&&!v.barcode);if(entry[0]==='barcode'&&!v.barcode)button.setAttribute('data-missing-barcode','');button.addEventListener('click',function(){if(busy||pending||button.disabled)return;run(async function(){await lookup(v.id);await label(entry[0]);});});actions.appendChild(button);});
+        if(!v.barcode){var missing=document.createElement('small');missing.textContent='Code-barres à générer dans l’admin.';text.appendChild(missing);}
+        row.append(text,actions);body.appendChild(row);
+      });box.appendChild(body);el('variantsList').appendChild(box);
+    });
+    el('labelsResults').textContent=labelsTotal?((labelsPage-1)*20+1)+'–'+Math.min(labelsPage*20,labelsTotal)+' variantes sur '+labelsTotal+(labelsQuery?' · recherche « '+labelsQuery+' »':''):'Aucune variante ne correspond à cette recherche.';
     el('labelsPage').textContent = 'Page ' + labelsPage + ' / ' + Math.max(1,Math.ceil(labelsTotal/20));
   }
+  el('labelsSearchForm').addEventListener('submit',function(event){event.preventDefault();if(busy||pending)return;labelsQuery=el('labelsSearch').value.trim();labelsPage=1;run(listVariants);});
+  el('labelsSearchReset').addEventListener('click',function(){if(busy||pending)return;labelsQuery='';el('labelsSearch').value='';labelsPage=1;run(listVariants);});
+  el('labelsRefresh').addEventListener('click',function(){if(!pending)run(listVariants);});
   el('labelsPrevious').addEventListener('click',function () { if (labelsPage>1) { labelsPage--; run(listVariants); } });
   el('labelsNext').addEventListener('click',function () { if (labelsPage*20<labelsTotal) { labelsPage++; run(listVariants); } });
   async function label(kind) {
@@ -237,7 +285,7 @@
     var text = kind === 'barcode' ? current.barcode : location.origin + '/stock.html#variant=' + current.id;
     el('labelTitle').textContent = kind === 'barcode' ? 'Étiquette vente' : 'Étiquette stock';
     el('labelName').textContent = current.products.name_fr || current.products.name_en;
-    el('labelVariant').textContent = [current.color,current.size].filter(Boolean).join(' · ');
+    el('labelVariant').textContent = [colorLabel(current.color),sizeLabel(current.size)].join(' · ');
     el('labelBarcode').hidden = kind !== 'barcode'; el('labelQr').hidden = kind !== 'qr';
     el('labelKind').textContent = kind === 'barcode' ? 'VENTE · CODE-BARRES' : 'STOCK · QR CODE';
     el('labelCode').textContent = kind === 'barcode' ? text : current.id;

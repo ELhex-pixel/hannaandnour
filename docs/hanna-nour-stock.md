@@ -26,6 +26,8 @@ Dans **Étiquettes**, choisir le modèle + coloris + taille, puis imprimer sépa
 
 Le modèle, le coloris et la taille figurent sur les deux étiquettes. Le choix d’une variante dans Étiquettes affiche directement les deux boutons d’impression, sans ouvrir le formulaire d’ajustement du stock. Les étiquettes sont conçues pour une largeur d’environ 70 mm ; choisir le papier, l’imprimante et l’échelle dans la boîte de dialogue d’impression. Une imprimante accessible depuis l’iPhone peut utiliser AirPrint ; l’impression est également possible depuis un ordinateur.
 
+Les variantes sont regroupées par modèle. Ouvrir le modèle, puis utiliser directement **Code-barres · vente** ou **QR code · stock** sur la bonne couleur/taille. La recherche porte sur tout le catalogue éligible, pas uniquement la page affichée ; elle accepte modèle, référence, coloris, taille ou code-barres. Chaque page contient jusqu’à 20 variantes, et un modèle peut donc apparaître sur plusieurs pages. Les libellés One Size/Taille unique sont affichés en français sans modifier les variantes enregistrées.
+
 Un code-barres manquant doit être généré dans l’admin → Bilan des ventes → Générer les codes manquants. Le QR code n’a pas besoin de changer ce code-barres. Scanner un QR avec la caméra native de l’iPhone ouvre la page ; l’authentification admin reste obligatoire. Le QR ne donne aucun droit d’accès et ne contient aucun token ni mot de passe.
 
 ## Vente physique — encaissement externe
@@ -38,7 +40,17 @@ Un code-barres manquant doit être généré dans l’admin → Bilan des ventes
 
 L’application ne débite aucun paiement. Elle enregistre une commande payée/remise (`HN-P-…`), les lignes, les coûts historiques disponibles et le retrait de stock dans **une seule transaction**. Les ventes figurent dans l’historique de l’application, les commandes et les statistiques de l’admin.
 
-Le prix physique correspond au prix catalogue augmenté de la TVA configurée, comme le calcul du site, sans livraison, code promo ni promotion automatique du panier en ligne. Si le catalogue, la TVA, la devise ou la disponibilité changent avant confirmation, le serveur refuse l’ancien récapitulatif ; relire et confirmer les nouvelles valeurs. Le montant encaissé à l’extérieur doit correspondre au montant confirmé.
+Par défaut, le prix physique correspond au prix catalogue augmenté de la TVA configurée, comme le calcul du site, sans livraison, code promo ni promotion automatique du panier en ligne. Si le catalogue, la TVA, la devise ou la disponibilité changent avant confirmation, le serveur refuse l’ancien récapitulatif ; relire et confirmer les nouvelles valeurs. Le montant encaissé à l’extérieur doit correspondre au montant confirmé.
+
+### Baisser ou augmenter le prix d’une vente
+
+Avant activation de cette option, exécuter **`supabase/migration_physical_prices.sql`** dans Supabase et confirmer son exécution avant publication. Cette migration ajoute les snapshots et les fonctions ; elle ne change aucun prix du catalogue, aucune quantité ni aucun montant d’une ancienne commande.
+
+Dans le panier, modifier **Prix unitaire pour cette vente (hors TVA)**. La virgule et le point sont acceptés, avec deux décimales maximum. Le prix peut être inférieur ou supérieur au catalogue, ou égal à zéro pour offrir l’article. Une note de prix est facultative. Le prix choisi s’applique à toutes les unités de cette ligne.
+
+Cliquer ensuite sur **Vérifier les prix et le total** : la TVA et le total sont recalculés par le serveur. Une modification du prix, de la note ou des quantités demande une nouvelle vérification et une nouvelle confirmation d’encaissement. **Revenir au prix catalogue** annule le prix personnalisé de la ligne. Le catalogue et le prix d’achat restent inchangés.
+
+Les nouvelles ventes conservent le prix catalogue d’origine, le prix réellement vendu et la note éventuelle dans l’historique de l’application et les détails de la commande admin. Les anciennes commandes gardent leurs montants ; leur ancien prix catalogue non enregistré n’est pas reconstitué artificiellement.
 
 ## Stock — QR code
 

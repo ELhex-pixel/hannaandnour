@@ -47,6 +47,13 @@ html[data-theme="dark"] .management-stock { color-scheme:dark; }
 .sale-line { border-bottom:1px solid var(--mg-line); padding:16px 0; }
 .sale-line input { max-width:90px; }
 .sale-line .input-row { margin-top:8px; }
+.sale-price-controls { margin-top:16px; padding:14px; border:1px solid var(--mg-line); border-radius:14px; background:var(--mg-bg); }
+.sale-price-controls label:first-child { margin-top:0; }
+.sale-price-controls label { font-size:14px; }
+.sale-price-controls input[data-sale-price] { max-width:200px; font-weight:650; font-variant-numeric:tabular-nums; }
+.sale-price-controls input[aria-invalid=true] { border-color:#bd5044; }
+.sale-catalog-price { display:block; color:var(--mg-muted); margin:8px 0; font-size:13px; }
+.management-stock .sale-price-reset { font-size:13px; min-height:44px; padding:9px 12px; }
 .stock-count { margin-left:auto; color:var(--mg-muted); font-size:14px; }
 #quoteSale { width:100%; margin:16px 0 0; }
 .stock-total { display:flex; justify-content:space-between; gap:12px; align-items:center; background:var(--mg-soft); border-radius:16px; margin:20px 0 12px; padding:18px; }
@@ -70,6 +77,29 @@ html[data-theme="dark"] .management-stock { color-scheme:dark; }
 .stock-label-choice { display:flex; align-items:center; gap:14px; }
 .stock-label-choice p { margin:0; flex:1; }
 .stock-label-choice button { flex-shrink:0; }
+.stock-labels-heading { display:flex; gap:16px; align-items:flex-start; justify-content:space-between; }
+.stock-labels-heading h2 { margin-top:8px; }
+.stock-label-search { margin:16px 0 20px; padding:18px; background:var(--mg-bg); border:1px solid var(--mg-line); border-radius:16px; }
+.stock-label-search label { margin-top:0; }
+.stock-label-search .input-row input { flex:1 1 280px; }
+.stock-label-models { display:grid; gap:14px; }
+.stock-label-model { border:1px solid var(--mg-line); border-radius:18px; overflow:hidden; background:var(--mg-surface); }
+.stock-label-model>summary { display:flex; gap:16px; align-items:center; min-height:76px; padding:18px; list-style:none; cursor:pointer; background:var(--mg-bg); }
+.stock-label-model>summary::-webkit-details-marker { display:none; }
+.stock-label-model-title { flex:1; min-width:0; }
+.stock-label-model-title strong { display:block; font-size:17px; line-height:1.4; }
+.stock-label-model-title small { display:block; font-size:13px; color:var(--mg-muted); margin-top:6px; }
+.stock-label-expand { display:grid; place-items:center; width:30px; height:30px; background:var(--mg-soft); color:var(--mg-accent); border-radius:50%; font-size:20px; }
+.stock-label-model[open] .stock-label-expand { font-size:0; }
+.stock-label-model[open] .stock-label-expand::after { content:'−'; font-size:20px; }
+.stock-label-variants { padding:0 18px; }
+.stock-label-variant { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:18px; align-items:center; padding:18px 0; border-top:1px solid var(--mg-line); }
+.stock-label-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.stock-label-chips span { padding:5px 10px; border-radius:999px; background:var(--mg-soft); color:var(--mg-muted); font-size:12px; }
+.stock-label-variant small { display:block; color:var(--mg-muted); font-size:13px; margin-top:10px; }
+.stock-label-variant-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.stock-label-variant-actions button { font-size:14px; }
+@media(max-width:700px) { .stock-labels-heading { flex-wrap:wrap; } .stock-label-variant { grid-template-columns:1fr; gap:14px; } .stock-label-variant-actions button { flex:1 1 140px; } .stock-label-search .input-row button { flex:1; } }
 .stock-history-order { border-bottom:1px solid var(--mg-line); padding:14px 0; }
 .stock-history-order summary { display:flex; align-items:flex-start; gap:12px; justify-content:space-between; cursor:pointer; min-height:48px; }
 .stock-history-order summary>span { display:flex; flex-direction:column; gap:5px; min-width:0; }
