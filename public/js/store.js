@@ -17,6 +17,12 @@
   }
 
   function request(url, options) {
+    // Consume an initial public head read once; explicit/forced later reads use
+    // fetch normally. This is in-flight handoff, never a price or stock cache.
+    if (!options && window.HN_EARLY_DATA) {
+      var early = window.HN_EARLY_DATA.take(url);
+      if (early) return early;
+    }
     var controller = new AbortController();
     var timer;
     return new Promise(function (resolve, reject) {

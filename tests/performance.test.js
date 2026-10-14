@@ -45,3 +45,17 @@ test('le scanner lourd est chargé uniquement sur demande et une fermeture penda
   window.HN_STOCK_CODES.stop();window.HN_STOCK_ENGINE={stop(){},start(){scans++;},qr:async text=>'QR:'+text};scripts[0].onload();await pending;assert.equal(scans,0);
   assert.equal(await window.HN_STOCK_CODES.qr('local'),'QR:local');assert.equal(scripts.length,1);
 });
+test('les premières lectures publiques démarrent dans le head et sont consommées une seule fois, pas réutilisées comme cache',async()=>{
+  const requests=[],location=new URL('https://example.test/fr/products/cape-courte.html');
+  const window={},document={currentScript:{getAttribute:()=> 'product.html'}};
+  const fetch=async(url,options)=>{requests.push({url,options});return{ok:true,json:async()=>({request:requests.length})};};
+  vm.runInNewContext(fs.readFileSync('public/js/early-data.js','utf8'),{window,document,location,URL,URLSearchParams,AbortController,Promise,setTimeout,clearTimeout,fetch});
+  assert.equal(requests.length,2);assert(requests.every(r=>r.options.cache==='no-store'&&!r.options.method));
+  assert.equal(requests[1].url,'https://example.test/.netlify/functions/products?slug=cape-courte');
+  const first=window.HN_EARLY_DATA.take('/.netlify/functions/config');assert(first);assert.equal(window.HN_EARLY_DATA.take('/.netlify/functions/config'),null);await first;
+  const product=window.HN_EARLY_DATA.take('/.netlify/functions/products?slug=cape-courte');assert(product);await product;
+  assert.equal(window.HN_EARLY_DATA.take('/.netlify/functions/products?slug=cape-courte'),null);
+  const context={window,fetch,AbortController,Promise,setTimeout,clearTimeout,tr:key=>key};vm.createContext(context);
+  const store=fs.readFileSync('public/js/store.js','utf8');vm.runInContext(store.slice(store.indexOf('  function request('),store.indexOf('  function loadingMarkup(')),context);
+  const before=requests.length;await context.request('/.netlify/functions/config');assert.equal(requests.length,before+1);assert.equal(requests.at(-1).options.cache,'no-store');
+});

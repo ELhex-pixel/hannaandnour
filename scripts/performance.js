@@ -7,7 +7,7 @@ async function compactAsset(content, extension) {
 
 function optimizePage($,file,language,images={}) {
   const storefront=$('script[src]').toArray().some(node=>/\/(?:store)(?:\.[a-f0-9]+)?\.js$/.test($(node).attr('src')||''));
-  if(storefront)$('script[src]').each((_,node)=>{const script=$(node);if(!/\/theme(?:\.[a-f0-9]+)?\.js$/.test(script.attr('src')))script.attr('defer','');});
+  if(storefront)$('script[src]').each((_,node)=>{const script=$(node);if(!/\/(?:theme|early-data)(?:\.[a-f0-9]+)?\.js$/.test(script.attr('src')))script.attr('defer','');});
   if($('link[href*="fonts/fonts"]').length){
     if(language==='ar'){if(!$('#arabicFont').length)$('head').append('<link id="arabicFont" rel="stylesheet" href="/fonts/cairo.css">');}
     else $('head').append('<link rel="preload" href="/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2" as="font" type="font/woff2" crossorigin>');

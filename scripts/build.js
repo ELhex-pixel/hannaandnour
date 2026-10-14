@@ -160,6 +160,7 @@ async function build() {
       if ($('script[src="js/main.js"]').length && !['admin.html','print.html','404.html'].includes(file) && !$('link[href="css/mobile.css"]').length) $('head').append('<link rel="stylesheet" href="css/mobile.css">');
       $('base').remove();
       $('head').prepend('<base href="/">');
+      if($('script[src="js/store.js"]').length)$('base').after('<script src="'+assets['/js/early-data.js']+'" data-page="'+file+'"></script>');
       $('html').attr('lang', language).attr('dir', language === 'ar' ? 'rtl' : 'ltr');
       if (language === 'ar') $('.logo, .footer-logo').text(translations.ar.brandName);
       $('.lang-switcher').val(language).attr('aria-label', translations[language].languageLabel);
