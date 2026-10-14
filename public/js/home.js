@@ -91,14 +91,21 @@
     var collections = document.querySelector('[data-feed="collections"]');
     HN.loading(grid, 'card', 4);
     HN.loading(collections, 'card', 3);
-    Promise.all([HN.requireConfig(force), HN.fetchProducts({ limit: 48 })])
+    var configuration=HN.requireConfig(force);
+    configuration.then(function(cfg){
+      renderCollections(cfg.home||null);
+      if(cfg.reviews&&cfg.reviews.show_demo)return fetch(HN.api('reviews')+'?demo=true').then(function(r){return r.json();}).then(function(data){renderTestimonials(data.reviews||[]);}).catch(function(){});
+    }).catch(function(){HN.loadError(collections,function(){init(true);});});
+    Promise.all([configuration, HN.fetchProducts({ limit: 48 })])
       .then(function (results) {
         var cfg = results[0] || {}, items = results[1];
         var slugs = cfg.home && cfg.home.bestsellers;
         var products;
         if (Array.isArray(slugs) && slugs.length) {
           var missing = slugs.filter(function (slug) { return !items.some(function (item) { return item.slug === slug; }); });
-          products = missing.length ? HN.loadProductSlugs(missing).then(function (extra) { return items.concat(extra); }) : Promise.resolve(items);
+          // A short unfiltered page already contains the entire active catalogue.
+          // Missing saved slugs are then absent/offline, not a second request.
+          products = missing.length && items.length >= 48 ? HN.loadProductSlugs(missing).then(function (extra) { return items.concat(extra); }) : Promise.resolve(items);
         } else {
           products = items.length >= 48 ? HN.fetchProducts({ bestseller: true, limit: 48 }) : Promise.resolve(items);
         }
@@ -108,18 +115,10 @@
         var cfg = res.cfg;
         var home = cfg.home || null;
         renderFeed(res.products, home);
-        renderCollections(home);
-        if (cfg.reviews && cfg.reviews.show_demo) {
-          return fetch(HN.api('reviews') + '?demo=true')
-            .then(function (r) { return r.json(); })
-            .then(function (d) { renderTestimonials(d.reviews || []); })
-            .catch(function () { /* offline: keep static testimonials */ });
-        }
         return null;
       })
       .catch(function () {
         HN.loadError(grid, function () { init(true); });
-        HN.loadError(collections, function () { init(true); });
       });
   }
 

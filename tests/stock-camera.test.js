@@ -10,8 +10,8 @@ function camera(){
     decodeFromConstraints(constraints,video,callback){assert.equal(constraints.audio,false);assert.equal(constraints.video.facingMode.ideal,'environment');state.callbacks.push(callback);return new Promise(resolve=>{state.resolve=()=>{const control={stops:0,stop(){this.stops++;}};state.controls.push(control);resolve(control);};});}
   }
   const window={};
-  vm.runInNewContext(fs.readFileSync('public/js/stock-codes.js','utf8'),{window,Map,require:name=>name==='@zxing/browser'?{BrowserMultiFormatReader:Reader}:name==='@zxing/library'?{BarcodeFormat:{QR_CODE:'qr',CODE_128:'code128',EAN_13:'ean13',EAN_8:'ean8',UPC_A:'upca',UPC_E:'upce'},DecodeHintType:{POSSIBLE_FORMATS:'formats'}}:{toDataURL:async()=>''}});
-  return {codes:window.HN_STOCK_CODES,state};
+  vm.runInNewContext(fs.readFileSync('public/js/stock-codes-engine.js','utf8'),{window,Map,require:name=>name==='@zxing/browser'?{BrowserMultiFormatReader:Reader}:name==='@zxing/library'?{BarcodeFormat:{QR_CODE:'qr',CODE_128:'code128',EAN_13:'ean13',EAN_8:'ean8',UPC_A:'upca',UPC_E:'upce'},DecodeHintType:{POSSIBLE_FORMATS:'formats'}}:{toDataURL:async()=>''}});
+  return {codes:window.HN_STOCK_ENGINE,state};
 }
 test('la caméra filtre QR stock vs code-barres vente et arrête le scan après une lecture',async()=>{
   const mock=camera(),found=[];

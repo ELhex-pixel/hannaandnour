@@ -90,13 +90,12 @@
   function focusable(root) { return Array.from(root.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')).filter(function (node) { return node.getClientRects().length && !node.closest('[inert]'); }); }
 
   if (header) {
+    var previousScrollState=header.classList.contains('scrolled');
     window.addEventListener('scroll', function() {
-      if (window.scrollY > 50) {
-        header.classList.add('scrolled');
-      } else {
-        header.classList.remove('scrolled');
-      }
-    });
+      var scrolled=window.scrollY>50;
+      if(scrolled===previousScrollState)return;
+      previousScrollState=scrolled;header.classList.toggle('scrolled',scrolled);
+    }, {passive:true});
   }
 
   document.body.setAttribute('data-menu-open', 'false');

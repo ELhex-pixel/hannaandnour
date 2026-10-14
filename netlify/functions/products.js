@@ -35,8 +35,8 @@ exports.handler = async function (event) {
     if (sErr) throw sErr;
     const out = products.map(p => {
       const review = (stats || []).find(r => r.product_id === p.id);
-      const { search_vector, ...fields } = p;
-      return { ...fields, variants: p.product_variants || [], approved_count: review ? Number(review.approved_count) : 0, approved_rating: review ? Number(review.approved_rating) : 0 };
+      const { search_vector, product_variants, ...fields } = p;
+      return { ...fields, variants: product_variants || [], approved_count: review ? Number(review.approved_count) : 0, approved_rating: review ? Number(review.approved_rating) : 0 };
     });
     return json(200, { products: out, total: count, page, limit, has_more: page * limit < count });
   } catch (error) { return json(500, { error: 'Catalog temporarily unavailable' }); }

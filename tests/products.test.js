@@ -31,3 +31,9 @@ test('total et pagination suivent les mêmes filtres, y compris sur une page vid
 test('une absence de compteur est une erreur de service, jamais un faux catalogue vide',async()=>{
   const mock=catalogue(null);assert.equal((await mock.handler({httpMethod:'GET'})).statusCode,500);
 });
+test('le catalogue transporte les variantes une seule fois tout en conservant leur stock et état réels',async()=>{
+  const variants=[{id:'v',stock:3,active:true},{id:'old',stock:10,active:false}];
+  const mock=catalogue(1,[{id:'p',slug:'veste',price_cents:1000,product_variants:variants}]);
+  const product=JSON.parse((await mock.handler({httpMethod:'GET'})).body).products[0];
+  assert.equal(Object.hasOwn(product,'product_variants'),false);assert.deepEqual(product.variants,variants);assert.equal(product.price_cents,1000);
+});

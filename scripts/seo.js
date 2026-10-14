@@ -2,6 +2,7 @@ const content = require('../public/js/content');
 const translations = require('../public/js/i18n');
 const { publicRead, queryResult } = require('../netlify/functions/lib/public-read');
 const { generalPost } = require('../netlify/functions/lib/brand-copy');
+const media = require('../public/js/product-media');
 
 // Explicit public fields only: no prices, stock, customer data or private costs.
 const fields = {
@@ -102,7 +103,7 @@ function renderContent($, origin, kind, row, lang) {
       if (value) { $('<h2>').text(translations[lang][field === 'fit' ? 'productFit' : 'productMeasurements']).appendTo(box); $('<p>').text(value).appendTo(box); }
     }
     const photo = content.image(row.image);
-    if (photo) $('<img decoding="async">').attr({ src: photo.startsWith('images/') ? '/' + photo : photo, alt: content.localized(row, 'name', lang) }).appendTo(box);
+    if (photo) $('<img decoding="async" loading="lazy">').attr({ src: photo.startsWith('images/') ? '/' + photo : media.delivery(photo,480,true), alt: content.localized(row, 'name', lang),width:480,height:640 }).appendTo(box);
     $('main').prepend(summary);
   }
   metadata($, meta, kind);

@@ -690,7 +690,7 @@
     // Re-announce the promo after a language switch (i18n resets [data-i18n]).
     document.addEventListener('langchange', function () { refreshPromoAnnounce(promosList); refreshFooterTrust(); });
     // Load the catalog in the background (rendering scripts call it too).
-    if (!window.HN_CONFIG_SUPPRESS_AUTOLOAD && !document.body.hasAttribute('data-live-page')) {
+    if (!window.HN_CONFIG_SUPPRESS_AUTOLOAD && !document.body.hasAttribute('data-live-page') && !document.body.hasAttribute('data-catalog-on-demand')) {
       loadProducts().catch(function () { /* offline preview: static content remains */ });
     }
   }

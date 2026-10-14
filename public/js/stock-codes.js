@@ -1,18 +1,19 @@
-// Bundled locally by scripts/build.js; works on iPhone without BarcodeDetector.
-const { BrowserMultiFormatReader } = require('@zxing/browser');
-const { BarcodeFormat, DecodeHintType } = require('@zxing/library');
-const QRCode = require('qrcode');
-let generation = 0, controls = null, reader = null;
-function stop() { generation++; if (controls) controls.stop(); controls = null; if (reader) BrowserMultiFormatReader.releaseAllStreams(); reader = null; }
-async function start(mode, video, found) {
-  stop();
-  const current = generation;
-  const hints = new Map([[DecodeHintType.POSSIBLE_FORMATS, mode === 'stock' ? [BarcodeFormat.QR_CODE] : [BarcodeFormat.CODE_128,BarcodeFormat.EAN_13,BarcodeFormat.EAN_8,BarcodeFormat.UPC_A,BarcodeFormat.UPC_E]]]);
-  reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts:250 });
-  const result = await reader.decodeFromConstraints({ audio:false,video:{ facingMode:{ideal:'environment'} } },video,(value,error,control) => {
-    if (!value || current !== generation) return;
-    control.stop(); stop(); found(value.getText());
-  });
-  if (current !== generation) result.stop(); else controls = result;
-}
-window.HN_STOCK_CODES = { start,stop,qr: text => QRCode.toDataURL(text,{errorCorrectionLevel:'M',width:400,margin:4}) };
+(function(){
+  'use strict';
+  var script=document.currentScript,src=script&&script.getAttribute('data-engine-src')||'/js/stock-codes-engine.js';
+  var promise=null,revision=0;
+  function load(){
+    if(window.HN_STOCK_ENGINE)return Promise.resolve(window.HN_STOCK_ENGINE);
+    if(promise)return promise;
+    promise=new Promise(function(resolve,reject){
+      var engine=document.createElement('script');engine.src=src;engine.async=true;
+      var timer=setTimeout(function(){fail();},20000);
+      function fail(){clearTimeout(timer);engine.onload=null;engine.onerror=null;engine.remove();promise=null;reject(new Error('Le scanner ne peut pas être chargé. Réessaie avec une connexion active.'));}
+      engine.onload=function(){clearTimeout(timer);if(!window.HN_STOCK_ENGINE){fail();return;}resolve(window.HN_STOCK_ENGINE);};
+      engine.onerror=fail;document.head.appendChild(engine);
+    });return promise;
+  }
+  function stop(){revision++;if(window.HN_STOCK_ENGINE)window.HN_STOCK_ENGINE.stop();}
+  function start(mode,video,found){stop();var current=revision;return load().then(function(engine){if(current!==revision)return;return engine.start(mode,video,function(value){if(current===revision)found(value);});});}
+  window.HN_STOCK_CODES={start:start,stop:stop,qr:function(value){return load().then(function(engine){return engine.qr(value);});}};
+})();

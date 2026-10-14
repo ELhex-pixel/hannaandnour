@@ -79,7 +79,12 @@
     if (main) {
       main.style.filter = '';
       main.hidden = !images.length;
-      if (images.length) main.src = HN.image(images[0], 960); else main.removeAttribute('src');
+      if (images.length) {
+        var small=HN.image(images[0],480), large=HN.image(images[0],960);
+        if(small!==large){main.setAttribute('sizes','(max-width: 992px) calc(100vw - 32px), 560px');main.setAttribute('srcset',small+' 480w, '+large+' 960w');}
+        else {main.removeAttribute('srcset');main.removeAttribute('sizes');}
+        main.src=large;
+      } else {main.removeAttribute('srcset');main.removeAttribute('src');}
       main.setAttribute('fetchpriority', 'high'); main.decoding = 'async';
       main.alt = HN.productName(p) + (selection.matched && color ? ' — ' + COLORS.label(color, HN.lang()) : '');
     }
@@ -483,11 +488,9 @@
 
     var demoPromise = DEMO_ON ? fetchDemo() : Promise.resolve([]);
 
-    demoPromise
-      .then(function (demo) {
-        return fetch(HN.api('reviews') + '?product=' + encodeURIComponent(p.slug))
-          .then(function (res) { return res.json(); })
-          .then(function (data) {
+    Promise.all([demoPromise,fetch(HN.api('reviews') + '?product=' + encodeURIComponent(p.slug)).then(function(res){return res.json();})])
+      .then(function (results) {
+            var demo=results[0],data=results[1];
             var reviews = data.reviews || [];
             var html = '';
             reviews.forEach(function (r) { html += reviewCardHtml(r); });
@@ -537,7 +540,6 @@
               setSummary((sum / total).toFixed(1), total, counts);
               setCount(total);
             }
-          });
       })
       .catch(function () {
         if (DEMO_ON) {

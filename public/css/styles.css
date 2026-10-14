@@ -162,7 +162,13 @@ body {
   padding-bottom: var(--spacing-xl);
 }
 
-@media (max-width: 768px) {
+/* The no-JS summary stays readable without scripts, without flashing a second
+   product page or downloading the original full-size photo during hydration. */
+html[data-js] [data-seo-summary] { display:none; }
+.product-loading { position:relative; gap:var(--spacing-3xl); padding:var(--spacing-3xl) 0; }
+.product-loading > .live-status { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); }
+
+@media (max-width: 992px) {
   .product-loading {
     grid-template-columns: minmax(0, 1fr);
   }

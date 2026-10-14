@@ -7,6 +7,7 @@ const translations = require('../public/js/i18n');
 const { preflight } = require('./preflight');
 const { loadPublicContent, cleanPublicLinks, renderContent, staticMetadata } = require('./seo');
 const content = require('../public/js/content');
+const { compactAsset, optimizePage } = require('./performance');
 
 function prepareNetlifyImages(source) {
   const section = source.match(/^\[images\]\s*\n([\s\S]*?)(?=^\[|$(?![\s\S]))/m);
@@ -101,10 +102,10 @@ async function build() {
     const files = await fs.readdir(path.join('public', dir));
     for (const file of files.filter(file => /\.(js|css)$/.test(file))) {
       let content = await fs.readFile(path.join('public', dir, file));
-      if (dir === 'js' && file === 'stock-codes.js') {
+      if (dir === 'js' && file === 'stock-codes-engine.js') {
         const bundle = await require('esbuild').build({entryPoints:[path.join('public',dir,file)],bundle:true,write:false,platform:'browser',target:'safari15',minify:true});
         content = Buffer.from(bundle.outputFiles[0].contents);
-      }
+      } else content = await compactAsset(content,dir==='css'?'css':'js');
       const hash = crypto.createHash('sha256').update(content).digest('hex').slice(0, 12);
       const name = file.replace(/\.(js|css)$/, '.' + hash + '.$1');
       assets['/' + dir + '/' + file] = '/assets/' + name;
@@ -113,11 +114,28 @@ async function build() {
   }
   const images = await fs.readdir('public/images');
   const optimized = {};
+  const responsiveImages = {};
+  const fontCSS=await fs.readFile('public/fonts/fonts.css','utf8');
+  const fontAsset=await compactAsset(fontCSS.replace(/^@import\s+url\(['"]?cairo\.css['"]?\);\s*/,'') ,'css');
+  const fontName='fonts.'+crypto.createHash('sha256').update(fontAsset).digest('hex').slice(0,12)+'.css';
+  assets['/fonts/fonts.css']='/fonts/'+fontName;
+  await fs.writeFile('dist/fonts/fonts.css',fontAsset);
+  await fs.writeFile(path.join('dist/fonts',fontName),fontAsset);
   for (const file of images.filter(file => /\.jpe?g$/i.test(file))) {
     const name = file.replace(/\.jpe?g$/i, '.webp');
     await sharp(path.join('public/images', file)).resize({ width: 1400, withoutEnlargement: true }).webp({ quality: 80 }).toFile(path.join('dist/images', name));
     await sharp(path.join('public/images', file)).resize({ width: 1400, withoutEnlargement: true }).jpeg({ quality: 80, mozjpeg: true }).toFile(path.join('dist/images', file));
     optimized['/images/' + file] = '/images/' + name;
+    const metadata=await sharp(path.join('dist/images',name)).metadata();
+    const sources=[];
+    for(const width of [480,960]){
+      if(width>=metadata.width)continue;
+      const resized=name.replace(/\.webp$/,'.'+width+'.webp');
+      await sharp(path.join('public/images',file)).resize({width,withoutEnlargement:true}).webp({quality:80}).toFile(path.join('dist/images',resized));
+      sources.push({src:'/images/'+resized,width});
+    }
+    sources.push({src:'/images/'+name,width:metadata.width});
+    responsiveImages['/images/'+name]={width:metadata.width,height:metadata.height,sources};
   }
   const files = (await fs.readdir('public')).filter(file => file.endsWith('.html'));
   for (const size of [192,512]) await sharp('public/images/stock-icon.svg').resize(size,size).png().toFile('dist/images/stock-icon-' + size + '.png');
@@ -128,7 +146,9 @@ async function build() {
     for (const lang of (file === 'stock.html' ? [null] : [null, 'fr', 'en', 'ar'])) {
       const language = ['admin.html','stock.html'].includes(file) ? 'fr' : lang || 'fr';
       const $ = cheerio.load(source);
+      $('script[src="js/stock-codes.js"]').attr('data-engine-src',assets['/js/stock-codes-engine.js']);
       prepareLivePage($, file);
+      if(['about.html','blog.html','blog-post.html','contact.html','privacy.html','terms.html','size-guide.html','reset.html','success.html','404.html','account.html'].includes(file))$('body').attr('data-catalog-on-demand','');
       cleanPublicLinks($);
       $('body').attr('data-site-origin', new URL(origin).origin);
       if (preview || process.env.STAGING_MODE === 'true') $('body').attr('data-preview', '');
@@ -161,6 +181,7 @@ async function build() {
         }
       });
       $('img').attr('decoding', 'async');
+      optimizePage($,file,language,responsiveImages);
       $('head link[rel="canonical"], head link[rel="alternate"][hreflang]').remove();
       $('head').append('<link rel="canonical" href="' + origin + '/' + language + '/' + file + '">');
       if (preview || process.env.STAGING_MODE === 'true' || privatePages.has(file) || file === 'stock.html') $('meta[name="robots"]').remove(), $('head').append('<meta name="robots" content="noindex, nofollow">');
