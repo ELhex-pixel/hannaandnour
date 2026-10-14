@@ -7,7 +7,7 @@
   var PRICES = window.HN_STOCK_PRICES;
   var labelsQuery = '', labelOpen = Object.create(null);
   var COLORS = window.HN_COLORS, SIZES = window.HN_SIZES;
-  function sizeLabel(value) { return SIZES && SIZES.unique(value) ? 'Taille unique' : value || 'Taille non renseignée'; }
+  function sizeLabel(value) { return SIZES ? SIZES.canonical(value) || 'Taille non renseignée' : value || 'Taille non renseignée'; }
   function colorLabel(value) { return COLORS ? COLORS.label(value,'fr') : value || 'Coloris non renseigné'; }
   var ID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
   function el(id) { return document.getElementById(id); }

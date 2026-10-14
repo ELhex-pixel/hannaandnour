@@ -25,7 +25,7 @@ async function stockApp(sb, action, body) {
         const filters=['color.ilike.'+value,'size.ilike.'+value,'barcode.ilike.'+value];
         if(found.data&&found.data.length)filters.push('product_id.in.('+found.data.map(p=>p.id).join(',')+')');
         for(const color of colors.list)if([color.fr,color.en,color.ar,...(color.aliases||[])].some(name=>colors.norm(name)===colors.norm(query)))for(const name of [color.fr,color.en,color.ar])filters.push('color.eq.'+JSON.stringify(name));
-        if(sizes.unique(query))filters.push('size.in.("One Size","Taille unique","Unique")');
+        if(sizes.key(query)==='taille unique')for(const value of ['One Size','One-size','OneSize','Taille unique','Taille-unique','TailleUnique'])filters.push('size.ilike.'+JSON.stringify(value));
         listing=listing.or(filters.join(','));
       }
       const {data,error,count} = await listing.order('product_id').order('id').range((page-1)*20,page*20-1);

@@ -25,5 +25,7 @@ test('la recherche des étiquettes reste paginée et recherche les modèles et v
   const sb={from:table=>({select(fields){calls.push([table,'select',fields]);return this;},eq(){return this;},is(){return this;},or(value){calls.push([table,'or',value]);return this;},order(){return this;},limit:async()=>({data:[{id}]}),range:async(a,b)=>{calls.push(['range',a,b]);return{data:[],count:21};}})};
   const result=await stockApp(sb,'listStockVariants',{query:'Noir,(*)',page:2});assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).total,21);assert.deepEqual(calls.at(-1),['range',20,39]);
   assert(calls.some(c=>c[0]==='products'&&c[1]==='or'));assert(calls.some(c=>c[0]==='product_variants'&&c[1]==='or'&&c[2].includes(id)));
+  assert(!calls.find(c=>c[0]==='product_variants'&&c[1]==='or')[2].includes('One Size'));
+  calls.length=0;await stockApp(sb,'listStockVariants',{query:'Taille unique'});assert(calls.find(c=>c[0]==='product_variants'&&c[1]==='or')[2].includes('One Size'));
   assert.equal((await stockApp(sb,'listStockVariants',{query:'a'.repeat(81)})).statusCode,400);
 });

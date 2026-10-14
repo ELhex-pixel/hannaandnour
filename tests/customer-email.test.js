@@ -43,3 +43,11 @@ test('la marque arabe exacte est cohérente dans tous les textes de l’interfac
   for (const text of Object.values(translations.ar)) assert.doesNotMatch(text, /حنا ونور|هناء ونور|Hanna.*Nour/);
   assert.match(message('claim', '<script>', { code:'123456' }).subject, /Hanna & Nour/);
 });
+test('les emails conservent les coloris et tailles réelles et traduisent seulement les tailles uniques reconnues',()=>{
+  for(const lang of ['fr','en','ar']){
+    const ordinary=cheerio.load(message('paid',lang,{order,items:[{product_name:'Veste',variant:'Noir / M',quantity:1,unit_price_cents:1200}]}).html);
+    assert.match(ordinary('table').text(),/M/);assert.match(ordinary('table').text(),lang==='fr'?/Noir/:lang==='en'?/Black/:/أسود/);
+    const one=cheerio.load(message('paid',lang,{order,items:[{product_name:'Veste',variant:'Noir / One Size',quantity:1,unit_price_cents:1200}]}).html);
+    assert.match(one('table').text(),lang==='fr'?/Taille unique/:lang==='en'?/One Size/:/مقاس واحد/);
+  }
+});

@@ -75,7 +75,7 @@ function message(type, lang, data = {}) {
   if (type === 'paid') {
     body += p(esc(c.paidText));
     const rows = (data.items || []).map(it => {
-      const variant = String(it.variant || '').split(' / ').map(value => sizes.unique(value) ? { fr:'Taille unique', en:'One Size', ar:'مقاس واحد' }[lang] : colors.label(value, lang)).join(' / ');
+      const variant = String(it.variant || '').split(' / ').map(value => sizes.key(value) === 'taille unique' ? { fr:'Taille unique', en:'One Size', ar:'مقاس واحد' }[lang] : colors.label(value, lang)).join(' / ');
       let image = '';
       try { const url = new URL(it.image, origin + '/'); if (it.image && url.protocol === 'https:') image = '<img src="' + esc(url.href) + '" alt="" width="52" height="70" style="border-radius:8px;object-fit:cover;vertical-align:middle;"> '; } catch (error) {}
       return '<tr><td style="padding:10px 0;border-bottom:1px solid #efe7d8;">' + image + '<bdi>' + esc(it.product_name) + '</bdi>' + (variant ? '<br><bdi>' + esc(variant) + '</bdi>' : '') + ' × ' + esc(it.quantity) + '</td><td style="padding:10px;white-space:nowrap;">' + money(it.unit_price_cents * it.quantity, order.currency) + '</td></tr>';
