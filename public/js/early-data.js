@@ -11,7 +11,7 @@
   }
   window.HN_EARLY_DATA={take:function(raw){var url=new URL(raw,location.href).href,promise=requests[url];if(promise)delete requests[url];return promise||null;}};
   start('config');
-  if(page==='index.html')start('products?limit=48');
+  if(page==='index.html'||page==='collections.html')start('products?limit=48');
   if(page==='shop.html'&&!location.search){start('products?facets=true');start('products?category=&sizes=&occasions=&sort=featured&limit=8&page=1');}
   if(page==='product.html'){
     var match=location.pathname.match(/\/products\/([a-z0-9_-]+)(?:\.html)?\/?$/),slug=match?match[1]:new URLSearchParams(location.search).get('slug');

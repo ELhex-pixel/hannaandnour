@@ -33,7 +33,7 @@ function prepareNetlifyRoutes(source) {
 }
 
 function prepareLivePage($, file) {
-  if (!['index.html', 'shop.html', 'product.html', 'cart.html', 'checkout.html'].includes(file)) return;
+  if (!['index.html', 'collections.html', 'shop.html', 'product.html', 'cart.html', 'checkout.html'].includes(file)) return;
   $('body').attr('data-live-page', file);
   $('body').attr('data-image-cdn', '');
   $('script[src="js/product-media.js"]').remove();
@@ -41,7 +41,7 @@ function prepareLivePage($, file) {
   const skeleton = (layout, count) => '<span class="live-status" role="status" data-i18n="liveLoading">Chargement…</span>' + Array.from({ length: count }, () => '<div class="live-skeleton-' + layout + '" aria-hidden="true"><div class="live-skeleton-image"></div><div class="live-skeleton-copy"><div class="live-skeleton-line"></div><div class="live-skeleton-line live-skeleton-short"></div></div></div>').join('');
   const placeholder = (selector, layout, count) => $(selector).attr('aria-busy', 'true').html(skeleton(layout, count));
   const amounts = selector => $(selector).removeAttr('data-i18n').html('<span class="live-amount" aria-hidden="true"></span>');
-  if (file === 'index.html') {
+  if (file === 'index.html' || file === 'collections.html') {
     placeholder('[data-feed="bestsellers"]', 'card', 4);
     placeholder('[data-feed="collections"]', 'card', 3);
     $('#testimonialsSection').css('display', 'none');

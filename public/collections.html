@@ -79,28 +79,8 @@
 
     <section class="section" style="background-color: var(--color-cream-dark);">
       <div class="container">
-        <div class="collections-grid">
-          <a href="shop.html" class="collection-card">
-            <img src="images/collection-prayer.jpg" alt="Tenues de prière">
-            <div class="collection-card-overlay">
-              <h3 class="collection-card-title" data-i18n="collectionPrayer">Tenues de prière</h3>
-              <p class="collection-card-count">Voir plus</p>
-            </div>
-          </a>
-          <a href="shop.html" class="collection-card">
-            <img src="images/collection-abayas.jpg" alt="Abayas élégantes">
-            <div class="collection-card-overlay">
-              <h3 class="collection-card-title" data-i18n="collectionAbayas">Abayas élégantes</h3>
-              <p class="collection-card-count">Voir plus</p>
-            </div>
-          </a>
-          <a href="shop.html" class="collection-card">
-            <img src="images/collection-hijabs.jpg" alt="Hijabs du quotidien">
-            <div class="collection-card-overlay">
-              <h3 class="collection-card-title" data-i18n="collectionEveryday">Hijabs du quotidien</h3>
-              <p class="collection-card-count">Voir plus</p>
-            </div>
-          </a>
+        <div class="collections-grid" data-feed="collections" aria-busy="true">
+          <p class="live-status" role="status" data-i18n="liveLoading">Chargement…</p>
         </div>
       </div>
     </section>
@@ -113,76 +93,8 @@
           <h2 class="heading-section" data-i18n="mostLoved">Meilleures ventes</h2>
         </div>
 
-        <div class="products-grid" data-feed="bestsellers">
-          <div class="product-card" data-slug="silk-hijab" data-price-cents="3490" data-name="Hijab en soie" data-image="images/silk-hijab.jpg">
-            <div class="product-card-image">
-              <img src="images/silk-hijab.jpg" alt="Hijab en soie">
-              <span class="product-badge" data-i18n="badgeBestseller">Best-seller</span>
-              <button class="product-wishlist" aria-label="Add to wishlist">
-                <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-              </button>
-              <div class="product-card-quick-add">
-                <button class="btn btn-primary btn-sm" data-i18n="quickAdd">Ajout rapide</button>
-              </div>
-            </div>
-            <div class="product-card-info">
-              <span class="product-card-category" data-i18n="catHijabs">Hijabs</span>
-              <h3 class="product-card-title"><a href="product.html?slug=silk-hijab"><span data-i18n="silkHijab">Hijab en soie</span></a></h3>
-              <div class="product-card-price"><span class="product-price-current">34,90 €</span></div>
-            </div>
-          </div>
-
-          <div class="product-card" data-slug="flowing-abaya" data-price-cents="8900" data-name="Abaya fluide émeraude" data-image="images/eid-abaya.jpg">
-            <div class="product-card-image">
-              <img src="images/eid-abaya.jpg" alt="Abaya fluide émeraude">
-              <button class="product-wishlist" aria-label="Add to wishlist">
-                <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-              </button>
-              <div class="product-card-quick-add">
-                <button class="btn btn-primary btn-sm" data-i18n="quickAdd">Ajout rapide</button>
-              </div>
-            </div>
-            <div class="product-card-info">
-              <span class="product-card-category" data-i18n="catAbayas">Abayas</span>
-              <h3 class="product-card-title"><a href="product.html?slug=flowing-abaya"><span data-i18n="flowingAbaya">Abaya fluide émeraude</span></a></h3>
-              <div class="product-card-price"><span class="product-price-current">89,00 €</span></div>
-            </div>
-          </div>
-
-          <div class="product-card" data-slug="prayer-set" data-price-cents="5990" data-name="Ensemble prière lavande" data-image="images/prayer-wear.jpg">
-            <div class="product-card-image">
-              <img src="images/prayer-wear.jpg" alt="Ensemble prière lavande">
-              <span class="product-badge" style="background-color: var(--color-gold);">Nouveau</span>
-              <button class="product-wishlist" aria-label="Add to wishlist">
-                <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-              </button>
-              <div class="product-card-quick-add">
-                <button class="btn btn-primary btn-sm" data-i18n="quickAdd">Ajout rapide</button>
-              </div>
-            </div>
-            <div class="product-card-info">
-              <span class="product-card-category" data-i18n="catPrayerWear">Tenues de prière</span>
-              <h3 class="product-card-title"><a href="product.html?slug=prayer-set"><span data-i18n="prayerSet">Ensemble prière lavande</span></a></h3>
-              <div class="product-card-price"><span class="product-price-current">59,90 €</span></div>
-            </div>
-          </div>
-
-          <div class="product-card" data-slug="modest-dress" data-price-cents="7450" data-name="Robe modeste rosée" data-image="images/modest-dress.jpg">
-            <div class="product-card-image">
-              <img src="images/modest-dress.jpg" alt="Robe modeste rosée">
-              <button class="product-wishlist" aria-label="Add to wishlist">
-                <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-              </button>
-              <div class="product-card-quick-add">
-                <button class="btn btn-primary btn-sm" data-i18n="quickAdd">Ajout rapide</button>
-              </div>
-            </div>
-            <div class="product-card-info">
-              <span class="product-card-category" data-i18n="catDresses">Robes</span>
-              <h3 class="product-card-title"><a href="product.html?slug=modest-dress"><span data-i18n="modestDress">Robe modeste rosée</span></a></h3>
-              <div class="product-card-price"><span class="product-price-current">74,50 €</span></div>
-            </div>
-          </div>
+        <div class="products-grid" data-feed="bestsellers" aria-busy="true">
+          <p class="live-status" role="status" data-i18n="liveLoading">Chargement…</p>
         </div>
 
         <div class="text-center" style="margin-top: var(--spacing-2xl);">
@@ -349,6 +261,7 @@
   <script src="js/quick-add.js"></script>
   <script src="js/main.js"></script>
   <script src="js/theme-toggle.js"></script>
+  <script src="js/home.js"></script>
   <script src="js/chatbot.js"></script>
 </body>
 </html>

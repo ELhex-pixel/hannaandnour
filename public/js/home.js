@@ -94,7 +94,7 @@
     var configuration=HN.requireConfig(force);
     configuration.then(function(cfg){
       renderCollections(cfg.home||null);
-      if(cfg.reviews&&cfg.reviews.show_demo)return fetch(HN.api('reviews')+'?demo=true').then(function(r){return r.json();}).then(function(data){renderTestimonials(data.reviews||[]);}).catch(function(){});
+      if(document.querySelector('[data-feed="testimonials"]')&&cfg.reviews&&cfg.reviews.show_demo)return fetch(HN.api('reviews')+'?demo=true').then(function(r){return r.json();}).then(function(data){renderTestimonials(data.reviews||[]);}).catch(function(){});
     }).catch(function(){HN.loadError(collections,function(){init(true);});});
     Promise.all([configuration, HN.fetchProducts({ limit: 48 })])
       .then(function (results) {
