@@ -8,6 +8,7 @@ const { preflight } = require('./preflight');
 const { loadPublicContent, cleanPublicLinks, renderContent, staticMetadata } = require('./seo');
 const content = require('../public/js/content');
 const { compactAsset, optimizePage } = require('./performance');
+const { buildBrandAssets, brandIcons } = require('./brand-assets');
 
 function prepareNetlifyImages(source) {
   const section = source.match(/^\[images\]\s*\n([\s\S]*?)(?=^\[|$(?![\s\S]))/m);
@@ -139,6 +140,7 @@ async function build() {
   }
   const files = (await fs.readdir('public')).filter(file => file.endsWith('.html'));
   for (const size of [192,512]) await sharp('public/images/stock-icon.svg').resize(size,size).png().toFile('dist/images/stock-icon-' + size + '.png');
+  await buildBrandAssets('dist');
   const privatePages = new Set(['admin.html', 'print.html', 'account.html', 'cart.html', 'checkout.html', 'reset.html', 'review.html', 'success.html', '404.html', 'product.html', 'blog-post.html']);
   const urls = [];
   for (const file of files) {
@@ -150,6 +152,7 @@ async function build() {
       prepareLivePage($, file);
       if(['about.html','blog.html','blog-post.html','contact.html','privacy.html','terms.html','size-guide.html','reset.html','success.html','404.html','account.html'].includes(file))$('body').attr('data-catalog-on-demand','');
       cleanPublicLinks($);
+      brandIcons($);
       $('body').attr('data-site-origin', new URL(origin).origin);
       if (preview || process.env.STAGING_MODE === 'true') $('body').attr('data-preview', '');
       if ($('script[src="js/store.js"]').length && !$('script[src="js/content.js"]').length) $('script[src="js/store.js"]').before('<script src="js/content.js"></script>');

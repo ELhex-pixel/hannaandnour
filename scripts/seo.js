@@ -3,6 +3,7 @@ const translations = require('../public/js/i18n');
 const { publicRead, queryResult } = require('../netlify/functions/lib/public-read');
 const { generalPost } = require('../netlify/functions/lib/brand-copy');
 const media = require('../public/js/product-media');
+const { LOGO } = require('./brand-assets');
 
 // Explicit public fields only: no prices, stock, customer data or private costs.
 const fields = {
@@ -71,6 +72,7 @@ function staticMetadata($, origin, file, lang) {
       const graph = JSON.parse($(node).text());
       for (const entry of graph['@graph'] || []) {
         if (['WebSite', 'Organization'].includes(entry['@type'])) entry.name = translations[lang].brandName;
+        if (entry['@type'] === 'Organization') entry.logo = new URL(LOGO, origin).href;
         if (entry['@type'] === 'WebSite') { entry.description = values.description; entry.inLanguage = lang; }
       }
       $(node).text(JSON.stringify(graph).replace(/</g, '\\u003c'));
