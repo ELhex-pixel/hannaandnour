@@ -1,4 +1,5 @@
 const { json } = require('../shared');
+const activity = require('./activity-periods');
 const DAY = 86400000;
 function canonicalPath(raw) {
   if (typeof raw !== 'string' || !raw.startsWith('/') || raw.startsWith('//') || raw.length > 2000) return '(page non renseignée)';
@@ -14,13 +15,14 @@ function canonicalPath(raw) {
     return '/' + lang + route;
   } catch (error) { return '(page non renseignée)'; }
 }
-function summarize(events, now = Date.now()) {
+function summarize(events, now = Date.now(), reporting) {
   const summary = {};
   for (const [period,days] of [['all',0],['d7',7],['d30',30]]) {
     const counts = {pageview:0,product_view:0,add_to_cart:0,checkout_attempt:0,purchase:0};
     const products = new Map(), paths = new Map();
     for (const event of events) {
       const date = Date.parse(event.created_at);
+      if (!activity.includes(event.created_at,reporting)) continue;
       if (!Number.isFinite(date) || date > now || (days && date < now-days*DAY)) continue;
       if (Object.hasOwn(counts,event.event_type)) counts[event.event_type]++;
       if (event.event_type === 'product_view' && event.product_slug) products.set(event.product_slug,(products.get(event.product_slug)||0)+1);
@@ -31,17 +33,19 @@ function summarize(events, now = Date.now()) {
   }
   return summary;
 }
-async function adminAnalytics(sb) {
+async function adminAnalytics(sb,body={}) {
   try {
+    const reporting=await activity.reportingWindow(sb,body);
     const events = []; let limited = false;
-    for (let offset=0;offset<20000;offset+=1000) {
-      const {data,error}=await sb.from('analytics_events').select('id,event_type,product_slug,path,created_at').order('created_at',{ascending:false}).order('id').range(offset,offset+999);
+    for (let offset=0;!reporting.empty&&offset<20000;offset+=1000) {
+      const query=sb.from('analytics_events').select('id,event_type,product_slug,path,created_at');
+      const {data,error}=await activity.constrain(query,'created_at',reporting).order('created_at',{ascending:false}).order('id').range(offset,offset+999);
       if (error) throw error;
       events.push(...(data||[]));
       if ((data||[]).length<1000) break;
       if (offset===19000) limited=true;
     }
-    return json(200,{summary:summarize(events),limited});
-  } catch (error) { return json(503,{error:'Statistiques des visites indisponibles. Réessayez.'}); }
+    return json(200,{summary:summarize(events,Date.now(),reporting),limited,reporting});
+  } catch (error) { return activity.failure(error)||json(503,{error:'Statistiques des visites indisponibles. Réessayez.'}); }
 }
 module.exports={canonicalPath,summarize,adminAnalytics};

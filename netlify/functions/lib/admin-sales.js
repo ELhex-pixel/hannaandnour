@@ -1,6 +1,7 @@
 const { json, getSetting } = require('../shared');
+const activity = require('./activity-periods');
 
-function salesReport(orders, products, period, threshold, currency, now = new Date()) {
+function salesReport(orders, products, period, threshold, currency, now = new Date(), reporting) {
   const days = { d7:7,d30:30,d90:90,y1:365,all:0 };
   const since = days[period] ? now.getTime()-days[period]*86400000 : 0;
   const monthly = Array.from({ length:12 },(_,index) => {
@@ -36,6 +37,7 @@ function salesReport(orders, products, period, threshold, currency, now = new Da
   for (const order of orders) {
     const date = Date.parse(order.paid_at);
     if (!Number.isFinite(date)) continue;
+    if (!activity.includes(order.paid_at,reporting)) continue;
     if (order.currency !== currency.code) { if (date >= since) excludedCurrencies.add(order.currency); continue; }
     const b = monthly.find(m => m.key === order.paid_at.slice(0,7));
     const returns = order.order_returns || [];
@@ -88,6 +90,7 @@ function salesReport(orders, products, period, threshold, currency, now = new Da
 }
 
 async function readSales(sb,body) {
+  const reporting=await activity.reportingWindow(sb,body);
   const period = ['d7','d30','d90','y1','all'].includes(body.period) ? body.period : 'd30';
   const threshold = Number.isInteger(body.threshold) && body.threshold >= 0 ? Math.min(body.threshold,1000000) : 5;
   const stored = await getSetting(sb,'currency',null) || { code:'usd' };
@@ -95,8 +98,9 @@ async function readSales(sb,body) {
   const currency = { code,symbol:code === 'eur' ? '€' : '$' };
   const orders = [], products = [];
   let limited = false;
-  for (let offset=0; offset<20000; offset+=500) {
-    const { data,error } = await sb.from('orders').select('id,status,sale_channel,total_cents,subtotal_cents,discount_cents,refunded_cents,paid_at,currency,order_items(id,product_slug,product_name,unit_price_cents,net_total_cents,quantity,order_item_costs(unit_cost_cents,currency)),order_returns(order_item_id,quantity,total_refund_cents,sellable_quantity)').not('paid_at','is',null).in('status',['paid','refunded','cancelled']).order('paid_at',{ ascending:false }).order('id').range(offset,offset+499);
+  for (let offset=0; !reporting.empty&&offset<20000; offset+=500) {
+    const query=sb.from('orders').select('id,status,sale_channel,total_cents,subtotal_cents,discount_cents,refunded_cents,paid_at,currency,order_items(id,product_slug,product_name,unit_price_cents,net_total_cents,quantity,order_item_costs(unit_cost_cents,currency)),order_returns(order_item_id,quantity,total_refund_cents,sellable_quantity)').not('paid_at','is',null).in('status',['paid','refunded','cancelled']);
+    const {data,error}=await activity.constrain(query,'paid_at',reporting).order('paid_at',{ascending:false}).order('id').range(offset,offset+499);
     if (error) throw error;
     orders.push(...(data || []));
     if ((data || []).length < 500) break;
@@ -109,10 +113,10 @@ async function readSales(sb,body) {
     if ((data || []).length < 500) break;
     if (offset === 9500) limited = true;
   }
-  return json(200,{ ...salesReport(orders,products,period,threshold,currency),limited });
+  return json(200,{ ...salesReport(orders,products,period,threshold,currency,new Date(),reporting),limited,reporting });
 }
 async function adminSales(sb,body) {
   try { return await readSales(sb,body); }
-  catch (error) { return json(503,{error:'Bilan des ventes indisponible. Actualisez pour réessayer.'}); }
+  catch (error) { return activity.failure(error)||json(503,{error:'Bilan des ventes indisponible. Actualisez pour réessayer.'}); }
 }
 module.exports = { salesReport,adminSales };

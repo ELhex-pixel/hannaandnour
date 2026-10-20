@@ -1591,8 +1591,13 @@
     var th = parseInt(document.getElementById('salesThreshold').value, 10);
     salesThreshold = isNaN(th) ? 5 : th;
     var request = ++salesRevision, owner = token();
-    return call('saleStats', { period: period, threshold: salesThreshold, currency: document.getElementById('salesCurrency').value }).then(function (res) {
+    var args={period:period,threshold:salesThreshold,currency:document.getElementById('salesCurrency').value};
+    document.getElementById('salesList').textContent='Chargement du bilan de la période…';
+    var reporting=null;
+    var read=window.HN_ACTIVITY_PERIOD?window.HN_ACTIVITY_PERIOD.context().then(function(context){reporting=context;return call('saleStats',Object.assign(args,context));}):call('saleStats',args);
+    return read.then(function (res) {
       if (request !== salesRevision || owner !== token()) return;
+      if(reporting&&(!res.reporting||res.reporting.id!==reporting.expected_reporting_period||res.reporting.scope!==reporting.reporting_scope))throw new Error('Période non confirmée. Actualisez pour réessayer.');
       salesAll = res || null;
       renderSales();
     }).catch(function (e) {
@@ -1676,6 +1681,7 @@
   }
 
   function wireSales() {
+    document.addEventListener('hn:activity-period',function(){salesRevision++;salesAll=null;document.getElementById('salesList').textContent='';if(document.getElementById('panel-sales').classList.contains('active'))loadSales();});
     document.getElementById('salesCurrency').addEventListener('change',loadSales);
     var btn = document.getElementById('refreshSalesBtn');
     if (btn) btn.addEventListener('click', loadSales);

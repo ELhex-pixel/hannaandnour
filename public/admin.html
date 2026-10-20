@@ -109,6 +109,11 @@
   #adminPhotoStage img { display: block; width: 100%; height: 100%; object-fit: contain; }
   #adminPhotoStage.is-zoomed img { width: auto; height: auto; max-width: none; max-height: none; min-width: 100%; }
   #adminPhotoCaption, #adminPhotoStatus { overflow-wrap: anywhere; margin: 10px 0; }
+  #activityPeriodDialog { width: min(560px, calc(100% - 24px)); max-height: 90dvh; border: 1px solid var(--mg-line, #ddd2bf); border-radius: 16px; padding: 24px; background: var(--mg-surface, white); color: var(--mg-ink, #282520); }
+  #activityPeriodDialog::backdrop { background: #0009; }
+  #activityPeriodDialog input { width: 100%; min-height: 44px; font-size: 16px; }
+  #activityPeriodDialog button { min-height: 44px; }
+  [data-activity-caption] { overflow-wrap: anywhere; }
   .gallery-item img.err { opacity: 0.35; }
   .gallery-item label { width: 200px; max-width: 100%; }
   .gallery-item .g-color { width: 100%; }
@@ -644,10 +649,13 @@
         </select>
         <input type="number" id="salesThreshold" value="5" min="0" style="width:70px; padding:8px; border:1px solid #ddd5c4; border-radius:8px;" title="Seuil stock faible">
         <button class="btn btn-secondary" id="refreshSalesBtn">Actualiser</button>
+        <select data-activity-scope aria-label="Période d’activité du bilan"><option value="current">Période actuelle</option><option value="history">Historique antérieur</option><option value="all">Toutes les périodes</option></select>
+        <button type="button" class="btn btn-secondary" data-start-activity-period>Remettre chiffres et visites à zéro</button>
         <button class="btn btn-secondary btn-small" id="genBarcodesBtn" title="Attribue un code-barres &agrave; toute variante qui n&rsquo;en a pas encore">G&eacute;n&eacute;rer les codes manquants</button>
         <button class="btn btn-secondary btn-small" id="printLabelsBtn" title="Codes-barres internes, pas des étiquettes de transport">Imprimer les codes-barres internes</button>
       </div>
       <details class="admin-danger-zone"><summary>Anciennes opérations sensibles — suspendues</summary><p>La remise à zéro et l’effacement global sont bloqués pour préserver l’historique. Utilisez les comptages justifiés dans Stock et l’archivage des commandes.</p><div class="toolbar"><button class="btn btn-danger btn-small" id="resetStockBtn" disabled>Remettre le stock à 0 — suspendu</button><button class="btn btn-danger btn-small" id="resetAllBtn" disabled>Tout effacer — suspendu</button></div></details>
+      <p data-activity-caption class="admin-muted"></p>
       <div class="card" id="scanArea">
         <p class="admin-notice">Scanner : recherche de variantes et consultation. Pour les ventes encaissées à l’extérieur et le stock par QR code, ouvrez <a href="/stock.html">Hanna &amp; Nour Stock</a>. L’ancienne caisse reste suspendue.</p>
         <div class="toolbar scan-bar">
@@ -802,7 +810,10 @@
         <div class="field"><label for="statsPeriod">Période</label><select id="statsPeriod"><option value="d7">7 derniers jours</option><option value="d30" selected>30 derniers jours</option><option value="all">Depuis le début</option></select></div>
         <div class="field"><label for="statsCurrency">Devise des montants</label><select id="statsCurrency"><option value="">Devise de la boutique</option><option value="eur">EUR · euro</option><option value="usd">USD · dollar</option></select></div>
         <button class="btn btn-secondary" id="refreshStatsBtn" type="button">Actualiser les chiffres</button>
+        <div class="field"><label>Périmètre commun<select data-activity-scope><option value="current">Période actuelle</option><option value="history">Historique antérieur</option><option value="all">Toutes les périodes</option></select></label></div>
+        <button type="button" class="btn btn-secondary" data-start-activity-period>Remettre chiffres et visites à zéro</button>
       </div>
+      <p data-activity-caption class="dashboard-caption"></p>
       <p id="dashboardStatus" role="status" aria-live="polite" class="dashboard-caption"></p>
       <div id="statsList"><section class="card dashboard-section" id="dashboardFinance" aria-label="Chiffre d’affaires et coûts d’achat"><p class="empty">Ouvrez la rubrique pour charger les montants.</p></section><section class="card dashboard-section" id="dashboardTraffic" aria-label="Visites du site"><p class="empty">Ouvrez la rubrique pour charger les visites.</p></section></div>
       <details class="management-details dashboard-reset"><summary>Gestion de l’historique des visites</summary><p>La remise à zéro efface uniquement les événements de visite. Les commandes, ventes, coûts d’achat et stocks sont conservés.</p><button class="btn btn-danger" id="resetStatsBtn" type="button">Effacer l’historique des visites</button></details>
@@ -1140,6 +1151,14 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <dialog id="activityPeriodDialog" aria-labelledby="activityPeriodTitle">
+    <h2 id="activityPeriodTitle">Démarrer une nouvelle période</h2>
+    <p>Le chiffre d’affaires, les commandes, les articles vendus, les retours et remboursements, les coûts des ventes et les visites repartiront ensemble sur une nouvelle date.</p>
+    <p>Les commandes, ventes et visites précédentes restent consultables dans « Historique antérieur ». Les stocks disponibles et les prix d’achat enregistrés restent des données actuelles.</p>
+    <div class="field"><label for="activityPeriodReason">Motif</label><input id="activityPeriodReason" maxlength="300" minlength="3" placeholder="Ex. fin des essais, nouvelle période d’activité"></div>
+    <p id="activityPeriodStatus" role="status" aria-live="polite"></p>
+    <div class="editor-stock-actions"><button type="button" class="btn btn-primary" id="activityPeriodConfirm">Confirmer la nouvelle période</button><button type="button" class="btn btn-secondary" id="activityPeriodClose">Fermer</button></div>
+  </dialog>
   <dialog id="adminPhotoDialog" aria-labelledby="adminPhotoTitle">
     <div class="admin-photo-heading"><h2 id="adminPhotoTitle">Vérifier la photo</h2><button type="button" class="btn btn-secondary" id="adminPhotoClose" autofocus>Fermer</button></div>
     <p id="adminPhotoCaption" aria-live="polite"></p>
@@ -1156,6 +1175,7 @@
   <script src="js/admin-catalog.js"></script>
   <script src="js/admin-inline-stock.js"></script>
   <script src="js/admin-photo-viewer.js"></script>
+  <script src="js/admin-activity-periods.js"></script>
   <script src="vendor/jsbarcode.min.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/admin-product-deletion.js"></script>

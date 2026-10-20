@@ -55,7 +55,7 @@ test('les classements lisibles échappent les noms, annoncent les lectures parti
 });
 test('la lecture analytique pagine sans écrire et filtre les erreurs fournisseur',async()=>{
   const calls=[];const row={event_type:'pageview',path:'/shop',created_at:new Date().toISOString()};
-  const sb={from:name=>({select(fields){assert.equal(name,'analytics_events');assert(!fields.includes('referrer'));return this;},order(){return this;},range:async(a,b)=>{calls.push([a,b]);return{data:a===0?Array.from({length:1000},()=>row):[row]};}})};
+  const sb={from:name=>({select(fields){if(name==='analytics_events')assert(!fields.includes('referrer'));return this;},order(){return this;},limit:async()=>({data:[]}),range:async(a,b)=>{calls.push([a,b]);return{data:a===0?Array.from({length:1000},()=>row):[row]};}})};
   const response=await adminAnalytics(sb);assert.equal(response.statusCode,200);assert.equal(JSON.parse(response.body).summary.d7.counts.pageview,1001);assert.deepEqual(calls,[[0,999],[1000,1999]]);
   sb.from=()=>({select(){return this;},order(){return this;},range:async()=>({error:{message:'private SQL token'}})});
   const failure=await adminAnalytics(sb);assert.equal(failure.statusCode,503);assert.doesNotMatch(failure.body,/SQL|token|private/);
@@ -79,7 +79,7 @@ function dashboard(){
   const window={HN_ADMIN:api,HN_DASHBOARD_VIEW:{finance:data=>'finance:'+data.totals.revenueCents,analytics:(data,period)=>'visits:'+period+':'+data.summary[period].counts.pageview}};
   const document={getElementById:el,createElement:()=>({}),addEventListener(name,handler){events[name]=handler;}};
   vm.runInNewContext(fs.readFileSync('public/js/admin-dashboard.js','utf8'),{window,document,Promise,Date});
-  return{nodes,requests,events,listeners,load:window.HN_DASHBOARD.load,logout(){owner='';events['hn:admin-logout']();}};
+  return{nodes,requests,events,listeners,window,load:window.HN_DASHBOARD.load,logout(){owner='';events['hn:admin-logout']();}};
 }
 const financial=revenue=>({totals:{revenueCents:revenue},currency:{code:'eur'},products:[]});
 const traffic=pages=>({summary:{d30:{counts:{pageview:pages}}}});
@@ -95,4 +95,12 @@ test('une panne financière n’invente aucun montant et les données sont effac
   assert.equal(d.nodes.dashboardFinance.innerHTML,'');assert.match(d.nodes.dashboardFinance.children.at(-1).textContent,/montants ne sont pas disponibles/);assert.equal(d.nodes.dashboardTraffic.innerHTML,'visits:d30:42');
   const late=d.load();d.logout();d.requests[2].resolve(financial(999));d.requests[3].resolve(traffic(99));await late;
   assert.equal(d.nodes.dashboardFinance.textContent,'');assert.equal(d.nodes.dashboardTraffic.textContent,'');assert.equal(d.nodes.refreshStatsBtn.disabled,false);
+});
+test('le tableau de bord épingle une même période aux deux lectures et refuse des réponses de périmètres différents',async()=>{
+  const d=dashboard(),reporting={id:'fixture-period',scope:'history'};
+  d.window.HN_ACTIVITY_PERIOD={context:async()=>({reporting_scope:'history',expected_reporting_period:reporting.id})};
+  const request=d.load();await new Promise(resolve=>setImmediate(resolve));assert.equal(d.requests.length,2);
+  for(const item of d.requests){assert.equal(item.body.reporting_scope,'history');assert.equal(item.body.expected_reporting_period,reporting.id);}
+  d.requests[0].resolve({...financial(100),reporting});d.requests[1].resolve({...traffic(10),reporting:{...reporting,scope:'current'}});await request;
+  assert.equal(d.nodes.dashboardFinance.innerHTML,'');assert.equal(d.nodes.dashboardTraffic.innerHTML,'');assert.match(d.nodes.dashboardFinance.children.at(-1).textContent,/Période non confirmée/);
 });

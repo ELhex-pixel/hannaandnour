@@ -223,7 +223,7 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     if (action === 'analyticsSummary') {
       const limited = await rateLimit(sb,event,'admin-analytics',60,600,'admin');
       if (limited) return limited;
-      return await require('./lib/admin-analytics').adminAnalytics(sb);
+      return await require('./lib/admin-analytics').adminAnalytics(sb, body);
     }
     if (['stockLookup','quotePhysicalSale','recordPhysicalSale','listPhysicalSales','listStockVariants'].includes(action)) {
       const limited = await rateLimit(sb,event,'admin-stock-app',120,600,'admin');
@@ -275,6 +275,11 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
       const limited = await rateLimit(sb, event, 'admin-sales', 60, 600, 'admin');
       if (limited) return limited;
       return await require('./lib/admin-sales').adminSales(sb, body);
+    }
+    if (['getActivityPeriod','startActivityPeriod'].includes(action)) {
+      const limited=await rateLimit(sb,event,'admin-activity-periods',60,600,'admin');
+      if(limited)return limited;
+      return await require('./lib/activity-periods').adminActivityPeriods(sb,action,body);
     }
     if (['getOrderRefunds','quoteOrderRefund','refundOrderPartial','resumeOrderRefund','refundOrder'].includes(action)) {
       const limited = await rateLimit(sb,event,'admin-refunds',30,600,'admin');
