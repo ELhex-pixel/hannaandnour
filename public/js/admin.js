@@ -905,6 +905,12 @@
         '</div></div>';
     }
     box.innerHTML = html;
+    var unassigned = lines.filter(function (src) { return !galleryColors[src]; }).length;
+    if (colors.length > 1 && unassigned) {
+      var warning = document.createElement('p'); warning.className = 'admin-notice'; warning.setAttribute('role', 'status');
+      warning.textContent = unassigned + ' photo(s) sans coloris associé. Pour changer la photo quand le client choisit une couleur, sélectionnez son vrai coloris dans « Coloris de cette photo », puis enregistrez le produit. Une photo générale n’est pas attribuée automatiquement.';
+      box.prepend(warning);
+    }
     renderColorPreview();
   }
 
@@ -1341,9 +1347,11 @@
         '<button class="btn btn-danger btn-small" data-act="cancelOrder">Annuler la commande</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printInvoice">Facture</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printPacking">Bon de livraison</button>' +
-        '<button class="btn btn-secondary btn-small" data-act="printLabel">&Eacute;tiquette</button>' +
+        '<button class="btn btn-secondary btn-small" data-act="printLabel">Fiche interne / code commande</button>' +
         '</div>' : '') +
-      (o.pickup_point_data && o.sale_channel !== 'physical' ? '<p><button type="button" class="btn btn-secondary" data-order-shipping="' + esc(o.id) + '">Étiquette Mondial Relay — préparer / télécharger</button></p>' : '') +
+      '<div class="admin-notice"><strong>Expédition Mondial Relay</strong><p>' + (o.sale_channel === 'physical' ? 'Vente comptoir : remise en main propre, aucun envoi Mondial Relay associé.' : o.pickup_point_data ? 'Le client a choisi son relais au paiement. Préparez le colis, puis ouvrez le bouton ci-dessous pour choisir le service Mondial Relay et créer l’étiquette de transport.' : 'Cette commande ne contient pas de relais Mondial Relay vérifié. Pour les nouvelles commandes, le client choisit « Mondial Relay — point relais / locker » au paiement, puis son pays, son code postal et son relais.') + '</p>' +
+      (o.pickup_point_data && o.sale_channel !== 'physical' ? '<button type="button" class="btn btn-primary" data-order-shipping="' + esc(o.id) + '">Mondial Relay : créer / télécharger l’étiquette de transport</button>' : '') +
+      '<p>La fiche interne avec le code de commande sert au classement. Elle ne remplace pas l’étiquette officielle du transporteur.</p></div>' +
       '<div id="trackingRow" style="display:none; margin-top:12px;">' +
       '<label style="font-size:12px; color:#5c5548;">Num&eacute;ro de suivi (facultatif)</label>' +
       '<input type="text" id="trackingInput" style="width:100%; padding:8px; border:1px solid #ddd5c4; border-radius:8px;">' +

@@ -158,6 +158,12 @@ test('zéro affiche Épuisé ; une variante active conserve son stock et borne l
   assert.equal(mock.nodes.quantity.max, 3);
   assert.equal(mock.nodes.quantity.value, 3);
 });
+test('la quantité tient compte du panier de la même variante et reste zéro quand tout le disponible est déjà ajouté',()=>{
+  const p={slug:'veste',variants:[stockVariant('S',3)]},mock=productStockUI(p);
+  mock.context.HN.cart.list=()=>[{slug:'veste',color:'Noir',size:'S',variantId:p.variants[0].id,qty:2},{slug:'autre',color:'Noir',size:'S',qty:9}];
+  mock.nodes.quantity.value='10';mock.update();assert.equal(mock.nodes.quantity.max,1);assert.equal(mock.nodes.quantity.value,1);
+  mock.context.HN.cart.list=()=>[{slug:'veste',color:'Noir',size:'S',variantId:p.variants[0].id,qty:3}];mock.update();assert.equal(mock.nodes.quantity.max,0);assert.equal(mock.nodes.quantity.value,0);assert.equal(mock.nodes.quantity.disabled,true);assert.equal(mock.nodes.addToCartBtn.disabled,true);
+});
 test('changer de coloris ne rend pas vendable une variante désactivée ou absente', () => {
   const mock = productStockUI({ variants: [stockVariant('S', 8), stockVariant('S', 8, false, 'Beige')] });
   mock.update();

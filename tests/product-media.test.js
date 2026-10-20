@@ -105,8 +105,8 @@ test('la galerie JSON transmise au serveur ne contient ni objets arbitraires ni 
 
 function galleryEditor() {
   const values={'f-image':beige,'f-gallery':beige+'\n'+vin,'f-colors':'Beige, Vin'},nodes={};
-  const node=id=>nodes[id]||(nodes[id]={value:'',innerHTML:'',textContent:''});
-  const context={window:{HN_MEDIA:media},document:{getElementById:node},galleryColors:Object.create(null),getVal:id=>values[id]||'',setVal:(id,value)=>{values[id]=value;},pickerColors:()=>values['f-colors'].split(',').map(s=>s.trim()),esc:s=>String(s).replace(/"/g,'&quot;')};
+  const node=id=>nodes[id]||(nodes[id]={value:'',innerHTML:'',textContent:'',prepend(value){this.warning=value;}});
+  const context={window:{HN_MEDIA:media},document:{getElementById:node,createElement:()=>({setAttribute(){},textContent:''})},galleryColors:Object.create(null),getVal:id=>values[id]||'',setVal:(id,value)=>{values[id]=value;},pickerColors:()=>values['f-colors'].split(',').map(s=>s.trim()),esc:s=>String(s).replace(/"/g,'&quot;')};
   const source=fs.readFileSync('public/js/admin.js','utf8');
   vm.createContext(context);vm.runInContext(source.slice(source.indexOf('  function galleryLines()'),source.indexOf('  function openVariantInventory(')),context);
   return {context,values,nodes,node};
@@ -114,6 +114,7 @@ function galleryEditor() {
 test('l’admin conserve l’association par URL lors du déplacement, retrait et sauvegarde de galerie', () => {
   const mock=galleryEditor();mock.context.galleryColors[vin]='Vin';mock.node('galleryPreviewColor').value='Vin';
   mock.context.renderGalleryGrid();
+  assert.match(mock.nodes.galleryGrid.warning.textContent,/1 photo\(s\) sans coloris associé/);
   assert.match(mock.nodes.galleryGrid.innerHTML,/class="g-color"/);
   assert.match(mock.nodes.galleryColorPreview.innerHTML,/vin.jpg/);
   mock.context.moveGallery(1,-1);

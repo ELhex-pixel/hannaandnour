@@ -1,5 +1,5 @@
 /**
- * Print page: Invoice / packing slip / courier label for a paid order.
+ * Print page: Invoice / packing slip / internal order reference card.
  * Requires the admin token (sessionStorage['hn-admin-token']) to fetch the order.
  */
 (function () {
@@ -40,7 +40,9 @@
   function customerAddress(o) {
     var parts = [];
     parts.push(o.customer_name);
-    if (o.delivery_type === 'pickup') {
+    if (o.sale_channel === 'physical') {
+      parts.push('Vente comptoir — remise en main propre');
+    } else if (o.delivery_type === 'pickup') {
       parts.push('Retrait : ' + (o.pickup_point || 'point relais'));
     } else {
       parts.push(o.address1);
@@ -110,14 +112,15 @@
   }
 
   function renderLabel(o) {
-    var tracking = o.tracking_number || o.order_number;
+    var tracking = o.order_number;
     return '<div class="sheet label">' +
-      '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+      '<div class="internal-label-heading">' +
       '<span class="label-logo">Hanna &amp; Nour</span>' +
       '<span style="font-size:9px; color:var(--muted);">Commande ' + esc(o.order_number) + '</span>' +
       '</div>' +
       '<div class="label-addr">' +
-      '<p class="label" style="margin-bottom:2px;">' + (o.delivery_type === 'pickup' ? 'Retrait / point relais' : 'Livraison') + '</p>' +
+      '<p class="label" style="margin-bottom:2px;">Fiche interne — code de commande</p>' +
+      '<p class="internal-label-notice">Document interne, sans affranchissement. Pour un envoi Mondial Relay, utilisez le PDF officiel créé depuis la commande.</p>' +
       '<p style="margin:0; line-height:1.5;">' + customerAddress(o) + '</p>' +
       '</div>' +
       '<div class="label-barcode"><svg id="barcode"></svg></div>' +
@@ -130,8 +133,10 @@
     try {
       if (window.JsBarcode) {
         JsBarcode('#barcode', String(text).replace(/[^\x20-\x7E]/g, ''), {
-          format: 'CODE128', width: 2.2, height: 70, displayValue: true, fontSize: 14, margin: 0
+          format: 'CODE128', width: 1.5, height: 65, displayValue: false, margin: 10
         });
+        var svg = document.getElementById('barcode');
+        if (svg) { svg.setAttribute('viewBox', '0 0 ' + svg.getAttribute('width') + ' ' + svg.getAttribute('height')); svg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); }
       }
     } catch (e) { /* no barcode library */ }
   }
@@ -140,7 +145,8 @@
     var params = new URLSearchParams(window.location.search);
     var doc = params.get('doc') || 'invoice';
     var orderId = params.get('order') || '';
-    document.getElementById('toolbarInfo').textContent = 'Impression : ' + (doc === 'invoice' ? 'Facture' : doc === 'packing' ? 'Bon de livraison' : 'Étiquette');
+    document.getElementById('toolbarInfo').textContent = 'Impression : ' + (doc === 'invoice' ? 'Facture' : doc === 'packing' ? 'Bon de livraison' : 'Fiche interne — pas une étiquette de transport');
+    var pageStyle = document.createElement('style'); pageStyle.textContent = '@page { size: ' + (doc === 'label' ? '148mm 105mm' : 'A4') + '; margin: 0; }'; document.head.appendChild(pageStyle);
 
     if (!orderId || !token()) {
       document.getElementById('sheetHolder').innerHTML = '<div class="sheet"><p>Session expir\u00e9e. Rouvrez depuis l\u2019espace admin.</p></div>';
@@ -161,10 +167,7 @@
         else if (doc === 'packing') holder.innerHTML = renderPacking(data.order);
         else holder.innerHTML = renderLabel(data.order);
         if (doc === 'label' && document.getElementById('barcode')) {
-          drawBarcode(data.order.tracking_number || data.order.order_number);
-        }
-        if (doc === 'label') {
-          holder.style.height = '105mm';
+          drawBarcode(data.order.order_number);
         }
       })
       .catch(function (err) {

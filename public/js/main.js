@@ -521,13 +521,16 @@
     qtyMinus.addEventListener('click', function() {
       let val = parseInt(quantityInput.value, 10) || 1;
       if (val > 1) quantityInput.value = val - 1;
+      quantityInput.dispatchEvent(new Event('input', { bubbles: true }));
     });
   }
 
   if (qtyPlus && quantityInput) {
     qtyPlus.addEventListener('click', function() {
       let val = parseInt(quantityInput.value, 10) || 1;
-      if (val < 10) quantityInput.value = val + 1;
+      const max = quantityInput.max === '' ? 10 : Math.min(10, Math.max(0, Number(quantityInput.max)));
+      if (val < max) quantityInput.value = val + 1;
+      quantityInput.dispatchEvent(new Event('input', { bubbles: true }));
     });
   }
 
@@ -535,7 +538,9 @@
     quantityInput.addEventListener('change', function() {
       let val = parseInt(this.value, 10);
       if (isNaN(val) || val < 1) this.value = 1;
-      if (val > 10) this.value = 10;
+      const max = this.max === '' ? 10 : Math.min(10, Math.max(0, Number(this.max)));
+      if (val > max) this.value = max;
+      this.dispatchEvent(new Event('input', { bubbles: true }));
     });
   }
 

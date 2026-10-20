@@ -89,7 +89,7 @@
       main.alt = HN.productName(p) + (selection.matched && color ? ' — ' + COLORS.label(color, HN.lang()) : '');
     }
     var notice = document.getElementById('productPhotoColorNotice');
-    if (!notice && main) { notice = document.createElement('p'); notice.id = 'productPhotoColorNotice'; notice.setAttribute('role', 'status'); main.parentElement.insertAdjacentElement('afterend', notice); }
+    if (!notice && main) { notice = document.createElement('p'); notice.id = 'productPhotoColorNotice'; notice.setAttribute('role', 'status'); var colors = document.querySelector('.color-options-detail'); (colors || main.parentElement).insertAdjacentElement('afterend', notice); }
     if (notice) {
       notice.hidden = !color || selection.matched;
       notice.textContent = images.length ? tr('photoColorUnassigned', { color: COLORS.label(color, HN.lang()) }) : tr('photoColorMissing', { color: COLORS.label(color, HN.lang()) });
@@ -317,7 +317,7 @@
 
   function variantStock(v) {
     if (!v || v.active !== true) return 0;
-    var stock = Number(v.stock);
+    var stock = v.stock;
     return Number.isInteger(stock) && stock > 0 ? stock : 0;
   }
 
@@ -328,6 +328,12 @@
   }
 
   var stockEl = null;
+  var productSyncing = false, productSyncFailed = false, productAdding = false, productSyncRevision = 0, productSyncTimer = null;
+
+  function cartQuantity(p, color, size, variant) {
+    if (!HN.cart.list) return 0;
+    return HN.cart.list().filter(function (item) { return item.slug === p.slug && (variant && item.variantId === variant.id || lower(item.color) === lower(color) && SIZES.key(item.size) === SIZES.key(size)); }).reduce(function (sum, item) { return sum + (Number.isInteger(item.qty) ? item.qty : 0); }, 0);
+  }
 
   function ensureStockLabel() {
     if (stockEl) return stockEl;
@@ -337,6 +343,8 @@
     stockEl.id = 'stockInfo';
     stockEl.style.cssText = 'font-size: 0.875rem; font-weight: 600; margin: 0 0 var(--spacing-md);';
     actions.parentNode.insertBefore(stockEl, actions);
+    var refresh = document.createElement('button'); refresh.id = 'productStockRefresh'; refresh.type = 'button'; refresh.className = 'btn btn-outline btn-sm'; refresh.textContent = tr('quickAddRefresh'); refresh.setAttribute('data-i18n', 'quickAddRefresh');
+    refresh.addEventListener('click', function () { refreshProduct(false); }); actions.parentNode.insertBefore(refresh, actions);
     return stockEl;
   }
 
@@ -366,31 +374,38 @@
     });
 
     var stock = managed ? stockFor(p, color, size) : null;
-    var inStock = !managed || (stock !== null && stock > 0);
+    var remaining = Math.max(0, Math.min(10, managed ? stock : 10) - cartQuantity(p, color, size, variantFor(p, color, size)));
+    var inStock = (!managed || (stock !== null && stock > 0)) && remaining > 0 && !productSyncing && !productSyncFailed && !productAdding;
 
     var addBtn = document.getElementById('addToCartBtn');
     var buyBtn = document.getElementById('buyNowBtn');
     if (addBtn) addBtn.disabled = !inStock;
     if (buyBtn) buyBtn.disabled = !inStock;
+    var refresh = document.getElementById('productStockRefresh'); if (refresh) refresh.disabled = productSyncing || productAdding;
 
     // Cap the quantity input to the available stock.
     var qtyInput = document.getElementById('quantity');
     if (qtyInput) {
-      qtyInput.max = managed && stock !== null ? Math.min(10, Math.max(1, stock)) : 10;
-      if (managed && stock !== null && (parseInt(qtyInput.value, 10) || 1) > stock) {
-        qtyInput.value = Math.max(1, stock);
-      }
+      qtyInput.max = remaining;
+      qtyInput.value = remaining ? Math.max(1, Math.min(remaining, parseInt(qtyInput.value, 10) || 1)) : 0;
+      qtyInput.disabled = remaining === 0 || productAdding;
     }
+    var minus = document.getElementById('qtyMinus'), plus = document.getElementById('qtyPlus');
+    if (minus) minus.disabled = !qtyInput || Number(qtyInput.value) <= 1 || productAdding;
+    if (plus) plus.disabled = !qtyInput || Number(qtyInput.value) >= remaining || productAdding;
 
     var label = ensureStockLabel();
     if (!label) return;
     if (!managed) { label.style.display = 'none'; return; }
     label.style.display = '';
     label.style.color = 'var(--color-gray)';
+    if (productSyncFailed) { label.textContent = tr('quickAddSyncFailed'); return; }
     var selectedVariant = variantFor(p, color, size);
     if (stock === 0) {
       label.textContent = tr(selectedVariant && selectedVariant.active === true ? 'stockOut' : 'notAvailable');
       label.style.color = 'var(--color-burgundy)';
+    } else if (!remaining) {
+      label.textContent = tr('quickAddLimit');
     } else if (stock <= 5) {
       label.textContent = tr('stockLow', { n: stock });
       label.style.color = '#b5792a';
@@ -708,23 +723,32 @@
   }
 
   function wireActions(p) {
+    if (wireActions.done) return;
+    wireActions.done = true;
     var addBtn = document.getElementById('addToCartBtn');
     var buyBtn = document.getElementById('buyNowBtn');
 
     function handleAdd(redirect) {
+      if (productAdding || productSyncing || productSyncFailed) return;
       var o = selectedOptions();
       if (o.qty === 0) {
         showToast(tr('stockOut'), tr('notAvailable'), 'error');
         return;
       }
-      HN.cart.add({
-        slug: p.slug,
-        name_en: p.name_en || HN.productName(p),
-        price_cents: p.price_cents,
-        image: window.HN_MEDIA.select(p, o.color).images[0] || p.image || ''
-      }, { color: o.color, size: o.size, qty: o.qty, variantId: o.variantId, stock: o.stock });
-      showToast(tr('cartAdd'), HN.productName(p) + ' x' + o.qty + ' ' + tr('cartAddMsg'), 'success');
-      if (redirect) window.location.href = HN.pageUrl('checkout.html');
+      var old = current, currency = HN.currency(), request = productSyncRevision;
+      productAdding = true; updateStockUI();
+      return refreshProduct(true).then(function (fresh) {
+        if (!fresh || request !== productSyncRevision) return;
+        var chosen = selectedOptions();
+        if (old.price_cents !== fresh.price_cents || currency !== HN.currency()) { showToast(tr('checkoutError'), tr('quickAddPriceChanged'), 'error'); return; }
+        if (chosen.variantId !== o.variantId || lower(chosen.color) !== lower(o.color) || SIZES.key(chosen.size) !== SIZES.key(o.size)) { showToast(tr('checkoutError'), tr('quickAddOptionsChanged'), 'error'); return; }
+        var cap = Math.min(10, chosen.stock === null ? 10 : chosen.stock), before = cartQuantity(fresh, chosen.color, chosen.size, variantFor(fresh, chosen.color, chosen.size));
+        if (before + o.qty > cap || o.qty < 1) { showToast(tr('stockOut'), tr('quickAddLimit'), 'error'); return; }
+        HN.cart.add({ slug: fresh.slug, name_en: fresh.name_en || HN.productName(fresh), price_cents: fresh.price_cents, image: window.HN_MEDIA.select(fresh, chosen.color).images[0] || fresh.image || '' }, { color: chosen.color, size: chosen.size, qty: o.qty, variantId: chosen.variantId, stock: chosen.stock });
+        if (cartQuantity(fresh, chosen.color, chosen.size, variantFor(fresh, chosen.color, chosen.size)) <= before) { showToast(tr('cartAdd'), tr('quickAddUnavailable'), 'error'); return; }
+        showToast(tr('cartAdd'), HN.productName(fresh) + ' x' + o.qty + ' ' + tr('cartAddMsg'), 'success');
+        if (redirect) window.location.href = HN.pageUrl('checkout.html');
+      }).finally(function () { productAdding = false; updateStockUI(); });
     }
 
     if (addBtn) addBtn.addEventListener('click', function () { handleAdd(false); });
@@ -733,6 +757,35 @@
 
   function showToast(t, m, type) {
     if (typeof window.hnToast === 'function') window.hnToast(t, m, type);
+  }
+
+  function scheduleProductSync() {
+    if (productSyncTimer !== null) clearTimeout(productSyncTimer);
+    productSyncTimer = null;
+    if (current && !document.hidden) productSyncTimer = setTimeout(function () { refreshProduct(false); }, 15000);
+  }
+
+  function refreshProduct(confirming) {
+    if (!current || productSyncing || document.hidden || productAdding && !confirming) return Promise.resolve(null);
+    var slug = current.slug, request = productSyncRevision;
+    productSyncing = true; updateStockUI();
+    return Promise.all([HN.requireConfig(true), HN.fetchProducts({ slug: slug, limit: 1 })]).then(function (results) {
+      if (request !== productSyncRevision) return null;
+      var fresh = results[1].filter(function (p) { return p.slug === slug && p.active === true && !p.catalog_deleted_at; })[0];
+      if (!fresh || !Number.isSafeInteger(fresh.price_cents) || fresh.price_cents < 1) throw new Error('Unavailable');
+      var chosen = selectedOptions(), color = chosen.color, size = chosen.size;
+      var changed = JSON.stringify(current) !== JSON.stringify(fresh);
+      current = fresh; productSyncFailed = false;
+      if (HN.rememberProducts) HN.rememberProducts([fresh]);
+      if (changed) {
+        renderInfo(fresh);
+        document.querySelectorAll('.color-option').forEach(function (btn) { var selected = lower(btn.getAttribute('data-color')) === lower(color); btn.classList.toggle('active', selected); btn.setAttribute('aria-pressed', selected ? 'true' : 'false'); });
+        document.querySelectorAll('.size-option').forEach(function (btn) { btn.classList.toggle('active', SIZES.key(btn.getAttribute('data-size')) === SIZES.key(size)); });
+        renderGallery(fresh); renderDetails(fresh); renderSizeGuide(fresh);
+      }
+      return fresh;
+    }).catch(function () { if (request === productSyncRevision) { productSyncFailed = true; updateStockUI(); } return null; })
+      .finally(function () { if (request === productSyncRevision) { productSyncing = false; updateStockUI(); scheduleProductSync(); } });
   }
 
   /* ---- Init ---- */
@@ -783,6 +836,7 @@
         wireReviewForm(p);
         updateReviewGate(p);
         updateStockUI();
+        scheduleProductSync();
         HN.updateWishlistHearts();
         loading.hidden = true;
         HN.loaded(loading);
@@ -798,6 +852,11 @@
     RETURNS_DAYS = HN.returnDays();
     updateReturnsMeta();
   });
+  document.addEventListener('input', function (event) { if (event.target && event.target.id === 'quantity') updateStockUI(); });
+  document.addEventListener('hn:cart', updateStockUI);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) { if (productSyncTimer !== null) clearTimeout(productSyncTimer); productSyncTimer = null; } else refreshProduct(false); });
+  window.addEventListener('pageshow', function (event) { if (event.persisted) refreshProduct(false); });
+  window.addEventListener('pagehide', function () { productSyncRevision++; if (productSyncTimer !== null) clearTimeout(productSyncTimer); productSyncTimer = null; productSyncing = false; productAdding = false; });
 
   // main.js handles color/size selection via document-level delegation (runs
   // first). This listener re-evaluates the stock state right after, using the
