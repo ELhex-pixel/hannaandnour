@@ -272,7 +272,7 @@ test('ajouter une taille conserve les quantités initiales et codes saisis, sans
   const context = {
     editing:{variants:[{id:'existing',color:'Vin',size:'M',stock:18,barcode:'OLD'}]},
     SIZES: require('../public/js/product-sizes'),
-    editorRevision:1,variantGridRevision:1,
+    editorRevision:1,variantGridRevision:1,inlineStock:null,
     getVal:id=>id==='f-colors'?'Vin':'M, L, XL',
     strToList:value=>value.split(',').map(s=>s.trim()),esc:value=>String(value),colorCellHtml:()=>'',
     sizeChoices:()=>['M','L','XL'],

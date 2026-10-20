@@ -81,11 +81,34 @@
   .variant-row { display: grid; grid-template-columns: 130px 1fr 90px 60px 170px; gap: 8px; align-items: center; }
   .variant-row input, .variant-row select { padding: 6px 8px; border: 1px solid #E2D8C5; border-radius: 8px; min-width: 0; }
   .variant-row .v-adjust { grid-column: 1 / -1; justify-self: start; }
+  .editor-stock-panel { grid-column: 1 / -1; min-width: 0; padding: 16px; margin: 6px 0 12px; background: var(--mg-soft, #f7f2e9); border: 1px solid var(--mg-line, #ddd2bf); border-radius: 12px; }
+  .editor-stock-panel[hidden] { display: none; }
+  .editor-stock-panel h4 { margin: 0 0 10px; overflow-wrap: anywhere; }
+  .editor-stock-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+  .editor-stock-fields .field:last-child { grid-column: 1 / -1; }
+  .editor-stock-panel input, .editor-stock-panel select { width: 100%; min-height: 44px; font-size: 16px; }
+  .editor-stock-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .editor-stock-actions button { min-height: 44px; }
+  #editorStockStatus, #editorStockPreview { margin: 10px 0; overflow-wrap: anywhere; }
+  @media(max-width:600px) { .editor-stock-fields { grid-template-columns: 1fr; } .editor-stock-actions button { flex: 1 1 160px; } }
 
   .gallery-item { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; border: 1px solid #E7DECC; border-radius: 10px; padding: 6px; margin: 0 8px 8px 0; }
   .gallery-item img { width: 72px; height: 90px; object-fit: cover; border-radius: 8px; }
   .gallery-item .g-actions { display: flex; gap: 4px; margin-top: 2px; }
   .gallery-item .g-actions button { font-size: 12px; padding: 1px 7px; line-height: 1.4; min-width: 26px; }
+  .gallery-item .g-eye { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 44px; }
+  .g-eye svg { width: 19px; height: 19px; }
+  .admin-color-photo { border: 0; background: transparent; cursor: zoom-in; padding: 4px; color: inherit; }
+  .admin-color-photo span { display: block; font-size: 12px; }
+  #adminPhotoDialog { width: min(1100px, calc(100% - 20px)); max-width: none; max-height: 95dvh; padding: 16px; border: 1px solid var(--mg-line, #ddd2bf); border-radius: 16px; background: var(--mg-surface, white); color: var(--mg-ink, #282520); }
+  #adminPhotoDialog::backdrop { background: #000b; }
+  .admin-photo-heading, .admin-photo-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .admin-photo-heading h2 { margin: 0; font-size: 20px; }
+  #adminPhotoDialog button { min-height: 44px; }
+  #adminPhotoStage { height: min(68dvh, 780px); overflow: auto; margin: 12px 0; background: var(--mg-bg, #f7f2e9); border-radius: 10px; }
+  #adminPhotoStage img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  #adminPhotoStage.is-zoomed img { width: auto; height: auto; max-width: none; max-height: none; min-width: 100%; }
+  #adminPhotoCaption, #adminPhotoStatus { overflow-wrap: anywhere; margin: 10px 0; }
   .gallery-item img.err { opacity: 0.35; }
   .gallery-item label { width: 200px; max-width: 100%; }
   .gallery-item .g-color { width: 100%; }
@@ -1051,7 +1074,7 @@
         <div class="field"><label>Transparence vérifiée</label><select id="f-opacity"><option value="unspecified">Non renseignée</option><option value="opaque">Opaque</option><option value="semi-sheer">Semi-transparente</option><option value="sheer">Transparente</option></select></div>
         <div class="field"><label>Vidéo produit (URL HTTPS)</label><input id="f-video_url" type="url"></div>
         <div class="field full" id="productPhotosSection"><h3>Photos du produit</h3><p class="admin-muted">La photo principale apparaît dans le catalogue. Associez chaque photo au bon coloris ci-dessous ; « Photo générale » ne promet aucun coloris. Enregistrez la fiche après vos modifications.</p></div>
-        <div class="field full"><label for="f-image">Image principale (URL)</label><input id="f-image" placeholder="images/... ou URL Supabase"><img id="previewMain" class="admin-main-preview" alt="Aperçu de l’image principale" style="display:none;"></div>
+        <div class="field full"><label for="f-image">Image principale (URL)</label><input id="f-image" placeholder="images/... ou URL Supabase"><img id="previewMain" class="admin-main-preview" alt="Aperçu de l’image principale" style="display:none;"><button type="button" class="btn btn-secondary btn-small" id="viewMainPhoto">Voir l’image principale en grand</button></div>
         <div class="field full"><label>&nbsp;</label>
           <div>
             <button class="btn btn-secondary btn-small" id="uploadMainBtn">Uploader une photo</button>
@@ -1083,8 +1106,18 @@
       </div>
 
       <div class="card" style="margin-top:16px;" id="productStockSection">
-        <h3>Quantités par taille et coloris</h3><p class="admin-muted">Choisissez les tailles uniquement ici : lettres, chiffres, taille unique ou « Autre taille… » pour une taille personnalisée. Aucune taille n’est choisie automatiquement. Pour une nouvelle variante, saisissez le disponible initial : 0 = épuisé, vide = stock non configuré. Sur une variante déjà enregistrée, choisir une autre taille ouvre une ligne distincte, sans déplacer son stock ni son historique. Le stock existant reste en lecture seule ici : utilisez la rubrique Stock pour les arrivages et corrections avec motif.</p><button type="button" class="btn btn-secondary btn-small" id="editInventoryBtn">Gérer les arrivages et corrections</button>
+        <h3>Quantités par taille et coloris</h3><p class="admin-muted">Pour une variante enregistrée, cliquez sur « Modifier ici » sous sa ligne pour ajouter, retirer ou corriger le disponible sans quitter cette fiche. Un aperçu avant/après, un motif et une confirmation précèdent l’enregistrement du mouvement. Pour une nouvelle variante : 0 = épuisé, vide = stock non configuré. Les tailles se choisissent ici ; choisir une autre taille sur une variante enregistrée ouvre une ligne distincte et conserve son stock et son historique.</p><button type="button" class="btn btn-secondary btn-small" id="editInventoryBtn">Ouvrir le gestionnaire de stock complet</button>
         <input type="hidden" id="f-sizes">
+        <div id="editorStockHome"><div id="editorStockPanel" class="editor-stock-panel" hidden>
+          <h4 id="editorStockTitle"></h4><p id="editorStockCurrent" role="status"></p>
+          <div class="editor-stock-fields">
+            <div class="field"><label for="editorStockMode">Opération</label><select id="editorStockMode"><option value="">Choisir…</option><option value="restock">Arrivage : ajouter des unités</option><option value="remove">Retrait : enlever des unités</option><option value="count">Correction : nouveau disponible</option></select></div>
+            <div class="field"><label for="editorStockQuantity" id="editorStockQuantityLabel">Quantité</label><input id="editorStockQuantity" type="number" inputmode="numeric" min="0" max="1000000" step="1"></div>
+            <div class="field"><label for="editorStockReason">Motif du mouvement</label><input id="editorStockReason" type="text" minlength="3" maxlength="300" placeholder="Ex. arrivage fournisseur, recomptage…"></div>
+          </div>
+          <p id="editorStockPreview"></p><p id="editorStockStatus" role="status" aria-live="polite"></p>
+          <div class="editor-stock-actions"><button type="button" class="btn btn-primary" id="editorStockSave" disabled>Confirmer la modification</button><button type="button" class="btn btn-secondary" id="editorStockRefresh">Actualiser le disponible</button><button type="button" class="btn btn-secondary" id="editorStockClose">Fermer l’ajustement</button></div>
+        </div></div>
         <div id="variantGrid" class="variant-grid"></div>
       </div>
 
@@ -1107,6 +1140,13 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <dialog id="adminPhotoDialog" aria-labelledby="adminPhotoTitle">
+    <div class="admin-photo-heading"><h2 id="adminPhotoTitle">Vérifier la photo</h2><button type="button" class="btn btn-secondary" id="adminPhotoClose" autofocus>Fermer</button></div>
+    <p id="adminPhotoCaption" aria-live="polite"></p>
+    <div id="adminPhotoStage" tabindex="0" role="region" aria-label="Photo agrandie, défilement possible en mode détails"><img id="adminPhotoImage" alt=""></div>
+    <p id="adminPhotoStatus" role="status"></p>
+    <div class="admin-photo-actions"><button type="button" class="btn btn-secondary" id="adminPhotoPrevious">← Précédente</button><button type="button" class="btn btn-secondary" id="adminPhotoZoom" aria-pressed="false">Agrandir les détails</button><button type="button" class="btn btn-secondary" id="adminPhotoNext">Suivante →</button></div>
+  </dialog>
   <script src="js/config.js"></script>
   <script src="js/admin-api.js"></script>
   <script src="js/colors.js"></script>
@@ -1114,6 +1154,8 @@
   <script src="js/product-sizes.js"></script>
   <script src="js/product-media.js"></script>
   <script src="js/admin-catalog.js"></script>
+  <script src="js/admin-inline-stock.js"></script>
+  <script src="js/admin-photo-viewer.js"></script>
   <script src="vendor/jsbarcode.min.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/admin-product-deletion.js"></script>

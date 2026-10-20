@@ -1,4 +1,6 @@
 const { json } = require('../shared');
+const { createHash } = require('crypto');
+const pickup = require('../../../public/js/pickup-points');
 
 const BASE_URL = 'https://panel.sendcloud.sc/api/v3';
 const CARRIER = 'mondial_relay';
@@ -66,16 +68,16 @@ function createClient({ env = process.env, fetchImpl = globalThis.fetch } = {}) 
   const configured = !!publicKey && !!secretKey && publicKey.length <= 512 && secretKey.length <= 512
     && !/[\s:]/.test(publicKey) && !/\s/.test(secretKey);
 
-  async function get(path, params = {}) {
+  async function request(path, params = {}, availability = false) {
     if (!configured) throw new SendcloudError('sendcloud_not_configured');
-    if (!/^\/(?:user\/auth\/metadata|integrations\/[1-9]\d*|contracts|addresses\/sender-addresses|service-points)$/.test(path)) {
+    if (availability ? !/^\/service-points\/[1-9]\d*\/check-availability$/.test(path) : !/^\/(?:user\/auth\/metadata|integrations\/[1-9]\d*|contracts|addresses\/sender-addresses|service-points(?:\/[1-9]\d*)?)$/.test(path)) {
       throw new SendcloudError('sendcloud_request_rejected', 400);
     }
     const url = new URL(BASE_URL + path);
     Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, String(value)));
     try {
       const response = await fetchImpl(url.href, {
-        method: 'GET', redirect: 'error', signal: AbortSignal.timeout(5000),
+        method: availability ? 'POST' : 'GET', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(5000),
         headers: { Accept: 'application/json', Authorization: 'Basic ' + Buffer.from(publicKey + ':' + secretKey).toString('base64') }
       });
       if (!response.ok) {
@@ -90,6 +92,8 @@ function createClient({ env = process.env, fetchImpl = globalThis.fetch } = {}) 
       throw safeError(error);
     }
   }
+
+  const get = (path, params) => request(path, params);
 
   async function inspect(path, params, summarize) {
     try {
@@ -155,7 +159,56 @@ function createClient({ env = process.env, fetchImpl = globalThis.fetch } = {}) 
     return { points, geocoding_status: ['matched', 'partially_matched', 'not_found'].includes(data.geocoding?.status) ? data.geocoding.status : null };
   }
 
-  return { diagnostics, servicePoints };
+  // Checkout uses the four agreed destinations. Keep the original admin probe
+  // limited to France; all provider URLs/methods remain explicitly allowlisted.
+  function checkoutPoint(point, country) {
+    const a = point?.address;
+    if (point?.carrier?.code !== CARRIER || point.is_expired !== false || a?.country_code !== country
+      || !pickup.postal(country, a.postal_code) || !Number.isSafeInteger(point.id) || point.id < 1
+      || !text(point.carrier_service_point_id, 80) || !text(point.name, 160) || !text(a.street, 160) || !text(a.city, 100)
+      || !['servicepoint', 'locker'].includes(point.general_shop_type)) return null;
+    const result = {
+      id: point.id, carrier: CARRIER, carrier_service_point_id: text(point.carrier_service_point_id, 80),
+      name: text(point.name, 160), type: point.general_shop_type,
+      address: { street: text(a.street, 160), house_number: text(a.house_number, 20), postal_code: pickup.postal(country, a.postal_code), city: text(a.city, 100), country_code: country }
+    };
+    result.fingerprint = createHash('sha256').update(JSON.stringify(result)).digest('hex');
+    return result;
+  }
+
+  async function checkoutPoints(body) {
+    const country = pickup.country(body.country_code), postal = pickup.postal(country, body.postal_code);
+    if (!country || !postal) throw new SendcloudError('invalid_postal_code', 400);
+    const { data } = await get('/service-points', { country_code: country, carrier_code: CARRIER, address_postal_code: postal, limit: 20, radius: 15000 });
+    if (!Array.isArray(data?.results)) throw new SendcloudError('sendcloud_invalid_response', 502);
+    const points = [], seen = new Set();
+    for (const row of data.results.slice(0, 200)) {
+      const point = checkoutPoint(row, country);
+      if (point && !seen.has(point.id) && points.length < 20) {
+        seen.add(point.id);
+        points.push({ ...point, distance: Number.isFinite(row.distance) && row.distance >= 0 ? Math.round(row.distance) : null });
+      }
+    }
+    return { points, geocoding_status: ['matched','partially_matched','not_found'].includes(data.geocoding?.status) ? data.geocoding.status : null };
+  }
+
+  async function verifyCheckoutPoint(selection) {
+    if (!pickup.selection(selection)) return { code: 'pickup_invalid' };
+    let data;
+    try { ({ data } = await get('/service-points/' + selection.id)); }
+    catch (error) { if (error.code === 'sendcloud_not_found') return { code: 'pickup_not_available' }; throw error; }
+    const point = checkoutPoint(data, selection.country_code);
+    if (!point || point.id !== selection.id) return { code: 'pickup_not_available' };
+    if (point.fingerprint !== selection.fingerprint) return { code: 'pickup_changed' };
+    let availability;
+    try { availability = await request('/service-points/' + selection.id + '/check-availability', {}, true); }
+    catch (error) { if (error.code === 'sendcloud_not_found') return { code: 'pickup_not_available' }; throw error; }
+    if (typeof availability.data?.is_available !== 'boolean') throw new SendcloudError('sendcloud_invalid_response', 502);
+    if (!availability.data.is_available) return { code: 'pickup_not_available' };
+    return { point: { ...point, availability_checked_at: new Date().toISOString() } };
+  }
+
+  return { diagnostics, servicePoints, checkoutPoints, verifyCheckoutPoint };
 }
 
 async function adminSendcloud(action, body) {

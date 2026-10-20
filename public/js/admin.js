@@ -410,6 +410,7 @@
   var imageBusy = false;
   var galleryStop = false;
   var editorReturnFocus = null;
+  var inlineStock = null, inlineStockLocked = false;
 
   function closeProductEditor() {
     editorRevision++;
@@ -596,16 +597,18 @@
       return '<div class="variant-row" data-i="' + i + '" data-original-size="' + esc(persisted ? persisted.size : r.size) + '">' +
         (r.color ? colorCellHtml(r.color) : '<input type="text" class="v-color" value="" placeholder="Couleur">') +
         variantSizeHtml(r.size) +
-        '<input type="number" class="v-stock" min="0" step="1" value="' + (stockFor(r.color, r.size) === '' ? '' : stockFor(r.color, r.size)) + '" placeholder="0"' + (persisted ? ' readonly aria-label="Stock existant, à ajuster dans la rubrique Stock"' : ' aria-label="Stock initial de la nouvelle variante"') + '>' +
+        '<input type="number" class="v-stock" min="0" step="1" value="' + (stockFor(r.color, r.size) === '' ? '' : stockFor(r.color, r.size)) + '" placeholder="0"' + (persisted ? ' readonly aria-label="Stock actuel, utiliser Modifier ici pour ajuster"' : ' aria-label="Stock initial de la nouvelle variante"') + '>' +
         '<span style="font-size:12px;color:#8a7d66;">stock</span>' +
         '<input type="text" class="v-barcode" value="' + esc(barcodeFor(r.color, r.size)) + '" placeholder="Code-barres (auto)">' +
-        (persisted ? '<button type="button" class="btn btn-secondary btn-small v-adjust" data-editor-inventory="' + esc(persisted.id) + '">Modifier ce stock</button>' : '') +
+        (persisted ? '<button type="button" class="btn btn-secondary btn-small v-adjust" data-editor-inventory="' + esc(persisted.id) + '">Modifier ici</button>' : '') +
         '</div>';
     }).join('');
 
+    if (inlineStock) inlineStock.beforeRender();
     document.getElementById('variantGrid').innerHTML = html ||
       '<p class="empty">Ajoutez des couleurs/tailles pour cr&eacute;er des lignes de stock.</p>';
     variantGridRevision = editorRevision;
+    if (inlineStock) inlineStock.afterRender();
   }
 
   function collectVariants() {
@@ -872,7 +875,7 @@
     var color = document.getElementById('galleryPreviewColor').value;
     var photos = window.HN_MEDIA.select({ image: getVal('f-image'), gallery: galleryPayload() }, color);
     document.getElementById('galleryColorStatus').textContent = color ? photos.matched ? 'Photos associées à ' + color + ', puis vues générales.' : 'Aucune photo associée à ' + color + '. Les vues générales ne garantissent pas ce coloris.' : 'Toutes les photos ; choisissez un coloris pour vérifier son affichage.';
-    document.getElementById('galleryColorPreview').innerHTML = photos.images.length ? photos.images.map(function (src) { return '<img class="admin-main-preview" src="' + esc(src) + '" alt="Aperçu de la sélection">'; }).join('') : '<p class="empty">Aucune photo pour cette sélection.</p>';
+    document.getElementById('galleryColorPreview').innerHTML = photos.images.length ? photos.images.map(function (src) { return '<button type="button" class="admin-color-photo" data-photo-src="' + esc(src) + '" aria-label="Voir cette photo en grand"><img class="admin-main-preview" src="' + esc(src) + '" alt="Aperçu de la sélection"><span>Voir en grand</span></button>'; }).join('') : '<p class="empty">Aucune photo pour cette sélection.</p>';
   }
 
   function renderGalleryGrid() {
@@ -892,6 +895,7 @@
     for (var i = 0; i < lines.length; i++) {
       html += '<div class="gallery-item" data-i="' + i + '">' +
         '<img src="' + esc(lines[i]) + '" alt="Image ' + (i + 1) + '">' +
+        '<button type="button" class="btn btn-secondary btn-small g-eye" data-photo-src="' + esc(lines[i]) + '" aria-label="Voir la photo ' + (i + 1) + ' en grand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span>Voir en grand</span></button>' +
         '<label>Coloris de cette photo<select class="g-color" aria-label="Coloris de la photo ' + (i + 1) + '"><option value="">Photo générale / non associée</option>' + colors.map(function (color) { return '<option value="' + esc(color) + '"' + (window.HN_MEDIA.norm(color) === window.HN_MEDIA.norm(galleryColors[lines[i]]) ? ' selected' : '') + '>' + esc(color) + '</option>'; }).join('') + (galleryColors[lines[i]] && !colors.some(function (color) { return window.HN_MEDIA.norm(color) === window.HN_MEDIA.norm(galleryColors[lines[i]]); }) ? '<option selected value="' + esc(galleryColors[lines[i]]) + '">Coloris retiré : ' + esc(galleryColors[lines[i]]) + '</option>' : '') + '</select></label>' +
         '<div class="g-actions">' +
         '<button type="button" class="btn btn-secondary btn-small g-main" aria-label="Choisir la photo ' + (i + 1) + ' comme image principale">' + (lines[i] === getVal('f-image') ? 'Principale' : 'Choisir principale') + '</button>' +
@@ -942,10 +946,22 @@
   }
 
   function wireEditor() {
+    if (window.HN_INLINE_STOCK) inlineStock = window.HN_INLINE_STOCK.install({
+      lock: function (on) { inlineStockLocked = on; document.getElementById('saveProductBtn').disabled = imageBusy || on; },
+      update: function (variant) {
+        if (!editing || editing.id !== variant.products.id || !document.getElementById('productEditor').classList.contains('open')) return;
+        (editing.variants || []).forEach(function (current) { if (current.id === variant.id) current.stock = variant.stock; });
+        (productsAll || []).forEach(function (product) { if (product.id === variant.products.id) (product.variants || []).forEach(function (current) { if (current.id === variant.id) current.stock = variant.stock; }); });
+        var button = document.querySelector('[data-editor-inventory="' + variant.id + '"]');
+        if (button) button.closest('.variant-row').querySelector('.v-stock').value = String(variant.stock);
+        renderProducts();
+      }
+    });
     document.getElementById('closeEditorBtn').addEventListener('click', closeProductEditor);
     document.addEventListener('keydown', function (e) {
       var dialog = document.getElementById('productEditor');
       if (!dialog.classList.contains('open')) return;
+      if (document.getElementById('adminPhotoDialog').open) return;
       if (e.key === 'Escape') { closeProductEditor(); return; }
       if (e.key !== 'Tab') return;
       var focusable = Array.prototype.filter.call(dialog.querySelectorAll('button, input, select, textarea, a[href]'), function (node) { return !node.disabled && node.getClientRects().length; });
@@ -956,8 +972,21 @@
     // Close by clicking the dark backdrop around the editor.
     document.getElementById('productEditor').addEventListener('click', function (e) {
       if (e.target === this) { closeProductEditor(); return; }
+      var photo = e.target.closest('[data-photo-src], #viewMainPhoto');
+      if (photo) {
+        var src = photo.id === 'viewMainPhoto' ? getVal('f-image') : photo.getAttribute('data-photo-src');
+        var photos = window.HN_MEDIA.entries({ image: getVal('f-image'), gallery: galleryPayload() });
+        if (!window.HN_ADMIN_PHOTOS || !window.HN_ADMIN_PHOTOS.open(photos, src, photo)) toast('Photo indisponible pour l’aperçu.', 'err');
+        return;
+      }
       var inventory = e.target.closest('[data-editor-inventory]');
-      if (inventory) { openVariantInventory(inventory.getAttribute('data-editor-inventory')); return; }
+      if (inventory) {
+        var id = inventory.getAttribute('data-editor-inventory');
+        var variant = (editing.variants || []).filter(function (value) { return value.id === id; })[0];
+        if (inlineStock && variant) inlineStock.open(id, editing.id, [editing.name_fr || editing.name_en || editing.slug, variant.color, SIZES.canonical(variant.size)].filter(Boolean).join(' — '));
+        else openVariantInventory(id);
+        return;
+      }
       if (imageBusy && e.target.closest('.g-actions, #galleryUrlAdd')) return;
       var section = e.target.closest('[data-editor-section]');
       if (section) { document.getElementById(section.getAttribute('data-editor-section')).scrollIntoView({ block: 'start' }); return; }
@@ -1006,6 +1035,7 @@
     });
 
     document.getElementById('saveProductBtn').addEventListener('click', function () {
+      if (inlineStock && inlineStock.blocked()) { toast('Confirmez ou reprenez l’ajustement de stock avant d’enregistrer la fiche.', 'err'); return; }
       var btn = this;
       if (btn.disabled || imageBusy) return;
       var revision = editorRevision;
@@ -1157,6 +1187,7 @@
   function lockProductImages(busy) {
     imageBusy = busy;
     ['saveProductBtn', 'uploadMainBtn', 'uploadGalleryBtn', 'deleteProductBtn'].forEach(function (id) { document.getElementById(id).disabled = busy; });
+    if (inlineStockLocked) document.getElementById('saveProductBtn').disabled = true;
     document.querySelectorAll('#galleryGrid button, #galleryGrid select').forEach(function (node) { node.disabled = busy; });
   }
 
@@ -1278,6 +1309,8 @@
       ? '<p><strong>Retrait :</strong> ' + esc(o.pickup_point || '-') + '</p>'
       : '<p>' + esc(o.address1) + (o.address2 ? ' ' + esc(o.address2) : '') + '<br>' +
         esc(o.city) + (o.state ? ' ' + esc(o.state) : '') + ' ' + esc(o.postal_code) + '<br>' + esc(o.country) + '</p>';
+    if (o.pickup_point_data) addressBlock += '<p><strong>Relais Mondial Relay :</strong> ' + esc(o.pickup_point_data.carrier_service_point_id) +
+      ' · Sendcloud ' + esc(o.pickup_point_data.id) + ' · ' + esc(o.country) + '</p>';
 
     var canReturn = ['paid','refunded'].includes(o.status) && ['shipped','delivered'].includes(o.shipping_status);
     var ret = returnedByItem(o);

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Hanna &amp; Nour — Les étapes restantes, une par une</title>
+  <style>
+    @page { size: A4; margin: 17mm 18mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #282520; font: 10.5pt/1.45 "Segoe UI", Arial, sans-serif; }
+    section { height: 262mm; display: flex; flex-direction: column; break-after: page; }
+    section:last-child { break-after: auto; }
+    .annex { font-size: 10pt; line-height: 1.4; }
+    header { border-bottom: 2px solid #b78a4a; padding-bottom: 10px; margin-bottom: 20px; }
+    .brand { font-size: 20pt; font-weight: 700; }
+    .muted, footer { color: #6c655b; font-size: 9pt; }
+    .number { color: #906323; font-size: 11pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+    h1 { font-size: 23pt; line-height: 1.15; margin: 8px 0 15px; }
+    h2 { font-size: 12pt; margin: 18px 0 8px; }
+    p { margin: 7px 0; }
+    .state, .done { background: #f7f2e9; border-left: 4px solid #b78a4a; padding: 11px 14px; margin: 12px 0; }
+    .done { background: #f0f4ee; border-color: #58714f; }
+    ul { list-style: none; margin: 8px 0; padding: 0; }
+    li { position: relative; padding: 0 0 11px 24px; break-inside: avoid; }
+    li::before, .box { content: ""; display: inline-block; width: 12px; height: 12px; border: 1px solid #6c655b; background: white; }
+    li::before { position: absolute; left: 0; top: 4px; }
+    li.checked::before, .box.checked { background: #58714f; border-color: #58714f; box-shadow: inset 0 0 0 2px white; }
+    table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 10pt; }
+    th, td { text-align: left; border-bottom: 1px solid #ddd5c8; padding: 8px 6px; vertical-align: top; }
+    th { background: #f7f2e9; }
+    .status { font-size: 9.5pt; margin-top: 9px; }
+    .status .box { margin: 0 5px 0 12px; vertical-align: -1px; }
+    .status .box:first-child { margin-left: 0; }
+    .notes { margin-top: auto; padding-top: 15px; color: #6c655b; font-size: 9pt; }
+    .line { height: 24px; border-bottom: 1px solid #dcd6cb; }
+    footer { border-top: 1px solid #dcd6cb; margin-top: 16px; padding-top: 8px; display: flex; justify-content: space-between; gap: 12px; }
+    a { color: #775019; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Feuille de route • Mise à jour du 20 octobre 2026</div></header>
+    <div class="number">Notre suivi</div>
+    <h1>Les étapes restantes,<br>une par une</h1>
+    <p>Un ordre simple pour terminer la boutique et préparer son ouverture. Pour chaque étape : cocher les actions, noter les décisions, puis valider avant de passer à la suivante.</p>
+    <div class="state"><strong>Déjà en place et publié :</strong> boutique et catalogue administrable, gestion des commandes et retours, application Stock et ventes physiques, étiquettes code-barres / QR, tableau de bord, langues FR/EN/AR, optimisations de vitesse, logo 4K et correction de Collections.</div>
+    <table>
+      <thead><tr><th>Ordre</th><th>Étape</th><th>Terminée</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Mondial Relay / Sendcloud — en cours</strong><br>Tarif unique 5,99 € enregistré ; sélecteur préparé.</td><td><span class="box"></span></td></tr>
+        <tr><td>2</td><td><strong>Produits et contenus</strong><br>Informations réelles, photos, coordonnées et langues.</td><td><span class="box"></span></td></tr>
+        <tr><td>3</td><td><strong>Avis clients</strong><br>Affichage, modération et invitation après livraison.</td><td><span class="box"></span></td></tr>
+        <tr><td>4</td><td><strong>iPhone et matériel</strong><br>Application Stock, scans et impressions.</td><td><span class="box"></span></td></tr>
+        <tr><td>5</td><td><strong>TikTok Shop — facultatif</strong><br>Décider de l’utilisation et de la gestion des stocks.</td><td><span class="box"></span></td></tr>
+        <tr><td>6</td><td><strong>Légal et paiement — en dernier</strong><br>Textes définitifs et essai commercial complet.</td><td><span class="box"></span></td></tr>
+      </tbody>
+    </table>
+    <p><strong>Étape en cours :</strong> terminer la configuration Mondial Relay pour la France, l’Espagne, la Belgique et les Pays-Bas.</p>
+    <p class="muted">Les 413 tests locaux et les contrôles navigateur ont réussi. La migration des relais est confirmée par le propriétaire ; le build vérifie le schéma avant publication. Les essais externes complets restent à réaliser.</p>
+    <div class="notes">Étape en cours / prochaine séance<div class="line"></div></div>
+    <footer><span>Site : hannanour.com</span><span>Vue d’ensemble • 1 / 8</span></footer>
+  </section>
+
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Les étapes restantes • Suivi une par une</div></header>
+    <div class="number">Étape 1 / Livraison</div>
+    <h1>Compléter Mondial Relay<br>avec Sendcloud</h1>
+    <p><strong>Objectif :</strong> permettre le choix d’un relais valide et gérer l’expédition jusqu’au suivi du colis.</p>
+    <div class="state"><strong>Avancement :</strong> API connectée, tarif unique de 5,99 € enregistré, sélection des relais des quatre pays développée et testée. Exécution de la migration SQL confirmée par le propriétaire ; le build contrôle le schéma avant publication.</div>
+    <p><strong>Départ confirmé :</strong> France. <strong>Destinations souhaitées :</strong> France, Espagne, Belgique et Pays-Bas. Zones desservies et services disponibles à confirmer selon le contrat.</p>
+    <h2>À faire</h2>
+    <ul>
+      <li class="checked">Vérifier la connexion API et l’activation des points relais : confirmé par la capture.</li>
+      <li>Vérifier l’exactitude de l’adresse expéditeur et l’accès au service choisi pour le colis.</li>
+      <li>Définir les poids / dimensions, les délais et les frais client à partir des tarifs relevés.</li>
+      <li class="checked">Exécuter migration_checkout_pickup.sql : confirmé par le propriétaire.</li>
+      <li>Vérifier en ligne le pays, l’identifiant et la disponibilité du relais ; finir l’éligibilité colis.</li>
+      <li>Intégrer les étiquettes d’expédition en empêchant les achats en double après un réessai.</li>
+      <li>Intégrer les événements de suivi et les notifications client correspondantes.</li>
+      <li>Valider le relais conservé, l’étiquette et le suivi sur un scénario de test adapté.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> le bon relais est conservé sur la commande, l’étiquette correspond au colis et le suivi remonte correctement.</div>
+    <div class="status"><span class="box"></span>À faire <span class="box checked"></span>En cours <span class="box"></span>Terminée</div>
+    <div class="notes">Décisions / informations à fournir / date de validation<div class="line"></div><div class="line"></div><div class="line"></div></div>
+    <footer><span>Priorité : premier chantier technique</span><span>Étape 1 • 2 / 8</span></footer>
+  </section>
+
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Les étapes restantes • Suivi une par une</div></header>
+    <div class="number">Étape 2 / Produits et contenus</div>
+    <h1>Finaliser les informations<br>réelles de la boutique</h1>
+    <p><strong>Objectif :</strong> présenter des fiches exactes, des photos cohérentes et les bonnes coordonnées.</p>
+    <div class="state"><strong>Déjà disponible :</strong> catalogue réel et contenus modifiables dans l’admin. Collections suit maintenant les sélections de l’admin et les prix du catalogue.</div>
+    <h2>À faire</h2>
+    <ul>
+      <li>Vérifier, pour chaque produit actif, le nom, la description, le prix, les variantes et les stocks.</li>
+      <li>Ajouter les matières, mesures vérifiées et conseils d’entretien disponibles.</li>
+      <li>Contrôler les tailles conseillées, sans inventer de mesures ou de caractéristiques.</li>
+      <li>Vérifier l’association des photos aux coloris et leur rendu sur mobile.</li>
+      <li>Relire « Notre histoire », les articles et les auteurs avec les informations à conserver.</li>
+      <li>Compléter les coordonnées de contact et les liens officiels des réseaux sociaux.</li>
+      <li>Vérifier les sélections d’accueil / Collections, les trois langues et les liens publics.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> les informations commerciales sont exactes, les photos correspondent aux variantes et les textes reflètent les services réellement proposés.</div>
+    <div class="status"><span class="box"></span>À faire <span class="box"></span>En cours <span class="box"></span>Terminée</div>
+    <div class="notes">Produits à compléter / textes à fournir / date de validation<div class="line"></div><div class="line"></div><div class="line"></div></div>
+    <footer><span>À préparer avec les informations réelles des produits</span><span>Étape 2 • 3 / 8</span></footer>
+  </section>
+
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Les étapes restantes • Suivi une par une</div></header>
+    <div class="number">Étape 3 / Avis clients</div>
+    <h1>Préparer les vrais avis</h1>
+    <p><strong>Objectif :</strong> afficher les expériences authentiques des clients et des notes cohérentes.</p>
+    <div class="state"><strong>Déjà disponible :</strong> gestion des avis et réglage des avis de démonstration dans l’admin. L’état de ce réglage doit être revérifié avant ouverture.</div>
+    <h2>À faire</h2>
+    <ul>
+      <li>Ouvrir la rubrique Avis et distinguer les vrais avis des avis de démonstration.</li>
+      <li>Désactiver les avis de démonstration s’ils sont encore affichés avant l’ouverture commerciale.</li>
+      <li>Conserver les avis authentiques et leurs textes ; publier après modération.</li>
+      <li>Vérifier les notes et compteurs sur l’accueil, les cartes et les fiches produits.</li>
+      <li>Tester l’email d’invitation après livraison sur une commande de test.</li>
+      <li>Vérifier le dépôt d’un avis et sa publication après approbation.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> aucun avis de démonstration n’est présenté comme un avis client et les notes correspondent aux avis réellement approuvés.</div>
+    <div class="status"><span class="box"></span>À faire <span class="box"></span>En cours <span class="box"></span>Terminée</div>
+    <div class="notes">Réglage vérifié / résultat de l’essai / date de validation<div class="line"></div><div class="line"></div><div class="line"></div></div>
+    <footer><span>L’essai d’email peut être regroupé avec l’étape 6</span><span>Étape 3 • 4 / 8</span></footer>
+  </section>
+
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Les étapes restantes • Suivi une par une</div></header>
+    <div class="number">Étape 4 / iPhone et matériel</div>
+    <h1>Valider l’usage<br>sur ton iPhone</h1>
+    <p><strong>Objectif :</strong> confirmer que l’application et les étiquettes sont pratiques sur ton appareil et ton imprimante.</p>
+    <div class="state"><strong>Déjà disponible :</strong> application Stock, scan caméra, ventes physiques, ajustements et étiquettes séparées code-barres / QR. Les parcours ont des tests et des vérifications navigateur ; la validation matérielle reste à faire.</div>
+    <h2>À faire</h2>
+    <ul>
+      <li>Ouvrir <strong>hannanour.com/stock.html</strong> dans Safari, puis utiliser Partager → Sur l’écran d’accueil.</li>
+      <li>Vérifier la connexion, les boutons, le thème clair / sombre et le confort de saisie.</li>
+      <li>Imprimer une étiquette code-barres de vente et une étiquette QR de stock.</li>
+      <li>Scanner chaque type avec l’iPhone : vérifier le bon produit, coloris et taille.</li>
+      <li>Contrôler la netteté, la taille imprimée et la lisibilité avec l’imprimante utilisée.</li>
+      <li>Tester le parcours de vente, le prix personnalisé et l’ajustement sur des données de test.</li>
+      <li>Vérifier la reprise après interruption, sans enregistrer deux fois la même opération.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> les deux étiquettes se lisent correctement et les parcours sont utilisables sur ton iPhone, avec une seule opération enregistrée par validation.</div>
+    <div class="status"><span class="box"></span>À faire <span class="box"></span>En cours <span class="box"></span>Terminée</div>
+    <div class="notes">Modèle d’iPhone / imprimante / réglages / date de validation<div class="line"></div><div class="line"></div><div class="line"></div></div>
+    <footer><span>Code-barres : vendre • QR : retrouver le stock</span><span>Étape 4 • 5 / 8</span></footer>
+  </section>
+
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Les étapes restantes • Suivi une par une</div></header>
+    <div class="number">Étape 5 / Facultatif</div>
+    <h1>Décider pour TikTok Shop</h1>
+    <p><strong>Objectif :</strong> choisir si TikTok sera un canal de vente et organiser les stocks en conséquence.</p>
+    <div class="state"><strong>Déjà disponible :</strong> export Excel pour TikTok Shop France. L’import est manuel et ne synchronise pas automatiquement les annonces, stocks ou commandes.</div>
+    <h2>À faire si TikTok Shop est retenu</h2>
+    <ul>
+      <li>Confirmer l’utilisation de TikTok Shop, ou noter que cette étape est reportée.</li>
+      <li>Valider l’import avec le modèle officiel de la bonne catégorie dans Seller Center.</li>
+      <li>Contrôler les références des variantes, les prix en euros, les photos et les champs obligatoires.</li>
+      <li>Choisir un stock réservé à TikTok ou une synchronisation automatique par API.</li>
+      <li>Si une synchronisation est choisie, intégrer les commandes, annulations et retours sans doublons.</li>
+      <li>Tester une vente simultanée sur les deux boutiques et la reprise après interruption.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> la décision est actée ; si TikTok est utilisé, chaque canal respecte le stock qui lui est alloué et les commandes restent cohérentes.</div>
+    <div class="status"><span class="box"></span>À faire <span class="box"></span>En cours <span class="box"></span>Terminée <span class="box"></span>Reportée</div>
+    <div class="notes">Décision / mode de gestion du stock / date<div class="line"></div><div class="line"></div><div class="line"></div></div>
+    <footer><span>Cette étape peut être reportée si TikTok n’est pas utilisé</span><span>Étape 5 • 6 / 8</span></footer>
+  </section>
+
+  <section>
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Les étapes restantes • Suivi une par une</div></header>
+    <div class="number">Étape 6 / En dernier, comme convenu</div>
+    <h1>Finaliser le légal<br>et le paiement</h1>
+    <p><strong>Objectif :</strong> disposer des informations définitives et valider le parcours commercial complet avant ouverture.</p>
+    <div class="state"><strong>Déjà disponible :</strong> parcours de paiement Stripe et gestion des commandes, retours et remboursements. Les textes définitifs, les essais externes et la validation d’ouverture restent à terminer.</div>
+    <h2>À faire</h2>
+    <ul>
+      <li>Renseigner le nom légal, la forme juridique, l’adresse et les identifiants de l’entreprise.</li>
+      <li>Finaliser les conditions de vente, livraison, retours et garanties avec les engagements réels.</li>
+      <li>Adapter la confidentialité aux comptes, commandes, messages, avis, emails et statistiques utilisés.</li>
+      <li>Confirmer les pays livrés, la devise, les taxes et tous les frais affichés avant paiement.</li>
+      <li>Tester en environnement isolé : achat, confirmation du paiement, email, stock et préparation.</li>
+      <li>Vérifier expédition, livraison et invitation à laisser un avis ; confirmer la réception des emails.</li>
+      <li>Tester retour physique, remise en stock des unités revendables et remboursements complets / partiels.</li>
+      <li>Après validation, finaliser la configuration de production et les contrôles d’ouverture.</li>
+    </ul>
+    <div class="done"><strong>Étape terminée quand :</strong> les textes correspondent à l’activité et le parcours complet est validé avec des montants, emails, statuts et stocks cohérents.</div>
+    <div class="status"><span class="box"></span>À faire <span class="box"></span>En cours <span class="box"></span>Terminée</div>
+    <div class="notes">Résultats des essais / derniers points / date de validation<div class="line"></div><div class="line"></div><div class="line"></div></div>
+    <footer><span>Les cases servent au suivi des validations à venir</span><span>Étape 6 • 7 / 8</span></footer>
+  </section>
+
+  <section class="annex">
+    <header><div class="brand">Hanna &amp; Nour</div><div class="muted">Annexe de l’étape 1 • Relevé du 20 octobre 2026</div></header>
+    <div class="number">Livraison / Référence tarifaire</div>
+    <h1>Les tarifs relevés<br>pour les quatre pays</h1>
+    <p><strong>Départ :</strong> France. <strong>Transporteur :</strong> Mondial Relay. <strong>Formule indiquée :</strong> Lite.</p>
+    <div class="state"><strong>Tranche exportée :</strong> libellé « 1–2 kg ». Ces montants reprennent la colonne « Total price » en EUR des lignes tarifées du CSV fourni. Le poids habituel des colis et les autres tranches restent à confirmer.</div>
+    <table>
+      <thead><tr><th>Destination</th><th>Point Relais</th><th>Locker</th><th>Domicile</th></tr></thead>
+      <tbody>
+        <tr><td>France</td><td>5,27 €</td><td>5,27 €</td><td>9,13 €</td></tr>
+        <tr><td>Belgique</td><td>6,62 €</td><td>6,62 €</td><td>11,72 €</td></tr>
+        <tr><td>Espagne</td><td>8,42 €</td><td>8,42 €</td><td>11,92 €</td></tr>
+        <tr><td>Pays-Bas</td><td>6,62 €</td><td>6,62 €</td><td>11,40 €</td></tr>
+      </tbody>
+    </table>
+    <p class="muted">Source : sendcloud_price_list_20261020_104022.csv. Le CSV ne précise pas HT / TTC. Un prix vide n’est pas un tarif gratuit ; un tarif affiché ne confirme pas à lui seul l’éligibilité de chaque colis ou relais.</p>
+    <h2>Choix retenu : un tarif unique de 5,99 €</h2>
+    <p><strong>Point Relais / Locker :</strong> 5,99 € pour les quatre pays dans l’intégration prévue. Enregistrement confirmé par lecture de la configuration publique : 599 centimes. Réglage modifiable dans l’admin.</p>
+    <ul>
+      <li class="checked">Choisir la formule et le montant : tarif unique de 5,99 €, confirmé par le propriétaire.</li>
+      <li class="checked">Enregistrer 5,99 € dans l’admin, puis vérifier la valeur publique : confirmé.</li>
+      <li>Confirmer les poids réels et vérifier le sélecteur en ligne après publication.</li>
+    </ul>
+    <p><strong>Compte :</strong> « Sendcloud rates » activé ; « My contracts » vide. L’absence de contrat personnel ne prouve pas l’indisponibilité des tarifs Sendcloud.</p>
+    <div class="notes">Prochaine validation : contrôle du sélecteur en ligne, puis étiquettes et suivi<div class="line"></div><div class="line"></div></div>
+    <footer><span>Tarif client : 5,99 € • Enregistrement confirmé</span><span>Annexe livraison • 8 / 8</span></footer>
+  </section>
+</body>
+</html>

@@ -222,6 +222,7 @@
   function clearPending() { pending = null; try { sessionStorage.removeItem(pendingKey); } catch (e) {} }
   function journalSay(message) { el('inventoryJournalStatus').hidden = false; el('inventoryJournalStatus').textContent = message; }
   function clearReset() { pendingReset = null; try { sessionStorage.removeItem(resetKey); } catch (e) {} }
+  function editorStockPending() { try { return window.localStorage && window.localStorage.getItem('hn-admin-editor-stock-operation'); } catch (error) { return true; } }
   function preview() {
     var mode = el('inventoryMode').value, value = el('inventoryQuantity').value, qty = Number(value);
     if (!snapshot || !catalog.validStock(snapshot.stock) || ['restock','remove','count'].indexOf(mode) < 0 || value === '') { el('inventoryPreview').textContent = 'Choisissez une variante au stock confirmé, une opération et une quantité pour voir le résultat avant envoi.'; return false; }
@@ -337,6 +338,7 @@
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     if (busy || pendingReset) return;
+    if (editorStockPending()) { say('Reprenez d’abord l’opération en attente dans la fiche produit.'); return; }
     if (!pending) {
       if (!snapshot) { say('Choisissez une variante.'); return; }
       var qty = Number(el('inventoryQuantity').value), mode = el('inventoryMode').value, reason = el('inventoryReason').value.trim();
@@ -371,6 +373,7 @@
     });
   });
   el('resetInventoryJournal').addEventListener('click', function () {
+    if (editorStockPending()) { journalSay('Reprenez d’abord l’opération en attente dans la fiche produit.'); return; }
     if (busy || pending) { journalSay('Confirmez d’abord l’ajustement de stock en cours.'); return; }
     if (!pendingReset) {
       if (!confirm('Réinitialiser le journal courant à zéro ?\n\nToutes les opérations déjà enregistrées seront archivées, pas supprimées, y compris celles au-delà des 100 lignes affichées.\nLe stock et les commandes restent inchangés. Les nouvelles opérations resteront visibles.')) return;

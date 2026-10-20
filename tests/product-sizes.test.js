@@ -20,7 +20,7 @@ test('l’admin prépare trois lignes Taille unique, garde les trois IDs actifs 
   const current=colors.map((color,index)=>({id:randomUUID(),color,size:'One Size',stock:[2,8,2][index],active:true,barcode:'CURRENT-'+color}));
   const editing={variants:old.concat(current)}, before=JSON.stringify(editing);
   const grid={innerHTML:''}, inputs={'f-colors':colors.join(', '),'f-sizes':'One Size, Taille unique'}, context={
-    SIZES:sizes,productsAll:[{sizes:['One Size','Taille unique'],variants:editing.variants}],editing,editorRevision:1,variantGridRevision:-1,
+    SIZES:sizes,productsAll:[{sizes:['One Size','Taille unique'],variants:editing.variants}],editing,editorRevision:1,variantGridRevision:-1,inlineStock:null,
     getVal:id=>inputs[id]||'',setVal:(id,value)=>{inputs[id]=value;},strToList:value=>value.split(',').map(s=>s.trim()).filter(Boolean),
     esc:value=>String(value==null?'':value).replace(/&/g,'&amp;').replace(/"/g,'&quot;'),colorCellHtml:color=>'<input class="v-color" value="'+color+'">',toast(){},
     document:{getElementById:()=>grid,querySelectorAll:()=>[]}

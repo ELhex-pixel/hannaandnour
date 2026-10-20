@@ -78,3 +78,6 @@ test('les commandes de maintenance exigent leur migration sans déclencher de re
 test('les prix personnalisés exigent leurs snapshots avant publication, sans modifier une vente',async()=>{
   const calls=[];await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='physical_prices_schema_version'?{error:{}}:{data:1};}}),/migration_physical_prices/);assert.equal(calls.at(-1),'physical_prices_schema_version');
 });
+test('les relais du checkout exigent leur snapshot avant publication, sans changer de commande',async()=>{
+  const calls=[];await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='checkout_pickup_schema_version'?{error:{}}:{data:1};}}),/migration_checkout_pickup/);assert.equal(calls.at(-1),'checkout_pickup_schema_version');
+});

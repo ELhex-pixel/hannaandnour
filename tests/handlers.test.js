@@ -4,11 +4,11 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
 
-function checkout(overrides = {}, stripeError = false) {
+function checkout(overrides = {}, stripeError = false, pickupCheck = async () => ({ code: 'pickup_not_available' })) {
   const exports = {};
-  const state = { inserted: 0, stripe: 0, releases: 0 };
+  const state = { inserted: 0, stripe: 0, releases: 0, rows: [], pickupChecks: 0 };
   const value = { return_policy:{ version:'initial',days:30,withdrawal_payer:'customer',fault_payer:'store' }, items: [{ slug: 'veste', qty: 2, price_cents: 1000, color: '', size: '', variantId: null, product: { id: 'product', name_en: 'Jacket', image: 'images/hero.jpg' } }], totals: { subtotal: 2000, discount: 0, tax: 140, shipping: 699, total: 2839 }, currency: { code: 'eur', symbol: '€' }, method: 'standard', promo: null };
-  const query = { insert() { state.inserted++; return Promise.resolve({ error: null }); }, update() { return this; }, delete() { return this; }, eq() { return this; }, then(resolve) { return Promise.resolve({ error: null }).then(resolve); } };
+  const query = { insert(row) { state.inserted++; state.rows.push(row); return Promise.resolve({ error: null }); }, update() { return this; }, delete() { return this; }, eq() { return this; }, then(resolve) { return Promise.resolve({ error: null }).then(resolve); } };
   const shared = {
     json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }), getSupabase: () => ({ from: () => query, rpc: async name => { if (name === 'release_order') state.releases++; return { data: true }; } }), isConfigured: () => true,
     readBody: event => JSON.parse(event.body || '{}'), requireUser: async () => ({ ok: true, user: { id: 'user' } }), getBearer: () => '', rateLimit: async () => null, siteUrl: 'https://example.test', CORS_HEADERS: {}, ...overrides
@@ -16,7 +16,7 @@ function checkout(overrides = {}, stripeError = false) {
   class Stripe {
     constructor() { this.checkout = { sessions: { create: async payload => { state.stripe++; state.payload = payload; if (stripeError) throw new Error('Network timeout'); return { id: 'cs_test', url: 'https://checkout.stripe.com/test' }; }, expire: async () => {} } }; }
   }
-  vm.runInNewContext(fs.readFileSync('netlify/functions/checkout.js', 'utf8'), { exports, process: { env: { STRIPE_SECRET_KEY: 'test-key-not-a-secret' } }, require: name => name === 'crypto' ? crypto : name === 'stripe' ? Stripe : name === './shared' ? shared : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : { ...require('../public/js/commerce'), quote: async () => value, publicQuote: data => data } });
+  vm.runInNewContext(fs.readFileSync('netlify/functions/checkout.js', 'utf8'), { exports, process: { env: { STRIPE_SECRET_KEY: 'test-key-not-a-secret' } }, require: name => name === 'crypto' ? crypto : name === 'stripe' ? Stripe : name === './shared' ? shared : name === './lib/sendcloud' ? {createClient:()=>({verifyCheckoutPoint:async selection=>{state.pickupChecks++;return pickupCheck(selection);}})} : name === '../../public/js/pickup-points' ? require('../public/js/pickup-points') : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : { ...require('../public/js/commerce'), quote: async () => value, publicQuote: data => data } });
   return { handler: exports.handler, state, value };
 }
 const event = payload => ({ httpMethod: 'POST', body: JSON.stringify(payload), headers: {} });
@@ -84,6 +84,27 @@ test('le checkout garde la langue Stripe et les retours localisés sans changer 
     assert.equal(payload.line_items[0].price_data.product_data.name, mock.value.items[0].product['name_' + lang]);
     assert.equal(payload.line_items.reduce((sum, line) => sum + line.quantity * line.price_data.unit_amount, 0) + payload.shipping_options[0].shipping_rate_data.fixed_amount.amount, mock.value.totals.total);
   }
+});
+
+const pickupSelection={id:1000001,country_code:'NL',fingerprint:'a'.repeat(64)};
+const pickupPoint={id:1000001,carrier:'mondial_relay',carrier_service_point_id:'NL-001',name:'Relais vérifié',type:'servicepoint',fingerprint:'a'.repeat(64),address:{house_number:'1',street:'Rue réelle',city:'Amsterdam',postal_code:'1234 AB',country_code:'NL'},availability_checked_at:'2026-10-20T12:00:00.000Z'};
+test('le checkout conserve le vrai relais et son pays, ignore les coordonnées et frais forgés et garde les montants exacts',async()=>{
+  const mock=checkout({},false,async()=>({point:pickupPoint}));mock.value.method='pickup';mock.value.totals.shipping=599;mock.value.totals.total=2739;
+  const response=await mock.handler(event({...customer,phone:'+33000000000',pickup:pickupSelection,pickup_point:'Adresse inventée',country:'US',shipping_cents:0,expected_total_cents:2739}));
+  assert.equal(response.statusCode,200);assert.equal(mock.state.pickupChecks,1);
+  const order=mock.state.rows[0];assert.equal(order.country,'NL');assert.equal(order.address1,'1 Rue réelle');assert.equal(order.city,'Amsterdam');assert.equal(order.postal_code,'1234 AB');assert.match(order.pickup_point,/Relais vérifié/);assert.doesNotMatch(order.pickup_point,/inventée/);
+  assert.deepEqual(order.pickup_point_data,pickupPoint);assert.equal(order.shipping_cents,599);assert.equal(order.total_cents,2739);
+  assert.equal(mock.state.payload.shipping_options[0].shipping_rate_data.fixed_amount.amount,599);
+});
+test('aucun texte libre, absence de téléphone, pays inconnu, panne ou relais changé ne réserve ni ne crée de paiement',async()=>{
+  for(const body of [{pickup_point:'Relais libre'},{pickup:{...pickupSelection,id:'1000001'}},{pickup:{...pickupSelection,country_code:'US'}},{pickup:pickupSelection,phone:''}]){
+    const mock=checkout();mock.value.method='pickup';const response=await mock.handler(event({...customer,phone:'0000',...body}));assert.equal(response.statusCode,400);assert.equal(mock.state.inserted,0);assert.equal(mock.state.stripe,0);assert.equal(mock.state.pickupChecks,0);
+  }
+  for(const failure of ['pickup_changed','pickup_not_available','network']){
+    const mock=checkout({},false,async()=>{if(failure==='network')throw new Error('private-key');return{code:failure};});mock.value.method='pickup';
+    const response=await mock.handler(event({...customer,phone:'0000',pickup:pickupSelection}));assert.equal(response.statusCode,failure==='network'?503:409);assert.equal(mock.state.inserted,0);assert.equal(mock.state.stripe,0);assert(!response.body.includes('private-key'));
+  }
+  const quote=checkout();quote.value.method='pickup';assert.equal((await quote.handler(event({action:'quote'}))).statusCode,200);assert.equal(quote.state.pickupChecks,0);
 });
 
 function webhook(type, overrides = {}) {

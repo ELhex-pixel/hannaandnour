@@ -34,8 +34,10 @@ async function preflight(env = process.env, client) {
     if(maintenance.error||maintenance.data!==1)throw new Error('schema');
     const physicalPrices=await client.rpc('physical_prices_schema_version');
     if(physicalPrices.error||physicalPrices.data!==1)throw new Error('schema');
+    const checkoutPickup=await client.rpc('checkout_pickup_schema_version');
+    if(checkoutPickup.error||checkoutPickup.data!==1)throw new Error('schema');
     for (const [table, columns] of [
-      ['orders', 'inventory_reserved,stock_issue,confirmation_claimed_at,admin_archived,payment_intent_id,refunded_cents,carrier,stripe_creation_started,refund_restock,prepared_at,return_policy,sale_channel,external_payment_method'],
+      ['orders', 'inventory_reserved,stock_issue,confirmation_claimed_at,admin_archived,payment_intent_id,refunded_cents,carrier,stripe_creation_started,refund_restock,prepared_at,return_policy,sale_channel,external_payment_method,pickup_point_data'],
       ['order_items', 'stock_debited,net_total_cents,prepared_quantity,catalog_unit_price_cents,physical_price_note'],
       ['return_requests', 'evidence_paths,category,shipping_payer,decision_note,admin_hidden_at'],
       ['order_returns','sellable_quantity,inspection_note'],
@@ -54,7 +56,7 @@ async function preflight(env = process.env, client) {
       if (tableError) throw new Error('schema');
     }
   } catch (error) {
-    throw new Error('Publication bloquée : vérifier les migrations existantes, dont supabase/migration_integrity_features.sql, supabase/migration_admin_inventory.sql, supabase/migration_admin_operations.sql, supabase/migration_return_policy_editor.sql, supabase/migration_catalog_cleanup.sql, supabase/migration_inventory_journal.sql, supabase/migration_partial_refunds.sql, supabase/migration_catalog_categories.sql, supabase/migration_catalog_return_cleanup.sql, supabase/migration_physical_sales.sql, supabase/migration_admin_maintenance.sql et supabase/migration_physical_prices.sql. Aucune migration distante n’a été exécutée automatiquement.');
+    throw new Error('Publication bloquée : vérifier les migrations existantes, dont supabase/migration_integrity_features.sql, supabase/migration_admin_inventory.sql, supabase/migration_admin_operations.sql, supabase/migration_return_policy_editor.sql, supabase/migration_catalog_cleanup.sql, supabase/migration_inventory_journal.sql, supabase/migration_partial_refunds.sql, supabase/migration_catalog_categories.sql, supabase/migration_catalog_return_cleanup.sql, supabase/migration_physical_sales.sql, supabase/migration_admin_maintenance.sql, supabase/migration_physical_prices.sql et supabase/migration_checkout_pickup.sql. Aucune migration distante n’a été exécutée automatiquement.');
   }
   console.log('Compatibilité Supabase vérifiée en lecture seule.');
 }

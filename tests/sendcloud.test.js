@@ -34,6 +34,8 @@ function load(env = credentials) {
   vm.runInNewContext(fs.readFileSync('netlify/functions/lib/sendcloud.js', 'utf8'), {
     module, process: { env }, Buffer, URL, AbortSignal, globalThis: { fetch: () => { throw new Error('Unexpected network access'); } },
     require: name => {
+      if (name === 'crypto') return crypto;
+      if (name === '../../../public/js/pickup-points') return require('../public/js/pickup-points');
       assert.equal(name, '../shared');
       return { json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }) };
     }
@@ -195,6 +197,28 @@ test('Sendcloud : relais périmés, étrangers, mal formés et autres transporte
   assert.equal(result.points[0].distance, 919);
   const broken = mock({ '/service-points': () => response({ results: null }) });
   await assert.rejects(broken.client.servicePoints({ postal_code: '75001' }), error => error.code === 'sendcloud_invalid_response');
+});
+
+test('checkout : recherche dans les quatre pays, codes postaux locaux, résultats sûrs et empreintes stables',async()=>{
+  for(const [country,postal] of [['FR','75001'],['BE','1000'],['ES','28001'],['NL','1234ab']]){
+    const row={...point,address:{...point.address,country_code:country,postal_code:country==='NL'?'1234 AB':postal}};
+    const {client,calls}=mock({'/service-points':()=>response({results:[row,row,{...row,is_expired:true},{...row,carrier:{code:'other'}},{...row,address:{...row.address,country_code:'US'}}],geocoding:{status:'matched'}})});
+    const data=await client.checkoutPoints({country_code:country,postal_code:postal,carrier_code:'other',limit:999});assert.equal(data.points.length,1);assert.match(data.points[0].fingerprint,/^[a-f0-9]{64}$/);assert.equal(data.points[0].address.country_code,country);
+    const url=calls[0].url;assert.equal(url.searchParams.get('country_code'),country);assert.equal(url.searchParams.get('carrier_code'),'mondial_relay');assert.equal(url.searchParams.get('limit'),'20');assert.equal(calls[0].options.cache,'no-store');assert(!JSON.stringify(data).includes('private-'));
+    assert.equal((await client.checkoutPoints({country_code:country,postal_code:postal})).points[0].fingerprint,data.points[0].fingerprint);
+  }
+  const {client,calls}=mock();for(const [country,postal] of [['US','10001'],['FR','97100'],['BE','75001'],['NL','1234'],['ES','99000']])await assert.rejects(client.checkoutPoints({country_code:country,postal_code:postal}));assert.equal(calls.length,0);
+});
+test('checkout : coordonnées fraîches puis contrôle de disponibilité borné, aucun achat ou endpoint externe',async()=>{
+  const calls=[],api=load(),row={...point};
+  let available=true,current=row;
+  const client=api.createClient({env:credentials,fetchImpl:async(url,options)=>{calls.push({url:new URL(url),options});return response(new URL(url).pathname.endsWith('check-availability')?{is_available:available}:new URL(url).pathname.endsWith('/1000001')?current:{results:[row]});}});
+  const chosen=(await client.checkoutPoints({country_code:'FR',postal_code:'75001'})).points[0],selection={id:chosen.id,country_code:'FR',fingerprint:chosen.fingerprint};calls.length=0;
+  const verified=await client.verifyCheckoutPoint(selection);assert.equal(verified.point.id,row.id);assert.match(verified.point.availability_checked_at,/^\d{4}-/);assert.equal(calls.length,2);assert.equal(calls[0].options.method,'GET');assert.equal(calls[1].options.method,'POST');assert.equal(calls[1].url.pathname,'/api/v3/service-points/1000001/check-availability');assert.equal(calls[1].options.body,undefined);
+  available=false;assert.equal((await client.verifyCheckoutPoint(selection)).code,'pickup_not_available');
+  current={...row,name:'Nouvelle adresse'};calls.length=0;assert.equal((await client.verifyCheckoutPoint(selection)).code,'pickup_changed');assert.equal(calls.length,1);
+  for(const changed of [{...row,is_expired:true},{...row,id:123},{...row,carrier:{code:'other'}},{...row,address:{...row.address,country_code:'BE',postal_code:'1000'}}]){current=changed;assert.equal((await client.verifyCheckoutPoint(selection)).code,'pickup_not_available');}
+  calls.length=0;assert.equal((await client.verifyCheckoutPoint({id:'../shipments'})).code,'pickup_invalid');assert.equal(calls.length,0);
 });
 
 test('les actions Sendcloud exigent une session admin et le débit persistant avant tout appel externe', async () => {

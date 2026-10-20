@@ -34,13 +34,26 @@ exports.handler = async function (event) {
     }
     fields.email = fields.email.toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email) || !fields.customer_name) return json(400, { error: 'Invalid customer details' });
-    if (value.method === 'pickup' ? !fields.pickup_point : !fields.address1 || !fields.city || !fields.postal_code || !/^[A-Za-z]{2}$/.test(fields.country)) return json(400, { error: 'Missing shipping details' });
+    if (value.method !== 'pickup' && (!fields.address1 || !fields.city || !fields.postal_code || !/^[A-Za-z]{2}$/.test(fields.country))) return json(400, { error: 'Missing shipping details' });
     let userId = null;
     if (getBearer(event)) {
       const auth = await requireUser(sb, getBearer(event));
       if (!auth.ok) return json(401, { error: 'Not authenticated' });
       userId = auth.user.id;
     }
+    let pickupPoint = null;
+    if (value.method === 'pickup') {
+      if (!require('../../public/js/pickup-points').selection(body.pickup) || !fields.phone) return json(400, { error: 'pickup_invalid', code: 'pickup_invalid' });
+      let checked;
+      try { checked = await require('./lib/sendcloud').createClient().verifyCheckoutPoint(body.pickup); }
+      catch { return json(503, { error: 'pickup_unavailable', code: 'pickup_unavailable' }); }
+      if (checked.code) return json(checked.code === 'pickup_invalid' ? 400 : 409, { error: checked.code, code: checked.code });
+      pickupPoint = checked.point;
+      const address = pickupPoint.address;
+      fields.pickup_point = (pickupPoint.name + ' — ' + require('../../public/js/pickup-points').address(pickupPoint)).slice(0, 250);
+      fields.address1 = [address.house_number, address.street].filter(Boolean).join(' ');
+      fields.address2 = ''; fields.city = address.city; fields.state = ''; fields.postal_code = address.postal_code; fields.country = address.country_code;
+    } else fields.pickup_point = null;
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     orderId = randomUUID();
     const orderNumber = 'HN-' + randomBytes(8).toString('hex').toUpperCase();
@@ -48,7 +61,7 @@ exports.handler = async function (event) {
     const allocation = discountedLines(value.items, t.discount);
     const { error: orderError } = await sb.from('orders').insert({
       ...fields, id: orderId, order_number: orderNumber, cart_restore_token: randomBytes(24).toString('hex'),
-      shipping_method: value.method, delivery_type: value.method === 'pickup' ? 'pickup' : 'home',
+      shipping_method: value.method, delivery_type: value.method === 'pickup' ? 'pickup' : 'home', pickup_point_data: pickupPoint,
       subtotal_cents: t.subtotal, shipping_cents: t.shipping, tax_cents: t.tax, discount_cents: t.discount,
       total_cents: t.total, currency: value.currency.code, status: 'pending', promo_code: value.promo ? value.promo.code : null, user_id: userId, return_policy: value.return_policy
     });

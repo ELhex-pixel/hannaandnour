@@ -63,6 +63,7 @@
     var apply = document.getElementById('applyDiscount'); if (apply) apply.disabled = false;
     var btn = document.getElementById('placeOrderBtn');
     if (btn) { btn.disabled = false; btn.textContent = tr('placeOrder') + ' • ' + formatMoney(data.totals.total); }
+    syncPickupButton();
   }
 
   function formatMoney(cents) {
@@ -200,24 +201,30 @@
     if (!shipSection) return null;
     var wrap = document.createElement('div');
     wrap.id = 'pickupField';
-    wrap.style.cssText = 'margin-top: var(--spacing-lg); display: none;';
-    wrap.innerHTML =
-      '<div class="form-group">' +
-      '<label class="form-label" for="pickupPoint">' + tr('pickupPoint') + ' *</label>' +
-      '<input type="text" class="form-input" id="pickupPoint" placeholder="Adresse / relais / boutiques choisi(e)s">' +
-      '</div>';
+    wrap.hidden = true;
     shipSection.appendChild(wrap);
+    if (window.HN_PICKUP_SELECTOR) state.pickupSelector = window.HN_PICKUP_SELECTOR(wrap, syncPickupButton);
+    else wrap.textContent = tr('pickupUnavailable');
     return wrap;
+  }
+
+  function syncPickupButton() {
+    var button = document.getElementById('placeOrderBtn');
+    if (button) button.disabled = state.paying || !state.quote || (state.method === 'pickup' && (!state.settings.pickup_enabled || !state.pickupSelector || !state.pickupSelector.value()));
   }
 
   function wireShippingMethods() {
     injectPickupMethod();
     var methods = document.querySelectorAll('.payment-method[data-method]');
     methods.forEach(function (m) {
+      m.setAttribute('role', 'button'); m.tabIndex = 0;
+      m.setAttribute('aria-pressed', m.classList.contains('selected') ? 'true' : 'false');
+      m.addEventListener('keydown', function (event) { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); m.click(); } });
       m.addEventListener('click', function () {
         if (state.paying) return;
-        methods.forEach(function (x) { x.classList.remove('selected'); });
+        methods.forEach(function (x) { x.classList.remove('selected'); x.setAttribute('aria-pressed', 'false'); });
         m.classList.add('selected');
+        m.setAttribute('aria-pressed', 'true');
         state.method = m.getAttribute('data-method');
         updateDeliveryUI();
         refreshQuote();
@@ -241,7 +248,9 @@
   function updateDeliveryUI() {
     var box = ensurePickupField();
     if (!box) return;
-    box.style.display = state.method === 'pickup' ? '' : 'none';
+    if (state.pickupSelector) state.pickupSelector.setActive(state.method === 'pickup');
+    else box.hidden = state.method !== 'pickup';
+    syncPickupButton();
   }
 
   function wirePromo() {
@@ -286,7 +295,7 @@
       var email = val('contactEmail');
       var name = val('fullName');
       var isPickup = state.method === 'pickup';
-      var pickupPoint = val('pickupPoint');
+      var pickup = isPickup && state.pickupSelector ? state.pickupSelector.value() : null;
 
       var payload = {
         lang: HN.lang(),
@@ -309,7 +318,7 @@
         postal_code: isPickup ? '' : val('postalCode'),
         country: isPickup ? 'FR' : val('country'),
         shipping_method: isPickup ? 'pickup' : state.method,
-        pickup_point: isPickup ? pickupPoint : '',
+        pickup: pickup,
         delivery_type: isPickup ? 'pickup' : 'home',
         promo: getPromo(),
         expected_total_cents: state.quote.totals.total,
@@ -322,8 +331,9 @@
         return;
       }
       if (isPickup) {
-        if (!pickupPoint) {
-          window.hnToast && hnToast(tr('checkoutError'), tr('pickupPoint') + ' *', 'error');
+        if (!pickup || !payload.phone) {
+          window.hnToast && hnToast(tr('checkoutError'), tr(pickup ? 'phoneLabel' : 'pickupChoose') + ' *', 'error');
+          if (state.pickupSelector && !pickup) state.pickupSelector.focus();
           return;
         }
       } else if (!payload.address1 || !payload.city || !payload.postal_code) {
@@ -332,6 +342,7 @@
       }
 
       state.paying = true;
+      if (state.pickupSelector) state.pickupSelector.lock(true);
       btn.disabled = true;
       btn.textContent = tr('processing');
 
@@ -348,16 +359,25 @@
             window.location.href = out.data.url;
           } else if (out.status === 409 && out.data.totals) {
             state.paying = false;
+            if (state.pickupSelector) state.pickupSelector.lock(false);
             acceptQuote(out.data);
             window.hnToast && hnToast(tr('checkoutError'), tr('quoteChanged'), 'error');
+          } else if (/^pickup_/.test(out.data.code || '')) {
+            var error = new Error(tr(out.data.code === 'pickup_changed' ? 'pickupChanged' : 'pickupUnavailable'));
+            error.pickup = true; throw error;
           } else {
             throw new Error(out.data.error || 'checkout failed');
           }
         })
         .catch(function (err) {
           state.paying = false;
+          if (state.pickupSelector) {
+            state.pickupSelector.lock(false);
+            if (err.pickup) state.pickupSelector.invalidate('pickupUnavailable');
+          }
           btn.disabled = false;
           btn.textContent = tr('placeOrder') + ' \u2022 ' + formatMoney(totals().total);
+          syncPickupButton();
           window.hnToast && hnToast(tr('checkoutError'), err.message || tr('demoMsg'), 'error');
         });
     });
@@ -408,7 +428,7 @@
     refreshQuote();
   }
 
-  document.addEventListener('langchange', function () { if (state.loaded) renderShippingMethodPrices(); renderSummary(); renderReturnPolicy(); });
+  document.addEventListener('langchange', function () { if (state.loaded) renderShippingMethodPrices(); renderSummary(); renderReturnPolicy(); syncPickupButton(); });
   document.addEventListener('hn:config', function () { if (state.loaded) refreshQuote(); });
   init();
 })();

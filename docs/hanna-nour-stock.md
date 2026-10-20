@@ -76,3 +76,14 @@ Les retours physiques et remboursements sont des opérations distinctes. Un remb
 - Réservation en ligne entre devis et confirmation ; prix changé, stock épuisé, variante désactivée et produit retiré.
 - Navigateur : lecture sans écriture au scan, panier, confirmation, réponse perdue puis reprise après rechargement, ajustement QR, deux étiquettes distinctes, historique, déconnexion et largeurs 320/390/1024 px.
 - Les tests utilisent des fixtures et une base locale ; aucune vente, opération de stock, paiement ni email réels n’a été effectué.
+# Modification rapide depuis la fiche produit
+
+Dans **Produits → Modifier → Quantités par taille et coloris**, chaque variante enregistrée propose **Modifier ici**. Le panneau s’ouvre sous sa ligne et conserve les autres champs en cours de saisie.
+
+1. Choisir **Arrivage**, **Retrait** ou **Correction : nouveau disponible**.
+2. Renseigner la quantité et le motif du mouvement.
+3. Vérifier l’aperçu avant → après, puis confirmer.
+
+Une correction remplace le **disponible**, hors unités réservées ou déjà vendues ; un arrivage ajoute les unités saisies. Le bouton d’actualisation relit le stock réel et les mouvements restent dans le journal existant. Le stock s’enregistre dès la confirmation de l’ajustement ; le bouton **Enregistrer le produit** concerne ensuite les autres champs de la fiche.
+
+Si le résultat d’une demande reste incertain, utiliser **Réessayer la même opération**, y compris après fermeture ou rechargement de la fiche. Le même identifiant est conservé pour éviter un double mouvement. Une autre variante ou le gestionnaire complet ne permet pas de créer un mouvement distinct tant que cette opération n’est pas résolue.
