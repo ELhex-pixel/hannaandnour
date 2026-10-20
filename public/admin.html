@@ -114,6 +114,14 @@
   #activityPeriodDialog input { width: 100%; min-height: 44px; font-size: 16px; }
   #activityPeriodDialog button { min-height: 44px; }
   [data-activity-caption] { overflow-wrap: anywhere; }
+  #orderShippingDialog { width: min(760px, calc(100% - 24px)); max-height: 92dvh; overflow: auto; padding: 22px; border: 1px solid var(--mg-line, #ddd2bf); border-radius: 16px; background: var(--mg-surface, white); color: var(--mg-ink, #282520); }
+  #orderShippingDialog::backdrop { background: #0009; }
+  #orderShippingDialog input, #orderShippingDialog select, #orderShippingDialog button { min-height: 44px; font-size: 16px; }
+  #orderShippingDialog input:not([type=radio]), #orderShippingDialog select { width: 100%; }
+  #shippingOptions { border: 0; margin: 14px 0; padding: 0; min-width: 0; }
+  .shipping-option { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--mg-line, #ddd2bf); border-radius: 10px; margin: 8px 0; overflow-wrap: anywhere; }
+  .shipping-option input { flex: 0 0 20px; width: 20px; }
+  #shippingStatus, #shippingPoint, #shippingReceipt { overflow-wrap: anywhere; white-space: pre-line; }
   .gallery-item img.err { opacity: 0.35; }
   .gallery-item label { width: 200px; max-width: 100%; }
   .gallery-item .g-color { width: 100%; }
@@ -1151,6 +1159,27 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <dialog id="orderShippingDialog" aria-labelledby="orderShippingTitle">
+    <div class="admin-photo-heading"><h2 id="orderShippingTitle">Étiquette Mondial Relay</h2><button type="button" class="btn btn-secondary" id="shippingClose">Fermer</button></div>
+    <p id="shippingPoint"></p><p id="shippingStatus" role="status" aria-live="polite"></p>
+    <div id="shippingParcelFields">
+      <div class="field"><label for="shippingSender">Adresse expéditeur enregistrée dans Sendcloud</label><select id="shippingSender"><option value="">Choisir l’expéditeur</option></select></div>
+      <div class="editor-stock-fields">
+        <div class="field"><label for="shippingPackaging">Emballage</label><select id="shippingPackaging"><option value="">Choisir…</option><option value="pouch">Pochette d’expédition</option><option value="box">Carton</option></select></div>
+        <div class="field"><label for="shippingWeight">Poids réel, emballage compris (kg)</label><input id="shippingWeight" inputmode="decimal" type="text" placeholder="À peser"></div>
+      </div>
+      <div class="editor-stock-fields">
+        <div class="field"><label for="shippingLength">Longueur (cm)</label><input id="shippingLength" type="text" inputmode="decimal"></div>
+        <div class="field"><label for="shippingWidth">Largeur (cm)</label><input id="shippingWidth" type="text" inputmode="decimal"></div>
+        <div class="field"><label for="shippingHeight">Hauteur / épaisseur du colis fermé (cm)</label><input id="shippingHeight" type="text" inputmode="decimal"></div>
+      </div>
+      <button type="button" class="btn btn-secondary" id="shippingQuote">Consulter les services et tarifs</button>
+    </div>
+    <fieldset id="shippingOptions" hidden><legend>Choisir le service d’affranchissement</legend><div id="shippingOptionsList"></div></fieldset>
+    <p class="admin-muted">Les montants ci-dessous sont les estimations de transport Sendcloud. Les frais de livraison facturés au client restent ceux de sa commande.</p>
+    <p id="shippingReceipt"></p>
+    <div class="editor-stock-actions"><button type="button" class="btn btn-primary" id="shippingCreate" disabled>Créer l’étiquette choisie</button><select id="shippingPaper" aria-label="Format du PDF"><option value="A6">PDF A6 — étiquette</option><option value="A4">PDF A4</option></select><button type="button" class="btn btn-secondary" id="shippingDownload" disabled>Télécharger l’étiquette PDF</button></div>
+  </dialog>
   <dialog id="activityPeriodDialog" aria-labelledby="activityPeriodTitle">
     <h2 id="activityPeriodTitle">Démarrer une nouvelle période</h2>
     <p>Le chiffre d’affaires, les commandes, les articles vendus, les retours et remboursements, les coûts des ventes et les visites repartiront ensemble sur une nouvelle date.</p>
@@ -1176,6 +1205,8 @@
   <script src="js/admin-inline-stock.js"></script>
   <script src="js/admin-photo-viewer.js"></script>
   <script src="js/admin-activity-periods.js"></script>
+  <script src="js/shipping-parcel.js"></script>
+  <script src="js/admin-order-shipping.js"></script>
   <script src="vendor/jsbarcode.min.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/admin-product-deletion.js"></script>

@@ -1303,6 +1303,7 @@
   document.addEventListener('hn:admin-logout',function () { manualReturnPending = null; manualReturnBusy = false; sessionStorage.removeItem('hn-admin-return-operation'); document.getElementById('orderModal').classList.remove('open'); document.getElementById('orderModalBody').textContent = ''; });
 
   function openOrder(o) {
+    document.dispatchEvent(new CustomEvent('hn:order-view'));
     document.getElementById('orderModalTitle').textContent = 'Commande ' + o.order_number;
     document.getElementById('orderModalBody').setAttribute('data-order-id',o.id);
     var addressBlock = o.delivery_type === 'pickup'
@@ -1342,6 +1343,7 @@
         '<button class="btn btn-secondary btn-small" data-act="printPacking">Bon de livraison</button>' +
         '<button class="btn btn-secondary btn-small" data-act="printLabel">&Eacute;tiquette</button>' +
         '</div>' : '') +
+      (o.pickup_point_data && o.sale_channel !== 'physical' ? '<p><button type="button" class="btn btn-secondary" data-order-shipping="' + esc(o.id) + '">Étiquette Mondial Relay — préparer / télécharger</button></p>' : '') +
       '<div id="trackingRow" style="display:none; margin-top:12px;">' +
       '<label style="font-size:12px; color:#5c5548;">Num&eacute;ro de suivi (facultatif)</label>' +
       '<input type="text" id="trackingInput" style="width:100%; padding:8px; border:1px solid #ddd5c4; border-radius:8px;">' +

@@ -281,6 +281,11 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
       if(limited)return limited;
       return await require('./lib/activity-periods').adminActivityPeriods(sb,action,body);
     }
+    if (['getOrderShipping','quoteOrderShipping','createOrderShipping','downloadOrderShippingLabel'].includes(action)) {
+      const limited=await rateLimit(sb,event,action==='createOrderShipping'?'admin-shipping-create':'admin-shipping',action==='createOrderShipping'?20:60,600,'admin');
+      if(limited)return limited;
+      return await require('./lib/order-shipping').adminOrderShipping(sb,action,body);
+    }
     if (['getOrderRefunds','quoteOrderRefund','refundOrderPartial','resumeOrderRefund','refundOrder'].includes(action)) {
       const limited = await rateLimit(sb,event,'admin-refunds',30,600,'admin');
       if (limited) return limited;

@@ -54,7 +54,7 @@ Le preflight bloque le déploiement si le schéma manque. Aucune migration dista
 
 ## Suite de l’étape livraison
 
-Le choix du relais et son contrôle ne constituent pas une validation du poids, des dimensions ou du service d’affranchissement pour un colis. Restent à intégrer : informations colis réelles, achat d’étiquette avec reprise sans doublon, rapprochement transporteur et suivi/notifications.
+Le choix du relais et son contrôle ne constituent pas une validation du poids, des dimensions ou du service d’affranchissement pour un colis. Le lot suivant, préparé dans `docs/etiquettes-expedition.md`, ajoute les mesures par commande, le devis et l’étiquette PDF avec reprise. Il nécessite sa nouvelle migration avant publication. Le rapprochement automatique des événements de transport et les notifications restent une étape ultérieure.
 
 Les retours et leur transport restent distincts de la livraison aller à 5,99 €.
 
