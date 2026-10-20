@@ -5,13 +5,13 @@ const vm = require('node:vm');
 function catalogue(count, rows = [{ id: 'test-product', slug: 'cape', product_variants: [] }]) {
   const exports = {}, state = { filters: [], range: null };
   const query = { select(columns) { state.columns = columns; return this; }, in(key, values) { state.filters.push([key,Array.from(values)]);return this; }, eq(key,value) {state.filters.push([key,value]);return this;},order(){return this;},range(start,end){state.range=[start,end];return this;},
-    then(resolve,reject){return Promise.resolve({data:rows,error:null,count}).then(resolve,reject);} };
+    abortSignal(){return this;},then(resolve,reject){return Promise.resolve({data:rows,error:null,count}).then(resolve,reject);} };
   const sb = { rpc(name,args,options) {
     if(name === 'product_review_stats')return Promise.resolve({ data: [], error:null });
     assert.equal(name,'search_products'); state.args=args;state.options=options;
     assert.equal(options.count,'exact');return query;
   } };
-  vm.runInNewContext(fs.readFileSync('netlify/functions/products.js','utf8'), { exports,require:()=>({json:(statusCode,body)=>({statusCode,body:JSON.stringify(body)}),getSupabase:()=>sb,isConfigured:()=>true,CORS_HEADERS:{}}) });
+  vm.runInNewContext(fs.readFileSync('netlify/functions/products.js','utf8'), { exports,AbortSignal,require:name=>name==='../../public/js/catalog-selection'?require('../public/js/catalog-selection'):({json:(statusCode,body)=>({statusCode,body:JSON.stringify(body)}),getSupabase:()=>sb,isConfigured:()=>true,CORS_HEADERS:{}}) });
   return { handler:exports.handler,state };
 }
 test('le comptage exact est demandé sur la RPC et non sur select ; un produit ne donne plus total zéro',async()=>{
@@ -36,4 +36,15 @@ test('le catalogue transporte les variantes une seule fois tout en conservant le
   const mock=catalogue(1,[{id:'p',slug:'veste',price_cents:1000,product_variants:variants}]);
   const product=JSON.parse((await mock.handler({httpMethod:'GET'})).body).products[0];
   assert.equal(Object.hasOwn(product,'product_variants'),false);assert.deepEqual(product.variants,variants);assert.equal(product.price_cents,1000);
+});
+test('Nouveautés et Promotions filtrent avant pagination avec un total exact et aucun prix de promotion inventé',async()=>{
+  const rows=[{id:'a',slug:'new-one',badge:'New',price_cents:2000,compare_at_price_cents:null},{id:'b',slug:'new-two',badge:'Nouveau',price_cents:3000,compare_at_price_cents:4000},{id:'c',slug:'sale-only',badge:'',price_cents:1000,compare_at_price_cents:2000},{id:'d',slug:'false-sale',badge:'Sale',price_cents:2000,compare_at_price_cents:1000}];
+  for(const [selection,expected] of [['new',['new-one','new-two']],['sale',['new-two','sale-only']]]){
+    for(const page of [1,2,3]){
+      const mock=catalogue(rows.length,rows),response=await mock.handler({httpMethod:'GET',queryStringParameters:{collection:selection,limit:'1',page:String(page)}});assert.equal(response.statusCode,200);const body=JSON.parse(response.body);assert.equal(body.total,2);assert.equal(body.has_more,page===1);assert.deepEqual(body.products.map(p=>p.slug),expected.slice(page-1,page));assert.deepEqual(mock.state.range,[0,499]);
+    }
+  }
+  const empty=catalogue(1,[rows[3]]);assert.equal(JSON.parse((await empty.handler({httpMethod:'GET',queryStringParameters:{collection:'sale'}})).body).total,0);
+  const bounded=catalogue(2001,rows);assert.equal((await bounded.handler({httpMethod:'GET',queryStringParameters:{collection:'sale'}})).statusCode,500);
+  const invalid=catalogue(1,rows);assert.equal((await invalid.handler({httpMethod:'GET',queryStringParameters:{collection:'anything'}})).statusCode,400);
 });

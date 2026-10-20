@@ -111,6 +111,10 @@ test('les nouvelles routes publiques précèdent le 404 et conservent un gabarit
   }
   assert(routes.includes('from = "/api/blog"'));
 });
+test('les liens Nouveautés et Promotions ciblent leur sélection, même avant JavaScript',()=>{
+  const {cleanPublicLinks}=require('../scripts/seo');const $=cheerio.load('<footer class="footer"><a href="shop.html" data-i18n="linkNewArrivals">Nouveautés</a><a href="shop.html" data-i18n="linkPromotions">Promotions</a></footer>');
+  cleanPublicLinks($);assert.equal($('[data-i18n=linkNewArrivals]').attr('href'),'shop.html?collection=new#products');assert.equal($('[data-i18n=linkPromotions]').attr('href'),'shop.html?collection=sale#products');
+});
 test('les nouvelles règles sont aussi livrées dans _redirects, sans écraser les pages générées', () => {
   const source = fs.readFileSync('public/_redirects', 'utf8');
   const rules = source.split(/\r?\n/).filter(line => line.trim() && !line.trim().startsWith('#')).map(line => line.trim().split(/\s+/));

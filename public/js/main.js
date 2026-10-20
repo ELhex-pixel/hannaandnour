@@ -498,6 +498,14 @@
     }
   };
 
+  function selectionLinks(){
+    document.querySelectorAll('a[data-i18n="linkNewArrivals"],a[data-i18n="linkPromotions"]').forEach(function(link){
+      var url='shop.html?collection='+(link.getAttribute('data-i18n')==='linkNewArrivals'?'new':'sale')+'#products';
+      link.href=window.HN&&window.HN.pageUrl?window.HN.pageUrl(url):url;
+    });
+  }
+  selectionLinks();document.addEventListener('langchange',selectionLinks);
+
   window.selectSize = function(el, size) {
     const options = el.parentElement.querySelectorAll('.size-option');
     options.forEach(function(o) {

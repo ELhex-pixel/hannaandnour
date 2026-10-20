@@ -32,6 +32,8 @@ async function loadPublicContent(sb) {
 }
 
 function cleanPublicLinks($) {
+  $('[data-i18n="linkNewArrivals"]').attr('href','shop.html?collection=new#products');
+  $('[data-i18n="linkPromotions"]').attr('href','shop.html?collection=sale#products');
   $('.footer [data-i18n="linkLoyalty"], .footer [data-i18n="linkCareers"], .footer [data-i18n="linkSustainability"], .footer [data-i18n="linkFaqs"]').each((_, el) => {
     const node = $(el); if (node.parent().is('li')) node.parent().remove(); else node.remove();
   });

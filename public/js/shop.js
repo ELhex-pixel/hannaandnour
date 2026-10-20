@@ -22,6 +22,14 @@
     filtersOpen: false
   };
   state.ready = false;
+  var initial = new URLSearchParams(window.location.search);
+  state.collection = ['new','sale'].indexOf(initial.get('collection')) >= 0 ? initial.get('collection') : '';
+  state.categories = (initial.get('category') || '').split(',').filter(Boolean).map(normalizeCategory);
+  state.sizes = (initial.get('sizes') || '').split(',').filter(Boolean);
+  state.occasions = (initial.get('occasions') || '').split(',').filter(Boolean);
+  if(initial.has('min')&&/^\d+$/.test(initial.get('min')))state.minCents=Number(initial.get('min'));
+  if(initial.has('max')&&/^\d+$/.test(initial.get('max')))state.maxCents=Number(initial.get('max'));
+  state.sort = ['featured','price-asc','price-desc','rating','newest'].indexOf(initial.get('sort'))>=0?initial.get('sort'):state.collection==='new'?'newest':'featured';
 
   var grid = document.getElementById('productsGrid');
   var loadMoreBtn = document.getElementById('loadMore');
@@ -151,6 +159,10 @@
     var params = new URLSearchParams({ category: state.categories.join(','), sizes: state.sizes.join(','), occasions: state.occasions.join(','), sort: state.sort, limit: PAGE_SIZE });
     if (state.minCents !== null) params.set('min', state.minCents);
     if (state.maxCents !== null) params.set('max', state.maxCents);
+    if (state.collection) params.set('collection', state.collection);
+    var url = new URL(window.location.href);
+    ['category','sizes','occasions','sort','min','max','collection'].forEach(function(key){var value=params.get(key);if(value)url.searchParams.set(key,value);else url.searchParams.delete(key);});
+    window.history.replaceState(null,'',url.pathname+url.search+url.hash);
     var signature = params.toString();
     if (signature !== remoteSignature || state.page === 1) remoteItems = [];
     remoteSignature = signature;
@@ -186,6 +198,7 @@
   function updateActiveFilters() {
     if (!activeFiltersEl) return;
     var tags = [];
+    if(state.collection)tags.push({text:tr(state.collection==='new'?'linkNewArrivals':'linkPromotions'),remove:function(){state.collection='';state.page=1;render();}});
     state.categories.forEach(function (c) {
       tags.push({ text: tr(catKey(c)), remove: function () { state.categories = []; state.page = 1; setFilterControls(); render(); } });
     });
@@ -334,5 +347,6 @@
   }
 
   wireFilters();
+  if(document.getElementById('sortSelect'))document.getElementById('sortSelect').value=state.sort;
   init();
 })();
