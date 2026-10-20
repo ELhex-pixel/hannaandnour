@@ -114,7 +114,7 @@ test('les nouvelles routes publiques précèdent le 404 et conservent un gabarit
 test('les nouvelles règles sont aussi livrées dans _redirects, sans écraser les pages générées', () => {
   const source = fs.readFileSync('public/_redirects', 'utf8');
   const rules = source.split(/\r?\n/).filter(line => line.trim() && !line.trim().startsWith('#')).map(line => line.trim().split(/\s+/));
-  const expected = [['/api/blog', '/.netlify/functions/blog']];
+  const expected = [['/api/blog', '/.netlify/functions/blog'], ['/api/service-points', '/.netlify/functions/service-points']];
   for (const lang of ['fr', 'en', 'ar']) {
     expected.push(['/' + lang + '/products/*', '/' + lang + '/product.html']);
     expected.push(['/' + lang + '/articles/*', '/' + lang + '/blog-post.html']);
@@ -131,9 +131,10 @@ test('le manifeste transmet les routes avant un ancien 404, sans forcer ni élar
   const source = fs.readFileSync('public/_redirects', 'utf8');
   const config = prepareNetlifyRoutes(source);
   assert.deepEqual(Object.keys(config), ['redirects!']);
-  assert.equal(config['redirects!'].length, 7);
+  assert.equal(config['redirects!'].length, 8);
   assert(config['redirects!'].every(rule => rule.status === 200 && rule.force === false));
   assert.deepEqual(config['redirects!'][0], { from: '/api/blog', to: '/.netlify/functions/blog', status: 200, force: false });
+  assert.deepEqual(config['redirects!'][1], { from: '/api/service-points', to: '/.netlify/functions/service-points', status: 200, force: false });
   assert.deepEqual(prepareNetlifyRoutes(source.replace(/\n/g, '\r\n')), config);
   for (const invalid of ['/* /index.html 200', '/api/blog https://external.test 200', '/api/blog /.netlify/functions/blog 200!', '# empty']) assert.throws(() => prepareNetlifyRoutes(invalid));
 });

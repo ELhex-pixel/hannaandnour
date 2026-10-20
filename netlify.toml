@@ -86,6 +86,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/service-points"
+  to = "/.netlify/functions/service-points"
+  status = 200
+
+[[redirects]]
   from = "/api/checkout"
   to = "/.netlify/functions/checkout"
   status = 200
