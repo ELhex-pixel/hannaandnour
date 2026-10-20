@@ -8,7 +8,7 @@ const { LOGO } = require('./brand-assets');
 // Explicit public fields only: no prices, stock, customer data or private costs.
 const fields = {
   products: 'slug,sku,name_fr,name_en,name_ar,description_fr,description_en,description_ar,image,fit_fr,fit_en,fit_ar,measurements_fr,measurements_en,measurements_ar',
-  blog_posts: 'slug,title,category,excerpt,body,image,author,read_minutes,published_at'
+  blog_posts: 'slug,title,category,excerpt,body,image,author,read_minutes,published_at,translations'
 };
 
 async function loadPublicContent(sb) {

@@ -16,13 +16,14 @@
   <title>Blog | Hanna &amp; Nour</title>
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/journal.css">
   <script src="js/theme.js"></script>
   <meta property="og:image" content="https://hannanour.com/images/hero.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="800">
   <meta name="twitter:card" content="summary_large_image">
 </head>
-<body>
+<body class="journal-page">
   <header class="header" id="header">
     <div class="header-top"><p data-i18n="announce">Free shipping on orders over $75 | New styles every week</p></div>
     <div class="header-main">
@@ -68,18 +69,17 @@
   </header>
 
   <main>
-    <section class="page-header">
-      <div class="container">
-        <span class="subtitle" data-i18n="blogSubtitle">Style &amp; Inspiration</span>
-        <h1 class="page-header-title" data-i18n="journalTitle">The Hanna &amp; Nour Journal</h1>
-        <div class="page-header-breadcrumb">
-          <a href="index.html">Home</a><span>/</span><span>Blog</span>
-        </div>
+    <section class="journal-hero">
+      <div class="container journal-hero-inner">
+        <div><span class="journal-kicker" data-i18n="blogSubtitle">Style &amp; Inspiration</span><h1 data-i18n="journalTitle">Le journal Hanna &amp; Nour</h1><p data-i18n="journalIntro">Des idées à porter, des détails à comprendre, un style à construire.</p></div>
+        <aside class="journal-invite"><strong data-i18n="journalCommunityTitle">Votre regard a sa place ici.</strong><p data-i18n="journalCommunityIntro">Une idée, une expérience ou un conseil ? Proposez un article à notre rédaction.</p><a href="blog.html#journalCommunity" data-i18n="journalContribute">Proposer un article</a></aside>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
+        <div class="journal-tools"><div id="journalTopics" role="group" aria-label="Thèmes du journal"></div><div class="journal-search"><label for="journalSearch" class="sr-only" data-i18n="journalSearch">Rechercher un article</label><input id="journalSearch" class="form-input" type="search" data-i18n-placeholder="journalSearch" placeholder="Rechercher un article"></div></div>
+        <p id="journalResults" role="status" aria-live="polite"></p>
         <div class="blog-grid">
 
           <!-- Blog Post 1 -->
@@ -201,6 +201,22 @@
         <div class="text-center" style="margin-top: var(--spacing-2xl);">
           <button class="btn btn-secondary" id="blogMoreBtn" data-i18n="loadMoreArticles">Load More Articles</button>
         </div>
+        <section class="journal-community" id="journalCommunity">
+          <span class="journal-kicker" data-i18n="journalCommunityKicker">Le journal, ensemble</span><h2 data-i18n="journalCommunityTitle">Votre regard a sa place ici.</h2><p data-i18n="journalModerationHelp">Les propositions sont relues par l’administration. Aucun article client n’apparaît avant validation.</p>
+          <p id="journalAuthGate"><a href="account.html" data-i18n="journalLogin">Se connecter pour proposer un article</a></p>
+          <details id="journalContribution" hidden><summary data-i18n="journalContribute">Proposer un article</summary>
+            <form id="journalSubmissionForm">
+              <div class="journal-form-grid"><div><label for="journalAuthor" data-i18n="journalAuthor">Nom public</label><input id="journalAuthor" minlength="2" maxlength="60" required></div><div><label for="journalCategory" data-i18n="journalTopic">Thème</label><select id="journalCategory" required></select></div></div>
+              <label for="journalTitleInput" data-i18n="journalArticleTitle">Titre de votre article</label><input id="journalTitleInput" minlength="5" maxlength="180" required>
+              <label for="journalCover" data-i18n="journalCover">Photo d’illustration</label><select id="journalCover" required></select><img id="journalCoverPreview" src="images/journal-capsule.webp" alt="" width="260" height="174" style="max-width:100%;object-fit:cover;border-radius:12px;margin-top:14px;" loading="lazy">
+              <label for="journalBodyInput" data-i18n="journalArticleBody">Votre article</label><textarea id="journalBodyInput" minlength="300" maxlength="20000" required></textarea>
+              <p data-i18n="journalWritingHelp">De 300 à 20 000 caractères. Écrivez votre propre texte. Votre nom public sera affiché si l’article est publié.</p>
+              <button type="submit" class="btn btn-primary" id="journalSubmit" data-i18n="journalSubmit">Envoyer à la rédaction</button>
+            </form>
+          </details>
+          <p id="journalSubmissionStatus" role="status" aria-live="polite"></p><button type="button" class="btn btn-secondary" id="journalRetry" hidden data-i18n="journalRetry">Vérifier / réessayer le même envoi</button>
+          <details id="journalMySubmissions" hidden><summary data-i18n="journalMySubmissions">Mes propositions</summary><div id="journalMySubmissionsList"></div></details>
+        </section>
       </div>
     </section>
   </main>
@@ -362,7 +378,10 @@
   <script src="js/store.js"></script>
   <script src="js/main.js"></script>
   <script src="js/theme-toggle.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/journal-categories.js"></script>
   <script src="js/blog.js"></script>
+  <script src="js/journal-community.js"></script>
   <script src="js/chatbot.js"></script>
 </body>
 </html>

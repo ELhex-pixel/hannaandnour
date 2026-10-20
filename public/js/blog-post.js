@@ -36,5 +36,6 @@
       .catch(function () { unavailable(false); });
   }
   document.addEventListener('langchange', render);
+  document.addEventListener('click',function(event){var link=event.target.closest&&event.target.closest('.journal-toc a');if(!link||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;var target=document.getElementById(new URL(link.href).hash.slice(1));if(target){event.preventDefault();target.scrollIntoView({block:'start'});window.history.replaceState(null,'',window.location.pathname+window.location.search+'#'+target.id);}});
   init();
 })();

@@ -33,6 +33,7 @@ function prepareNetlifyRoutes(source) {
 }
 
 function prepareLivePage($, file) {
+  if(file==='blog.html')$('.blog-grid').html('<p class="live-status" role="status" data-i18n="liveLoading">Chargement…</p>');
   if (!['index.html', 'collections.html', 'shop.html', 'product.html', 'cart.html', 'checkout.html'].includes(file)) return;
   $('body').attr('data-live-page', file);
   $('body').attr('data-image-cdn', '');

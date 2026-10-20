@@ -755,6 +755,13 @@
         <button class="btn btn-primary" id="newPostBtn" style="margin-top:10px;">+ Nouvel article</button>
       </div>
 
+      <div class="card" id="blogCommunityAdmin" style="margin-top:18px;">
+        <h3>Articles proposés par les clients</h3><p>Les propositions restent privées jusqu’à votre validation. Relisez le texte, ajustez l’extrait et choisissez une illustration avant de publier.</p>
+        <div class="toolbar"><select id="blogSubmissionScope" aria-label="État des propositions"><option value="pending">À relire</option><option value="approved">Publiées</option><option value="rejected">Non retenues</option></select><button type="button" class="btn btn-secondary" id="refreshBlogSubmissions">Actualiser les propositions</button></div>
+        <p id="blogModerationStatus" role="status" aria-live="polite"></p><button type="button" class="btn btn-secondary" id="retryBlogModeration" hidden>Vérifier / réessayer la même décision</button>
+        <div id="blogSubmissionsList"></div><div class="toolbar"><button type="button" class="btn btn-secondary" id="blogSubmissionsPrevious">Précédent</button><span id="blogSubmissionsPage"></span><button type="button" class="btn btn-secondary" id="blogSubmissionsNext">Suivant</button></div>
+      </div>
+
       <div class="card" style="margin-top:18px;">
         <h3>Notre histoire</h3>
         <p style="font-size:12px;color:#8a7d66;margin-bottom:10px;">Texte et images du hero et de la section &laquo; Confectionn&eacute; avec intention &raquo; de la page about.html.</p>
@@ -1006,6 +1013,7 @@
         </div>
         <div class="field full"><label>Extrait (affich&eacute; sur la carte)</label><textarea id="b-excerpt"></textarea></div>
         <div class="field full"><label>Texte de l&rsquo;article (paragraphes s&eacute;par&eacute;s par une ligne vide)</label><textarea id="b-body" style="min-height:160px;"></textarea></div>
+        <div class="field full"><p>Pour un intertitre, commencez un paragraphe par « ## ». Le texte est affiché sans HTML.</p><details><summary>Traductions anglaise et arabe</summary><div class="field"><label for="b-title_en">Titre EN</label><input id="b-title_en" maxlength="180"></div><div class="field"><label for="b-excerpt_en">Extrait EN</label><textarea id="b-excerpt_en" maxlength="400"></textarea></div><div class="field"><label for="b-body_en">Article EN</label><textarea id="b-body_en" maxlength="20000"></textarea></div><div class="field"><label for="b-title_ar">Titre AR</label><input id="b-title_ar" maxlength="180" dir="rtl"></div><div class="field"><label for="b-excerpt_ar">Extrait AR</label><textarea id="b-excerpt_ar" maxlength="400" dir="rtl"></textarea></div><div class="field"><label for="b-body_ar">Article AR</label><textarea id="b-body_ar" maxlength="20000" dir="rtl"></textarea></div></details></div>
         <div class="field"><label>Auteur</label><input id="b-author"></div>
         <div class="field"><label>Lecture (min)</label><input type="number" min="1" id="b-read"></div>
         <div class="field full">
@@ -1213,6 +1221,8 @@
   <script src="js/admin-refunds.js"></script>
   <script src="js/admin-features.js"></script>
   <script src="js/admin-returns.js"></script>
+  <script src="js/journal-categories.js"></script>
+  <script src="js/admin-blog-community.js"></script>
   <script src="js/admin-cart-offer.js"></script>
   <script src="js/tiktok-xlsx.js"></script>
   <script src="js/admin-tiktok.js"></script>

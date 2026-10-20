@@ -20,7 +20,7 @@
     return validSlug(value) ? value : '';
   }
   function esc(value) { return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function localized(row, field, lang) { return row[field + '_' + language(lang)] || row[field + '_en'] || row[field + '_fr'] || row[field + '_ar'] || row[field] || ''; }
+  function localized(row, field, lang) { return row.translations && row.translations[language(lang)] && row.translations[language(lang)][field] || row[field + '_' + language(lang)] || row[field + '_en'] || row[field + '_fr'] || row[field + '_ar'] || row[field] || ''; }
   function image(value) {
     var raw = String(value || '');
     return /^(?:https:\/\/|\/?images\/)/.test(raw) && !/[\s<>"\\]/.test(raw) ? raw : '';
@@ -32,13 +32,17 @@
   function postHTML(post, lang, t) {
     var title = localized(post, 'title', lang), body = localized(post, 'body', lang);
     var photo = image(post.image), blog = '/' + language(lang) + '/blog.html';
+    var sections=String(body).split(/\r?\n\s*\r?\n/),headings=[];
+    var html=sections.map(function(p){p=p.trim();if(!p)return '';if(/^##\s+/.test(p)){var title=p.replace(/^##\s+/,''),id='section-'+(headings.length+1);headings.push({title:title,id:id});return '<h2 id="'+id+'">'+esc(title)+'</h2>';}return '<p>'+esc(p).replace(/\r?\n/g,'<br>')+'</p>';}).join('');
+    var toc=headings.length?'<nav class="journal-toc" aria-label="'+esc(t('journalContents'))+'"><strong>'+esc(t('journalContents'))+'</strong><ol>'+headings.map(function(h){return '<li><a href="'+esc(path('post',post.slug,lang))+'#'+h.id+'">'+esc(h.title)+'</a></li>';}).join('')+'</ol></nav>':'';
     return '<article><header class="blog-post-header">' +
       '<a href="' + blog + '" class="blog-card-category">' + esc(post.category || 'Blog') + '</a>' +
       '<h1 class="blog-post-title">' + esc(title) + '</h1><div class="blog-post-meta">' +
       '<span>' + esc(post.author || '') + '</span><span>' + esc(date(post.published_at, lang)) + '</span>' +
       '<span>' + (parseInt(post.read_minutes, 10) || 5) + ' ' + esc(t('minRead')) + '</span></div></header>' +
-      (photo ? '<figure class="blog-post-figure"><img src="' + esc(photo) + '" alt="' + esc(title) + '"></figure>' : '') +
-      '<div class="blog-post-body" style="margin-top:var(--spacing-xl);">' + String(body).split(/\n\s*\n/).map(function (p) { return p.trim() ? '<p>' + esc(p.trim()).replace(/\n/g, '<br>') + '</p>' : ''; }).join('') + '</div>' +
+      '<p class="journal-lead">'+esc(localized(post,'excerpt',lang))+'</p>' +
+      (photo ? '<figure class="blog-post-figure"><img src="' + esc(photo) + '" alt="' + esc(title) + '" decoding="async"><figcaption>'+esc(t('journalIllustration'))+'</figcaption></figure>' : '') +
+      '<div class="journal-reading-layout">'+toc+'<div class="blog-post-body" style="margin-top:var(--spacing-xl);">'+html+'</div></div>' +
       '<div class="text-center" style="margin-top:var(--spacing-2xl);"><a href="' + blog + '" class="btn btn-secondary">' + esc(t('backToBlog')) + '</a> ' +
       '<a href="/' + language(lang) + '/shop.html" class="btn btn-primary">' + esc(t('discoverCollection')) + '</a></div></article>';
   }
@@ -47,7 +51,7 @@
     var url = localFile ? 'blog-post.html?slug=' + encodeURIComponent(post.slug) : path('post', post.slug, lang);
     return '<article class="blog-card">' + (photo ? '<a href="' + esc(url) + '" class="blog-card-image"><img src="' + esc(photo) + '" alt="' + esc(title) + '" loading="lazy" decoding="async"></a>' : '') +
       '<div class="blog-card-content">' + (post.category ? '<span class="blog-card-category">' + esc(post.category) + '</span>' : '') +
-      '<h2 class="blog-card-title"><a href="' + esc(url) + '">' + esc(title) + '</a></h2><p class="blog-card-excerpt">' + esc(localized(post, 'excerpt', lang)) + '</p>' +
+      '<h2 class="blog-card-title"><a href="' + esc(url) + '">' + esc(title) + '</a></h2><p class="blog-card-excerpt">' + esc(localized(post, 'excerpt', lang)) + '</p><a class="journal-read-link" href="'+esc(url)+'">'+esc(t('journalRead'))+' <span aria-hidden="true">↗</span></a>' +
       '<div class="blog-card-meta"><div class="blog-card-author"><span class="blog-author-avatar">' + esc(author.charAt(0).toUpperCase()) + '</span><span>' + esc(author) + '</span></div>' +
       '<span>' + esc(date(post.published_at, lang, true)) + ' &bull; ' + (parseInt(post.read_minutes, 10) || 5) + ' ' + esc(t('minRead')) + '</span></div></div></article>';
   }

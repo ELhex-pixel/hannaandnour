@@ -22,7 +22,7 @@ exports.handler = async function (event) {
     const slug = String((event.queryStringParameters || {}).slug || '').trim();
     if (slug && !require('../../public/js/content').validSlug(slug)) return json(400, { error: 'Invalid article slug' });
     const { data } = await publicRead('blog', async signal => {
-      let query = sb.from('blog_posts').select('slug,title,category,excerpt,body,image,author,read_minutes,published_at').eq('active', true);
+      let query = sb.from('blog_posts').select('slug,title,category,excerpt,body,image,author,read_minutes,published_at,translations').eq('active', true);
       query = slug ? query.eq('slug', slug).maybeSingle() : query.order('published_at', { ascending: false });
       return queryResult(await query.abortSignal(signal));
     }, { log: entry => console.warn(JSON.stringify(entry)) });

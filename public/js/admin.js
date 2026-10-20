@@ -2817,6 +2817,7 @@
     setVal('b-image', p ? p.image : '');
     setVal('b-excerpt', p ? p.excerpt : '');
     setVal('b-body', p ? p.body : '');
+    ['en','ar'].forEach(function(lang){['title','excerpt','body'].forEach(function(field){setVal('b-'+field+'_'+lang,p&&p.translations&&p.translations[lang]?p.translations[lang][field]||'':'');});});
     setVal('b-author', p ? p.author : '');
     setVal('b-read', p ? (parseInt(p.read_minutes, 10) || 5) : 5);
     setVal('b-date', p && p.published_at ? String(p.published_at).slice(0, 10) : '');
@@ -2850,7 +2851,8 @@
         author: getVal('b-author'),
         read_minutes: parseInt(getVal('b-read'), 10) || 5,
         published_at: getVal('b-date'),
-        active: document.getElementById('b-active').checked
+        active: document.getElementById('b-active').checked,
+        translations:{fr:{title:title,excerpt:getVal('b-excerpt'),body:getVal('b-body')},en:{title:getVal('b-title_en'),excerpt:getVal('b-excerpt_en'),body:getVal('b-body_en')},ar:{title:getVal('b-title_ar'),excerpt:getVal('b-excerpt_ar'),body:getVal('b-body_ar')}}
       })
         .then(function () {
           toast('Article enregistré', 'ok');

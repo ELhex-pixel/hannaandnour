@@ -40,6 +40,8 @@ async function preflight(env = process.env, client) {
     if(activityPeriods.error||activityPeriods.data!==1)throw new Error('schema');
     const orderShipping=await client.rpc('order_shipping_schema_version');
     if(orderShipping.error||orderShipping.data!==1)throw new Error('schema');
+    const blogCommunity=await client.rpc('blog_community_schema_version');
+    if(blogCommunity.error||blogCommunity.data!==1)throw new Error('schema');
     for (const [table, columns] of [
       ['orders', 'inventory_reserved,stock_issue,confirmation_claimed_at,admin_archived,payment_intent_id,refunded_cents,carrier,stripe_creation_started,refund_restock,prepared_at,return_policy,sale_channel,external_payment_method,pickup_point_data'],
       ['order_items', 'stock_debited,net_total_cents,prepared_quantity,catalog_unit_price_cents,physical_price_note'],
@@ -56,13 +58,17 @@ async function preflight(env = process.env, client) {
       ['physical_sale_operations','id,order_id,request,result,created_at'],
       ['admin_maintenance_operations','id,kind,reason,request,result,created_at'],
       ['admin_activity_periods','id,previous_id,started_at,reason'],
-      ['order_shipping_operations','id,order_id,request,provider_request,order_guard,state,result,created_at,confirmed_at']
+      ['order_shipping_operations','id,order_id,request,provider_request,order_guard,state,result,created_at,confirmed_at'],
+      ['blog_posts','translations'],
+      ['blog_submissions','id,user_id,author_name,title,category,body,image,lang,status,decision_note,published_post_id,published_slug,created_at,updated_at'],
+      ['blog_submission_decisions','id,submission_id,request,result'],
+      ['blog_editorial_backups','post_id,revision,snapshot']
     ]) {
       const { error: tableError } = await client.from(table).select(columns).limit(0);
       if (tableError) throw new Error('schema');
     }
   } catch (error) {
-    throw new Error('Publication bloquée : vérifier les migrations existantes, dont supabase/migration_integrity_features.sql, supabase/migration_admin_inventory.sql, supabase/migration_admin_operations.sql, supabase/migration_return_policy_editor.sql, supabase/migration_catalog_cleanup.sql, supabase/migration_inventory_journal.sql, supabase/migration_partial_refunds.sql, supabase/migration_catalog_categories.sql, supabase/migration_catalog_return_cleanup.sql, supabase/migration_physical_sales.sql, supabase/migration_admin_maintenance.sql, supabase/migration_physical_prices.sql, supabase/migration_checkout_pickup.sql, supabase/migration_activity_periods.sql et supabase/migration_order_shipping.sql. Aucune migration distante n’a été exécutée automatiquement.');
+    throw new Error('Publication bloquée : vérifier les migrations existantes, dont supabase/migration_integrity_features.sql, supabase/migration_admin_inventory.sql, supabase/migration_admin_operations.sql, supabase/migration_return_policy_editor.sql, supabase/migration_catalog_cleanup.sql, supabase/migration_inventory_journal.sql, supabase/migration_partial_refunds.sql, supabase/migration_catalog_categories.sql, supabase/migration_catalog_return_cleanup.sql, supabase/migration_physical_sales.sql, supabase/migration_admin_maintenance.sql, supabase/migration_physical_prices.sql, supabase/migration_checkout_pickup.sql, supabase/migration_activity_periods.sql, supabase/migration_order_shipping.sql et supabase/migration_blog_community.sql. Aucune migration distante n’a été exécutée automatiquement.');
   }
   console.log('Compatibilité Supabase vérifiée en lecture seule.');
 }

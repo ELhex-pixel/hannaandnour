@@ -146,6 +146,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/journal-submissions"
+  to = "/.netlify/functions/journal-submissions"
+  status = 200
+
+[[redirects]]
   from = "/api/blog"
   to = "/.netlify/functions/blog"
   status = 200

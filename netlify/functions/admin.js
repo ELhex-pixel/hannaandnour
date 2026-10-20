@@ -286,6 +286,10 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
       if(limited)return limited;
       return await require('./lib/order-shipping').adminOrderShipping(sb,action,body);
     }
+    if(['listBlogSubmissions','moderateBlogSubmission'].includes(action)){
+      const limited=await rateLimit(sb,event,'admin-blog-submissions',60,600,'admin');if(limited)return limited;
+      return await require('./lib/blog-community').adminSubmissions(sb,action,body);
+    }
     if (['getOrderRefunds','quoteOrderRefund','refundOrderPartial','resumeOrderRefund','refundOrder'].includes(action)) {
       const limited = await rateLimit(sb,event,'admin-refunds',30,600,'admin');
       if (limited) return limited;
@@ -846,6 +850,14 @@ case 'deleteMessage': {
           active: body.active !== false,
           updated_at: new Date().toISOString()
         };
+        if(body.translations!==undefined){
+          if(!body.translations||typeof body.translations!=='object'||Array.isArray(body.translations))return json(400,{error:'Traductions invalides.'});
+          fields.translations={};
+          for(const lang of ['fr','en','ar'])if(body.translations[lang]){
+            const row=body.translations[lang],clean={};if(typeof row!=='object'||Array.isArray(row))return json(400,{error:'Traductions invalides.'});for(const [name,max] of [['title',180],['excerpt',400],['body',20000]]){if(row[name]!==undefined&&(typeof row[name]!=='string'||row[name].length>max))return json(400,{error:'Traductions invalides.'});clean[name]=String(row[name]||'').trim();}
+            if(clean.title||clean.body||clean.excerpt)fields.translations[lang]=clean;
+          }
+        }
         if (body.published_at) {
           const d = new Date(body.published_at);
           if (!isNaN(d.getTime())) fields.published_at = d.toISOString();
