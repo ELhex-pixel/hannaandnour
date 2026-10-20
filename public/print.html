@@ -35,13 +35,25 @@
   .barcode-box svg { max-width: 100%; height: auto; }
   .track { font-size: 12px; letter-spacing: 2px; color: var(--ink); font-weight: 700; }
 
-  /* Ã‰tiquette A6 (148 x 105 mm) */
-  .sheet.label { width: 148mm; min-height: 105mm; padding: 8mm; display: flex; flex-direction: column; justify-content: space-between; color: var(--ink); text-transform: none; letter-spacing: normal; }
+  /* Thermal 4 × 6 inch stock: 102 × 152 mm, portrait, monochrome. */
+  .sheet.label { width: 102mm; min-height: 152mm; padding: 5mm; display: flex; flex-direction: column; justify-content: flex-start; gap: 4mm; color: #000; text-transform: none; letter-spacing: normal; border: 1px solid #000; }
   .internal-label-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
   .internal-label-notice { font-size: 10px; color: var(--ink); }
   .label-barcode svg { display: block; width: 100%; max-width: 100%; height: auto; }
   .track { overflow-wrap: anywhere; letter-spacing: .5px; }
   .label-logo { font-family: Georgia, serif; font-size: 15px; color: var(--sage); }
+  .sheet.label .label-logo { color: #000; font-size: 23px; font-weight: 700; }
+  .thermal-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 4mm; }
+  .thermal-type { font-size: 9px; text-transform: uppercase; border: 1px solid #000; padding: 5px; font-weight: 700; }
+  .thermal-order { display: grid; gap: 5px; font-size: 10px; }
+  .thermal-order strong { font-family: Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+  .sheet.label h2 { margin: 0 0 3mm; font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  .thermal-recipient { border: 1px solid #000; border-radius: 0; padding: 4mm; min-height: 35mm; }
+  .thermal-recipient p { margin: 0; font-size: 13px; line-height: 1.5; }
+  .thermal-reference { padding-block: 2mm; }
+  .thermal-reference .track { font-family: Consolas, monospace; font-size: 11px; margin-top: 3mm; text-align: center; }
+  .thermal-footer { border-top: 1px solid #000; padding-top: 3mm; margin-top: auto; font-size: 9px; line-height: 1.5; }
+  .thermal-footer p { font-size: 9px; margin: 2mm 0; }
   .label-addr { font-size: 12px; line-height: 1.45; }
   .label-barcode { text-align: center; padding: 4px; background: #fff; }
   .label-footer { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-top: 6px; }
@@ -52,7 +64,7 @@
     main { padding: 0; }
     .sheet { box-shadow: none; margin: 0; page-break-after: always; }
     .sheet, .sheet.label { width: auto; min-height: auto; }
-    .sheet.label { width: 148mm; min-height: 105mm; }
+    .sheet.label { width: 102mm; min-height: 152mm; max-width: none; box-shadow: none; border: 0; }
   }
 </style>
   <meta property="og:image" content="https://hannanour.com/images/hero.jpg">

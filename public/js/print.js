@@ -114,18 +114,11 @@
   function renderLabel(o) {
     var tracking = o.order_number;
     return '<div class="sheet label">' +
-      '<div class="internal-label-heading">' +
-      '<span class="label-logo">Hanna &amp; Nour</span>' +
-      '<span style="font-size:9px; color:var(--muted);">Commande ' + esc(o.order_number) + '</span>' +
-      '</div>' +
-      '<div class="label-addr">' +
-      '<p class="label" style="margin-bottom:2px;">Fiche interne — code de commande</p>' +
-      '<p class="internal-label-notice">Document interne, sans affranchissement. Pour un envoi Mondial Relay, utilisez le PDF officiel créé depuis la commande.</p>' +
-      '<p style="margin:0; line-height:1.5;">' + customerAddress(o) + '</p>' +
-      '</div>' +
-      '<div class="label-barcode"><svg id="barcode"></svg></div>' +
-      '<div style="text-align:center;" class="track">' + esc(tracking) + '</div>' +
-      '<div class="label-footer"><span>Hanna &amp; Nour</span><span>' + esc(o.email) + '</span><span>' + fmtDate(o.created_at) + '</span></div>' +
+      '<header class="thermal-heading"><span class="label-logo">Hanna &amp; Nour</span><span class="thermal-type">Fiche interne</span></header>' +
+      '<div class="thermal-order"><span>Commande</span><strong>' + esc(o.order_number) + '</strong><span>' + fmtDate(o.created_at) + '</span></div>' +
+      '<section class="thermal-recipient"><h2>' + (o.sale_channel === 'physical' ? 'Vente comptoir' : o.pickup_point_data ? 'Destinataire / point relais' : 'Destinataire') + '</h2><p>' + customerAddress(o) + '</p></section>' +
+      '<section class="thermal-reference"><h2>Référence de la commande</h2><div class="label-barcode"><svg id="barcode"></svg></div><div class="track">' + esc(tracking) + '</div></section>' +
+      '<footer class="thermal-footer"><strong>Document interne · sans affranchissement</strong><p>Pour expédier, imprimez l’étiquette officielle du transporteur depuis la commande.</p>' + (o.email ? '<span>' + esc(o.email) + '</span>' : '<span>hannanour.com</span>') + '</footer>' +
       '</div>';
   }
 
@@ -146,7 +139,8 @@
     var doc = params.get('doc') || 'invoice';
     var orderId = params.get('order') || '';
     document.getElementById('toolbarInfo').textContent = 'Impression : ' + (doc === 'invoice' ? 'Facture' : doc === 'packing' ? 'Bon de livraison' : 'Fiche interne — pas une étiquette de transport');
-    var pageStyle = document.createElement('style'); pageStyle.textContent = '@page { size: ' + (doc === 'label' ? '148mm 105mm' : 'A4') + '; margin: 0; }'; document.head.appendChild(pageStyle);
+    var pageStyle = document.createElement('style'); pageStyle.textContent = '@page { size: ' + (doc === 'label' ? '102mm 152mm' : 'A4') + '; margin: 0; }'; document.head.appendChild(pageStyle);
+    if(doc==='label')document.getElementById('toolbarInfo').textContent='Étiquette interne · 102 × 152 mm · Portrait · Échelle 100 % · Marges : aucune';
 
     if (!orderId || !token()) {
       document.getElementById('sheetHolder').innerHTML = '<div class="sheet"><p>Session expir\u00e9e. Rouvrez depuis l\u2019espace admin.</p></div>';
