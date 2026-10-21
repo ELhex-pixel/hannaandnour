@@ -3,6 +3,7 @@ const translations = require('../public/js/i18n');
 const { publicRead, queryResult } = require('../netlify/functions/lib/public-read');
 const { generalPost } = require('../netlify/functions/lib/brand-copy');
 const media = require('../public/js/product-media');
+const landing = require('../public/js/product-landing');
 const { LOGO } = require('./brand-assets');
 
 // Explicit public fields only: no prices, stock, customer data or private costs.
@@ -97,6 +98,11 @@ function renderContent($, origin, kind, row, lang) {
   $('body').attr({ 'data-content-slug': row.slug, 'data-content-kind': kind });
   if (kind === 'post') $('#postContent').html(content.postHTML(row, lang, key => translations[lang][key]));
   else {
+    if (landing.enabled(row.slug)) {
+      $('body').addClass('product-landing');
+      $('.product-info').attr('id','landingOptions');
+      $('#productLandingEditorial').html(landing.editorialHTML(row,lang,'',null,key=>translations[lang][key],(src,width)=>media.delivery(src,width,true)));
+    }
     // Descriptions are readable without JS. Live prices/actions remain gated.
     const summary = $('<section class="section" data-seo-summary><div class="container blog-post-body"></div></section>');
     const box = summary.find('div');

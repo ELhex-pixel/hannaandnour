@@ -328,6 +328,7 @@
   }
 
   var stockEl = null;
+  var landingConfig = null;
   var productSyncing = false, productSyncFailed = false, productAdding = false, productSyncRevision = 0, productSyncTimer = null;
 
   function cartQuantity(p, color, size, variant) {
@@ -351,6 +352,7 @@
   function updateStockUI() {
     if (!current) return;
     var p = current;
+    if (window.HN_PRODUCT_LANDING) window.HN_PRODUCT_LANDING.refresh(p, landingConfig, { failed: productSyncFailed });
     var vs = productVariants(p);
     var managed = vs.length > 0;
 
@@ -776,6 +778,7 @@
       var chosen = selectedOptions(), color = chosen.color, size = chosen.size;
       var changed = JSON.stringify(current) !== JSON.stringify(fresh);
       current = fresh; productSyncFailed = false;
+      landingConfig = results[0];
       if (HN.rememberProducts) HN.rememberProducts([fresh]);
       if (changed) {
         renderInfo(fresh);
@@ -809,6 +812,7 @@
 
     Promise.all([HN.requireConfig(force), HN.fetchProducts({ slug: slug })]).then(function (results) {
       var cfg = results[0];
+      landingConfig = cfg;
       RETURNS_DAYS = HN.returnDays();
       if (cfg && cfg.reviews) DEMO_ON = !!cfg.reviews.show_demo;
       return results[1];
