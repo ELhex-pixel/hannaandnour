@@ -101,7 +101,9 @@ test('Stripe et les lignes nettes remboursables reçoivent la remise exacte, ave
   assert.equal(order.discount_cents, 601); assert.equal(order.promo_code, null);
   const lines = mock.state.writes.find(write => write.table === 'order_items').row;
   assert.equal(lines.reduce((sum, line) => sum + line.net_total_cents, 0), quote.totals.subtotal - quote.totals.discount);
-  assert.equal(mock.state.rpcs[0].name, 'reserve_order');
+  assert.equal(mock.state.rpcs.length, 0);
+  assert.equal(order.payment_flow, 'authorize_capture');
+  assert.equal(payload.payment_intent_data.capture_method, 'manual');
 });
 
 function editor(response) {

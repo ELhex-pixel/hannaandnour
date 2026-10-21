@@ -98,7 +98,7 @@ exports.handler = async function (event) {
     // Accept non-instant payments (e.g. card that goes through an async
     // verification): Stripe delivers these under a distinct event type.
     if (stripeEvent.type === 'checkout.session.async_payment_succeeded') {
-      return await markPaid(session, sb);
+      return await require('./lib/authorized-checkout').settleCheckout(sb, session, markPaid);
     }
 
     if (stripeEvent.type === 'checkout.session.async_payment_failed') {
@@ -116,7 +116,7 @@ exports.handler = async function (event) {
     }
 
     if (stripeEvent.type === 'checkout.session.completed') {
-      return await markPaid(session, sb);
+      return await require('./lib/authorized-checkout').settleCheckout(sb, session, markPaid);
     }
 
     if (stripeEvent.type === 'checkout.session.expired') {

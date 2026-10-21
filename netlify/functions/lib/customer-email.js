@@ -15,7 +15,7 @@ const COPY = {
     cancelTitle:'Votre commande a été annulée', cancelText:'Nous sommes navrés de ne pas pouvoir confirmer votre commande.', defective:'Un article s’est révélé défectueux.', out_of_stock:'Un article n’est plus disponible.', other:'Une indisponibilité imprévue est survenue.', refunded:'Le remboursement de votre paiement a déjà été lancé.', refundPending:'Si un paiement a été effectué, celui-ci vous sera intégralement remboursé dans les plus brefs délais.',
     refundTitle:'Remboursement confirmé', refundText:'Un remboursement a été confirmé pour votre commande.', refundDelay:'Le délai d’apparition dépend de votre moyen de paiement.',
     cartTitle:'Votre panier vous attend', cartText:'Vous avez commencé une commande qui n’a pas encore été finalisée. Reprenez où vous en étiez.', cartButton:'Reprendre mon panier',
-    pendingTitle:'Rappel : votre commande est en attente de règlement', pendingText:'Votre commande est toujours en attente de paiement. Si vous l’avez déjà réglée, ignorez ce message.', pendingButton:'Finaliser ma commande', restoreInfo:'Ce lien personnel permet de reprendre votre panier pendant 72 heures après sa création. Les prix et disponibilités seront vérifiés à nouveau.',
+    pendingTitle:'Finalisez votre paiement', pendingText:'Votre paiement n’est pas terminé. Retrouvez votre panier pour poursuivre votre achat. Si vous avez déjà réglé une commande depuis, ignorez ce message.', pendingButton:'Reprendre mon paiement', restoreInfo:'Ce lien personnel permet de reprendre votre panier pendant 72 heures après sa création. Les prix et disponibilités seront vérifiés à nouveau.',
     recoveryTitle:'Réinitialiser votre mot de passe', recoveryText:'Vous avez demandé un nouveau mot de passe pour votre compte.', recoveryButton:'Choisir un nouveau mot de passe', recoveryInfo:'Ce lien est temporaire et à usage unique. Si vous n’êtes pas à l’origine de cette demande, ignorez cet email : votre mot de passe reste inchangé.',
     claimTitle:'Confirmation de vos commandes', claimText:'Votre code de confirmation', claimInfo:'Il expire dans 10 minutes. Ne le partagez pas.'
   },
@@ -27,7 +27,7 @@ const COPY = {
     cancelTitle:'Your order has been cancelled', cancelText:'We are sorry that we cannot confirm your order.', defective:'An item was found to be defective.', out_of_stock:'An item is no longer available.', other:'An unexpected availability issue occurred.', refunded:'Your payment refund has already been initiated.', refundPending:'If a payment was made, it will be fully refunded as soon as possible.',
     refundTitle:'Refund confirmed', refundText:'A refund has been confirmed for your order.', refundDelay:'The time it takes to appear depends on your payment method.',
     cartTitle:'Your cart is waiting', cartText:'You started an order that has not been completed. Pick up where you left off.', cartButton:'Return to my cart',
-    pendingTitle:'Reminder: your order is awaiting payment', pendingText:'Your order is still awaiting payment. If you have already paid, ignore this message.', pendingButton:'Complete my order', restoreInfo:'This personal link restores your cart for 72 hours after it was created. Prices and availability will be checked again.',
+    pendingTitle:'Complete your payment', pendingText:'Your payment has not been completed. Return to your cart to continue shopping. If you have already paid for an order since then, ignore this message.', pendingButton:'Resume my payment', restoreInfo:'This personal link restores your cart for 72 hours after it was created. Prices and availability will be checked again.',
     recoveryTitle:'Reset your password', recoveryText:'You requested a new password for your account.', recoveryButton:'Choose a new password', recoveryInfo:'This link is temporary and can only be used once. If you did not request this, ignore this email: your password will remain unchanged.',
     claimTitle:'Confirm your orders', claimText:'Your confirmation code', claimInfo:'It expires in 10 minutes. Do not share it.'
   },
@@ -39,13 +39,14 @@ const COPY = {
     cancelTitle:'تم إلغاء طلبكم', cancelText:'نعتذر لعدم تمكننا من تأكيد طلبكم.', defective:'تبيّن وجود عيب في أحد المنتجات.', out_of_stock:'لم يعد أحد المنتجات متوفراً.', other:'حدثت مشكلة غير متوقعة في توفر المنتجات.', refunded:'تم البدء بالفعل في استرداد دفعتكم.', refundPending:'إذا تم الدفع، فسيتم استرداد المبلغ كاملاً في أقرب وقت ممكن.',
     refundTitle:'تم تأكيد استرداد المبلغ', refundText:'تم تأكيد استرداد مبلغ لطلبكم.', refundDelay:'يعتمد موعد ظهور المبلغ على وسيلة الدفع المستخدمة.',
     cartTitle:'سلة التسوق بانتظاركم', cartText:'بدأتم طلباً لم يكتمل بعد. يمكنكم متابعة التسوق من حيث توقفتم.', cartButton:'العودة إلى سلة التسوق',
-    pendingTitle:'تذكير: طلبكم بانتظار الدفع', pendingText:'لا يزال طلبكم بانتظار الدفع. إذا كنتم قد دفعتم بالفعل، فتجاهلوا هذه الرسالة.', pendingButton:'إكمال الطلب', restoreInfo:'يتيح هذا الرابط الشخصي استعادة سلتكم خلال 72 ساعة من إنشائها. سيتم التحقق من الأسعار والتوفر مجدداً.',
+    pendingTitle:'أكملوا عملية الدفع', pendingText:'لم تكتمل عملية الدفع. عودوا إلى سلتكم لمتابعة الشراء. إذا كنتم قد دفعتم لطلب منذ ذلك الحين، فتجاهلوا هذه الرسالة.', pendingButton:'متابعة الدفع', restoreInfo:'يتيح هذا الرابط الشخصي استعادة سلتكم خلال 72 ساعة من إنشائها. سيتم التحقق من الأسعار والتوفر مجدداً.',
     recoveryTitle:'إعادة تعيين كلمة المرور', recoveryText:'طلبتم كلمة مرور جديدة لحسابكم.', recoveryButton:'اختيار كلمة مرور جديدة', recoveryInfo:'هذا الرابط مؤقت ويُستخدم مرة واحدة فقط. إذا لم تطلبوا ذلك، فتجاهلوا هذه الرسالة؛ ستبقى كلمة المرور دون تغيير.',
     claimTitle:'تأكيد طلباتكم', claimText:'رمز التأكيد الخاص بكم', claimInfo:'تنتهي صلاحيته خلال 10 دقائق. لا تشاركوه مع أحد.'
   }
 };
 
 async function orderLocale(order, session, retrieve) {
+  if (SUPPORTED.includes(order.checkout_lang)) return order.checkout_lang;
   function fromSession(value) {
     return value && value.metadata && value.metadata.order_id === order.id && SUPPORTED.includes(value.metadata.lang) ? value.metadata.lang : null;
   }

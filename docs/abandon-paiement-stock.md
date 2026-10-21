@@ -1,5 +1,7 @@
 # Paiements en attente et réservations de stock
 
+> Parcours historique des premières commandes. Le propriétaire a ensuite choisi le stock attribué après autorisation bancaire : voir `paiement-autorisation-stock.md`. Le bouton d’annulation client est retiré par ce nouveau lot ; les endpoints restent compatibles avec les anciens retours Stripe.
+
 ## Ce qui compte comme une vente
 
 Une tentative créée avant la redirection Stripe reste `pending` : aucun paiement n’est confirmé. Le stock disponible est réservé atomiquement pour éviter que deux personnes achètent la dernière unité. La confirmation Stripe valide la vente sans débiter une deuxième fois ces unités.
@@ -18,7 +20,7 @@ Le compte et l’admin distinguent désormais **En attente de paiement — non p
 
 ## Annuler une ancienne tentative depuis son compte
 
-Le bouton **Annuler ce paiement en attente** appelle `auth` avec `action: cancelCheckout`, après confirmation. La session client validée et un quota sont obligatoires ; la requête filtre strictement `orders.user_id` sur le propriétaire authentifié. Un identifiant utilisateur fourni par le navigateur n’est pas utilisé. La vérification Stripe est la même que pour le retour panier. Les réponses arrivées après déconnexion ne réaffichent aucune donnée privée.
+L’ancien bouton utilisait `auth` avec `action: cancelCheckout`. Cet endpoint reste compatible avec une ancienne page déjà ouverte : session client validée, quota et filtre strict `orders.user_id` sur le propriétaire authentifié. Un identifiant utilisateur fourni par le navigateur n’est pas utilisé. La vérification Stripe est la même que pour le retour panier. Le bouton n’est plus affiché par le nouveau lot.
 
 Les anciens brouillons dont la création Stripe reste incertaine et sans identifiant de session ne sont pas libérés à l’aveugle. Ils nécessitent un rapprochement. Ne pas ajouter manuellement des unités pour compenser : une restitution automatique ultérieure pourrait sinon les doubler. Le déploiement du correctif ne constitue pas une preuve de réparation des anciennes lignes distantes.
 

@@ -60,6 +60,14 @@ Les identifiants Supabase vivent uniquement dans les variables d'environnement N
    - Copiez le **Signing secret** `whsec_...` → `STRIPE_WEBHOOK_SECRET`
 3. Testez le paiement avec la carte  `4242 4242 4242 4242`.
 
+### Nouveau parcours : autorisation, stock, puis encaissement automatique
+
+Le propriétaire a retenu un stock inchangé à l’ouverture de Checkout. Le parcours utilise `capture_method=manual` : après validation bancaire, le serveur attribue atomiquement le stock puis encaisse automatiquement. Une pièce déjà vendue entraîne l’annulation de l’autorisation, sans capture ni remboursement automatique.
+
+Avant publication : exécuter/confirmer **`supabase/migration_authorized_checkout.sql`** et donner **Payment Intents: Write** à la clé Stripe du site, en conservant **Checkout Sessions: Write** et **Charges and Refunds: Write**. Le build vérifie le schéma en lecture seule. Les anciens checkouts restent sur leur fonctionnement historique ; ne pas rejouer les seeds ni modifier leurs stocks pour les convertir.
+
+Le compte remplace le bouton d’annulation par un message de reprise. Le job `relance` prépare un rappel unique après deux heures sans paiement, contrôlé toutes les quinze minutes ; l’ancienne seconde relance à 24h est retirée. La page de retour attend la confirmation serveur avant d’annoncer le succès. Voir **`docs/paiement-autorisation-stock.md`** pour le détail, les restrictions des moyens de paiement compatibles et l’état des confirmations d’installation.
+
 ## 4. Variables d'environnement Netlify
 
 Copiez `.env.example` en `.env` pour `netlify dev`, et définissez les mêmes variables dans

@@ -20,7 +20,7 @@ test('un schéma incomplet bloque la publication même si le marqueur existe', a
 test('un schéma à jour autorise la publication après des lectures seules', async () => {
   const tables = [];
   await preflight(env, { rpc: async () => ({ data: 1 }), from: table => { tables.push(table); return { select: () => ({ limit: async count => { assert.equal(count, 0); return { error: null }; } }) }; } });
-  assert.deepEqual(tables, ['orders', 'order_items', 'return_requests', 'order_returns', 'variant_costs', 'variant_cost_history', 'order_item_costs', 'products', 'inventory_adjustments', 'inventory_journal_resets', 'inventory_journal_archives', 'order_refund_operations','physical_sale_operations','admin_maintenance_operations','admin_activity_periods','order_shipping_operations','blog_posts','blog_submissions','blog_submission_decisions','blog_editorial_backups']);
+  assert.deepEqual(tables, ['orders', 'order_payment_captures', 'order_items', 'return_requests', 'order_returns', 'variant_costs', 'variant_cost_history', 'order_item_costs', 'products', 'inventory_adjustments', 'inventory_journal_resets', 'inventory_journal_archives', 'order_refund_operations','physical_sale_operations','admin_maintenance_operations','admin_activity_periods','order_shipping_operations','blog_posts','blog_submissions','blog_submission_decisions','blog_editorial_backups']);
 });
 test('les remboursements exigent leur journal privé avant publication, sans migration automatique', async () => {
   const calls=[];
@@ -89,4 +89,9 @@ test('les étiquettes exigent leur journal avant publication sans affranchisseme
 });
 test('les propositions du journal exigent la migration privée avant publication sans publier de texte client',async()=>{
   const calls=[];await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='blog_community_schema_version'?{error:{}}:{data:1};}}),/migration_blog_community/);assert.equal(calls.at(-1),'blog_community_schema_version');
+});
+test('le stock après autorisation exige son journal privé avant publication sans capturer de paiement',async()=>{
+  const calls=[];
+  await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='authorized_checkout_schema_version'?{error:{}}:{data:1};}}),/migration_authorized_checkout/);
+  assert.equal(calls.at(-1),'authorized_checkout_schema_version');
 });

@@ -1,62 +1,16 @@
 /**
  * Hanna & Nour — Pending-order lifecycle (Netlify Scheduled Function).
  * Runs every five minutes. For unpaid orders (status 'pending' or 'abandoned'):
- *   - 24 h after creation: sends ONE follow-up email with the cart restore
- *     link (single-send guarded by orders.reminder_24h_sent_at).
+ *   - The separate relance job handles the sole reminder after 2 h unpaid.
  *   - 72 h after creation: archives unreserved drafts, keeping their history.
  * Checkout sessions expire after 30 minutes. A recovery pass checks Stripe
  * after 35 minutes in case the expiration webhook was missed. Unknown or
  * asynchronous payments are never assumed expired solely from their age.
  */
 const { schedule } = require('@netlify/functions');
-const { getSupabase, isConfigured, sendEmail, siteUrl } = require('./shared');
-const { orderLocale, message } = require('./lib/customer-email');
+const { getSupabase, isConfigured } = require('./shared');
 
 const HOUR = 60 * 60 * 1000;
-
-async function send24hEmails(sb) {
-  if (!process.env.RESEND_API_KEY) return 0;
-  const now = Date.now();
-  const oldest = new Date(now - 24 * HOUR).toISOString();
-  const floor = new Date(now - 72 * HOUR).toISOString();
-  const { data, error } = await sb
-    .from('orders')
-    .select('id, order_number, email, customer_name, cart_restore_token, stripe_session_id')
-    .in('status', ['pending', 'abandoned'])
-    .lte('created_at', oldest)
-    .gt('created_at', floor)
-    .is('reminder_24h_sent_at', null)
-    .order('created_at', { ascending: true })
-    .limit(50);
-  if (error) throw error;
-
-  let sent = 0;
-  for (const order of data || []) {
-    if (!order.email || !order.cart_restore_token) continue;
-    try {
-      // Atomic claim BEFORE sending: only the run that sets
-      // reminder_24h_sent_at first can email the order (no duplicates).
-      const { data: claimed, error: claimErr } = await sb
-        .from('orders')
-        .update({ reminder_24h_sent_at: new Date().toISOString() })
-        .eq('id', order.id)
-        .is('reminder_24h_sent_at', null)
-        .in('status', ['pending', 'abandoned'])
-        .select('id');
-      if (claimErr) throw claimErr;
-      if (!claimed || claimed.length === 0) continue;
-
-      await sendEmail({
-        to: order.email,
-        ...message('pending', await orderLocale(order), { order, siteUrl })
-      });
-      sent++;
-    } catch (e) {
-      console.error('pending-cleanup email failed for ' + order.id + ':', e.message);
-    }
-  }
-  return sent;
-}
 
 async function deleteStaleOrders(sb) {
   const cutoff = new Date(Date.now() - 72 * HOUR).toISOString();
@@ -91,6 +45,7 @@ async function handler() {
   await sb.from('rate_limits').delete().lt('window_start', new Date(Date.now() - 48 * HOUR).toISOString());
   if (process.env.STRIPE_SECRET_KEY) {
     const stripe = new (require('stripe'))(process.env.STRIPE_SECRET_KEY, { timeout: 5000, maxNetworkRetries: 0 });
+    await require('./lib/authorized-checkout').recoverAuthorizedCheckouts(sb, require('./stripe-webhook').markPaid, stripe);
     const { data: stale, error } = await sb.from('orders').select('id, stripe_session_id, stripe_creation_started, created_at,total_cents,currency').eq('inventory_reserved', true).eq('status', 'pending').lt('created_at', new Date(Date.now() - 35 * 60 * 1000).toISOString()).limit(50);
     if (error) throw error;
     for (const order of stale || []) {
@@ -114,7 +69,7 @@ async function handler() {
           const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
           if (session.id !== order.stripe_session_id || session.client_reference_id !== order.id || session.metadata?.order_id !== order.id || session.amount_total !== order.total_cents || session.currency !== order.currency) continue;
           if (session.status === 'complete' && ['paid', 'no_payment_required'].includes(session.payment_status)) {
-            await require('./stripe-webhook').markPaid(session, sb);
+            await require('./lib/authorized-checkout').settleCheckout(sb, session, require('./stripe-webhook').markPaid, stripe);
             continue;
           }
           if (session.status !== 'expired' || session.payment_status !== 'unpaid') continue;
@@ -126,14 +81,7 @@ async function handler() {
       }
     }
   }
-  const result = { emails: 0, deleted: 0 };
-  try {
-    result.emails = await send24hEmails(sb);
-  } catch (e) {
-    // E.g. orders.reminder_24h_sent_at missing (migration not run yet):
-    // log and keep the 72 h cleanup running regardless.
-    console.error('pending-cleanup email step skipped:', e.message);
-  }
+  const result = { deleted: 0 };
   result.deleted = await deleteStaleOrders(sb);
   return { statusCode: 200, body: JSON.stringify({ ok: true, ...result }) };
 }

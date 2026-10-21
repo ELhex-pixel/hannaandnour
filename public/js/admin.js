@@ -1324,7 +1324,7 @@
 
     document.getElementById('orderModalBody').innerHTML =
       (o.stock_issue ? '<p role="alert" class="badge badge-red">Paiement reçu mais stock insuffisant : vérifier avant expédition.</p>' : '') +
-      (o.status === 'pending' ? '<p class="admin-notice"><strong>Paiement non confirmé — aucune vente encaissée.</strong> ' + (o.inventory_reserved ? 'Une réservation temporaire réduit le stock disponible pendant le paiement. Elle sera libérée après annulation ou expiration vérifiée de la session Stripe.' : 'Aucune réservation de stock active.') + '</p>' : '') +
+      (o.status === 'pending' ? '<p class="admin-notice"><strong>Paiement non confirmé — aucune vente encaissée.</strong> ' + (o.payment_flow === 'authorize_capture' ? o.inventory_reserved ? 'Autorisation bancaire reçue : contrôle et encaissement automatique en cours. Un résultat incertain est rapproché avant toute restitution.' : 'L’ouverture du paiement ne diminue pas le stock. L’allocation intervient après validation bancaire, juste avant l’encaissement automatique.' : o.inventory_reserved ? 'Ancienne tentative : réservation à rapprocher de sa session Stripe avant restitution.' : 'Aucune réservation de stock active.') + '</p>' : '') +
       '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; font-size:13px;">' +
       '<div><strong>Client</strong><br>' + esc(o.customer_name) + '<br>' + esc(o.email) + (o.phone ? '<br>' + esc(o.phone) : '') + '</div>' +
       '<div><strong>Livraison</strong><br>' + esc(o.shipping_method || 'standard') + '<br>' + addressBlock +

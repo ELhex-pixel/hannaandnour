@@ -68,7 +68,8 @@ exports.handler = async function (event) {
       ...fields, id: orderId, order_number: orderNumber, cart_restore_token: restoreToken,
       shipping_method: value.method, delivery_type: value.method === 'pickup' ? 'pickup' : 'home', pickup_point_data: pickupPoint,
       subtotal_cents: t.subtotal, shipping_cents: t.shipping, tax_cents: t.tax, discount_cents: t.discount,
-      total_cents: t.total, currency: value.currency.code, status: 'pending', promo_code: value.promo ? value.promo.code : null, user_id: userId, return_policy: value.return_policy
+      total_cents: t.total, currency: value.currency.code, status: 'pending', promo_code: value.promo ? value.promo.code : null, user_id: userId, return_policy: value.return_policy,
+      payment_flow: 'authorize_capture', checkout_lang: lang
     });
     if (orderError) throw orderError;
     const { error: itemsError } = await sb.from('order_items').insert(value.items.map(i => ({
@@ -77,13 +78,6 @@ exports.handler = async function (event) {
       variant: [i.color, i.size].filter(Boolean).join(' / ')
     })));
     if (itemsError) throw itemsError;
-    const { data: reserved, error: reserveError } = await sb.rpc('reserve_order', { p_order_id: orderId });
-    if (reserveError) throw reserveError;
-    if (!reserved) {
-      await sb.from('orders').delete().eq('id', orderId).eq('status', 'pending');
-      orderId = null;
-      return json(409, { error: 'Stock or promo unavailable' });
-    }
     const lineItems = allocation.map(line => ({
       quantity: line.quantity,
       price_data: { currency: value.currency.code, unit_amount: line.unit_amount,
@@ -99,7 +93,7 @@ exports.handler = async function (event) {
       mode: 'payment', client_reference_id: orderId, customer_email: fields.email, line_items: lineItems,
       expires_at: Math.floor(Date.now() / 1000) + 1800,
       shipping_options: [{ shipping_rate_data: { type: 'fixed_amount', fixed_amount: { amount: t.shipping, currency: value.currency.code }, display_name: value.method } }],
-      metadata: { order_id: orderId, lang }, payment_intent_data: { metadata: { order_id: orderId, lang } },
+      metadata: { order_id: orderId, lang }, payment_intent_data: { capture_method: 'manual', metadata: { order_id: orderId, lang } },
       locale: lang === 'ar' ? 'auto' : lang,
       success_url: `${siteUrl}${pagePrefix}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}${pagePrefix}/cart.html?checkout_cancel=${orderId}&checkout_cancel_token=${cancelToken}`

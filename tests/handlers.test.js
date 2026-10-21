@@ -6,11 +6,11 @@ const crypto = require('node:crypto');
 
 function checkout(overrides = {}, stripeError = false, pickupCheck = async () => ({ code: 'pickup_not_available' })) {
   const exports = {};
-  const state = { inserted: 0, stripe: 0, releases: 0, rows: [], pickupChecks: 0 };
+  const state = { inserted: 0, stripe: 0, releases: 0, reserves: 0, rows: [], pickupChecks: 0 };
   const value = { return_policy:{ version:'initial',days:30,withdrawal_payer:'customer',fault_payer:'store' }, items: [{ slug: 'veste', qty: 2, price_cents: 1000, color: '', size: '', variantId: null, product: { id: 'product', name_en: 'Jacket', image: 'images/hero.jpg' } }], totals: { subtotal: 2000, discount: 0, tax: 140, shipping: 699, total: 2839 }, currency: { code: 'eur', symbol: '€' }, method: 'standard', promo: null };
   const query = { insert(row) { state.inserted++; state.rows.push(row); return Promise.resolve({ error: null }); }, update() { return this; }, delete() { return this; }, eq() { return this; }, is() { return this; }, then(resolve) { return Promise.resolve({ error: null }).then(resolve); } };
   const shared = {
-    json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }), getSupabase: () => ({ from: () => query, rpc: async name => { if (name === 'release_order') state.releases++; return { data: true }; } }), isConfigured: () => true,
+    json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }), getSupabase: () => ({ from: () => query, rpc: async name => { if (name === 'release_order') state.releases++; if (name === 'reserve_order') state.reserves++; return { data: true }; } }), isConfigured: () => true,
     readBody: event => JSON.parse(event.body || '{}'), requireUser: async () => ({ ok: true, user: { id: 'user' } }), getBearer: () => '', rateLimit: async () => null, siteUrl: 'https://example.test', CORS_HEADERS: {}, ...overrides
   };
   class Stripe {
@@ -61,6 +61,9 @@ test('le montant des lignes Stripe et du port égale le devis', async () => {
   assert.equal((await mock.handler(event(customer))).statusCode, 200);
   const payload = mock.state.payload;
   assert.equal(payload.line_items.reduce((sum, line) => sum + line.quantity * line.price_data.unit_amount, 0) + payload.shipping_options[0].shipping_rate_data.fixed_amount.amount, mock.value.totals.total);
+  assert.equal(mock.state.reserves, 0);
+  assert.equal(mock.state.rows[0].payment_flow, 'authorize_capture');
+  assert.equal(payload.payment_intent_data.capture_method, 'manual');
 });
 
 test('une réponse Stripe perdue ne libère pas aveuglément la réservation', async () => {
@@ -148,7 +151,7 @@ function webhook(type, overrides = {}) {
       this.paymentIntents = { retrieve: async () => ({ metadata: { order_id: 'order' } }) };
     }
   }
-  vm.runInNewContext(fs.readFileSync('netlify/functions/stripe-webhook.js', 'utf8'), { exports, Buffer, console: { error() {} }, process: { env: { STRIPE_WEBHOOK_SECRET: 'test-only', STRIPE_SECRET_KEY: 'test-only' } }, require: name => name === 'stripe' ? Stripe : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : shared });
+  vm.runInNewContext(fs.readFileSync('netlify/functions/stripe-webhook.js', 'utf8'), { exports, Buffer, console: { error() {} }, process: { env: { STRIPE_WEBHOOK_SECRET: 'test-only', STRIPE_SECRET_KEY: 'test-only' } }, require: name => name === 'stripe' ? Stripe : name === './lib/authorized-checkout' ? {settleCheckout:(sb,session,notify)=>notify(session,sb)} : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : shared });
   return { handler: exports.handler, state };
 }
 

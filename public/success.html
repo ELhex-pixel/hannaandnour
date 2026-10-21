@@ -63,20 +63,21 @@
   <main>
     <section class="page-header">
       <div class="container">
-        <h1 class="page-header-title" data-i18n="successTitle">Order Confirmed</h1>
+        <h1 class="page-header-title" data-payment-title data-i18n="paymentCheckingTitle">Vérification du paiement</h1>
         <div class="page-header-breadcrumb">
-          <a href="index.html" data-i18n="navHome">Home</a><span>/</span><span data-i18n="successTitle">Order Confirmed</span>
+          <a href="index.html" data-i18n="navHome">Home</a><span>/</span><span data-payment-title data-i18n="paymentCheckingTitle">Vérification du paiement</span>
         </div>
       </div>
     </section>
 
     <section class="container" style="padding: var(--spacing-3xl) 0;">
       <div class="cart-summary" style="max-width: 640px; margin: 0 auto; text-align: center;">
-        <div style="width: 72px; height: 72px; border-radius: 50%; background-color: var(--color-sage); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-lg);">
+        <div id="paymentConfirmedIcon" hidden style="width: 72px; height: 72px; border-radius: 50%; background-color: var(--color-sage); align-items: center; justify-content: center; margin: 0 auto var(--spacing-lg);">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </div>
-        <h2 style="font-size: 1.75rem; margin-bottom: var(--spacing-sm);" data-i18n="successThank">Thank you for your purchase!</h2>
-        <p style="color: var(--color-gray); margin-bottom: var(--spacing-xl);" data-i18n="successDesc">Your payment was successful. A confirmation email is on its way. Below is your order reference.</p>
+        <h2 style="font-size: 1.75rem; margin-bottom: var(--spacing-sm);" data-payment-title data-i18n="paymentCheckingTitle">Vérification du paiement</h2>
+        <p id="paymentResultDescription" role="status" aria-live="polite" style="color: var(--color-gray); margin-bottom: var(--spacing-xl);" data-i18n="paymentCheckingDescription">Nous vérifions la confirmation de votre paiement. Veuillez patienter.</p>
+        <button type="button" class="btn btn-secondary" id="paymentRefresh" data-i18n="paymentRefresh">Vérifier à nouveau</button>
         <div id="orderDetails" style="display: none; margin-bottom: var(--spacing-xl); padding: var(--spacing-lg); background-color: var(--color-cream); border-radius: var(--radius-md);">
           <p style="margin-bottom: var(--spacing-xs);"><span style="color: var(--color-gray);" data-i18n="successOrderNumber">Order Number:</span> <strong id="successOrderNumber">-</strong></p>
           <p><span style="color: var(--color-gray);" data-i18n="successTotal">Order Total:</span> <strong id="successOrderTotal">-</strong></p>

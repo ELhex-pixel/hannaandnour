@@ -62,7 +62,7 @@
         (showShipping && o.shipping_status && shippingText(o.shipping_status) ? '<span class="order-status" style="display:block; margin-top:6px;">' + shippingText(o.shipping_status) + '</span>' : '') +
         '    </div>' +
         '  </div>' +
-        (o.status === 'pending' ? '<p class="account-feedback">' + esc(tr('orderReservationHelp')) + '</p><button type="button" class="btn btn-secondary btn-sm" data-cancel-checkout="' + esc(o.id) + '">' + esc(tr('orderCancelCheckout')) + '</button><p data-cancel-status role="status" aria-live="polite"></p>' : '') +
+        (['pending','abandoned'].indexOf(o.status) >= 0 ? '<p class="account-feedback">' + esc(tr(o.payment_flow === 'authorize_capture' && o.payment_intent_id ? 'orderPaymentConfirming' : 'orderReservationHelp')) + '</p>' : '') +
         (showShipping && o.tracking_number ? '<p style="margin: 8px 0 0; font-size: 0.875rem; color: var(--color-gray);">' + tr('trackingN', { n: esc(o.tracking_number) }) + '</p>' : '') +
         (o.delivery_type === 'pickup' && o.pickup_point ? '<p style="margin: 6px 0 0; font-size: 0.875rem; color: var(--color-gray);">' + tr('pickupPoint') + ' : ' + esc(o.pickup_point) + '</p>' : '') +
         '  <div class="order-items">' + itemsHtml +
@@ -122,22 +122,6 @@
   }
 
   function wireOrderFilter() {
-    var box = document.getElementById('accountOrders');
-    if (box) box.addEventListener('click', function (event) {
-      var button = event.target.closest('[data-cancel-checkout]');
-      if (!button || button.disabled || !window.HN_AUTH || !HN_AUTH.isAuthed()) return;
-      if (!window.confirm(tr('orderCancelCheckoutConfirm'))) return;
-      var token = HN_AUTH.token(), user = HN_AUTH.currentUser().id, message = button.parentNode.querySelector('[data-cancel-status]');
-      function current() { return HN_AUTH.isAuthed() && HN_AUTH.currentUser().id === user && HN_AUTH.token() === token; }
-      button.disabled = true; message.textContent = tr('checkoutCancelChecking');
-      HN_AUTH.call({ action: 'cancelCheckout', order_id: button.getAttribute('data-cancel-checkout') }, true).then(function (data) {
-        if (!current()) return;
-        if (data.cancelled !== true) throw new Error();
-        loadAccountOrders();
-      }).catch(function (error) {
-        if (current()) { message.textContent = tr(error.message === 'checkout_cancel_completed' ? 'checkoutCancelCompleted' : 'checkoutCancelUnconfirmed'); button.disabled = false; }
-      });
-    });
     var apply = document.getElementById('orderFilterApply');
     var reset = document.getElementById('orderFilterReset');
     if (apply) apply.addEventListener('click', function () { loadAccountOrders(); });
