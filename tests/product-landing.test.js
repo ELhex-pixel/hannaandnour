@@ -1,5 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),cheerio=require('cheerio');
 const landing=require('../public/js/product-landing'),media=require('../public/js/product-media'),dict=require('../public/js/i18n');
+const vm=require('node:vm');
 const {renderContent}=require('../scripts/seo'),{prepareLivePage}=require('../scripts/build');
 const base='https://rqgoawbzbgzuvpxnzxsu.supabase.co/storage/v1/object/public/product-images/';
 const product={slug:'ensemble-col-rond-pantalon-large',name_fr:'Ensemble test',name_en:'Test outfit',name_ar:'طقم تجريبي',description_fr:'Description <script>privée</script>',description_en:'Description',description_ar:'وصف',fit_fr:'Du 36 au 46',fit_en:'EU 36–46',fit_ar:'من 36 إلى 46',features_fr:['Col rond','Pantalon large'],features_en:['Round neck','Wide leg'],features_ar:['ياقة دائرية','بنطال واسع'],image:base+'gray-1.webp',gallery:[{src:base+'gray-1.webp',color:'Gris clair'},{src:base+'gray-2.webp',color:'Gris clair'},{src:base+'black-1.webp',color:'Noir'},{src:base+'black-2.webp',color:'Noir'}],variants:[{color:'Gris clair',active:true,stock:0},{color:'Noir',active:true,stock:5}]};
@@ -27,4 +28,14 @@ test('le pré-rendu cible uniquement cette fiche, conserve les contrôles et ne 
     assert.equal(doc('body').hasClass('product-landing'),slug===product.slug);assert.equal(doc('#addToCartBtn').is('[disabled]'),true);assert.equal(doc('#buyNowBtn').length,1);assert.equal(doc('.product-price').text(),'');assert.equal(doc('link[rel=canonical]').attr('href'),url);assert.equal(doc('#productLandingEditorial').is('[hidden]'),true);assert.equal(doc('script[src="js/product.js"]').length,1);
     if(slug===product.slug){assert.equal(doc('#landingOptions').length,1);assert.equal(doc('#productLandingEditorial details').length,3);}
   }
+});
+test('le bouton éditorial vise les vrais coloris avant le favori et ne déclenche aucune action d’achat',()=>{
+  const events={},state={focus:'',scrolls:0};
+  const color={focus(){state.focus='color';}},wishlist={focus(){state.focus='wishlist';}};
+  const options={scrollIntoView(){state.scrolls++;},querySelector(selector){return selector==='.color-option'?color:wishlist;}};
+  const button={getAttribute:()=> 'landingOptions',closest:selector=>selector==='[data-landing-target]'?button:null};
+  const document={body:{classList:{contains:()=>true}},getElementById:()=>options,addEventListener:(name,fn)=>events[name]=fn};
+  const window={document,HN_MEDIA:media,HN_COLORS:require('../public/js/colors'),matchMedia:()=>({matches:true}),addEventListener(){}};
+  vm.runInNewContext(fs.readFileSync('public/js/product-landing.js','utf8'),{window});events.click({target:button});
+  assert.equal(state.focus,'color');assert.equal(state.scrolls,1);
 });

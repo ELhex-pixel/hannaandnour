@@ -114,7 +114,7 @@
     var target = root.document.getElementById(button.getAttribute('data-landing-target'));
     if (!target) return;
     target.scrollIntoView({ behavior: root.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-    var control = target.querySelector('.color-option, .size-option, button'); if (control) control.focus({ preventScroll: true });
+    var control = target.querySelector('.color-option') || target.querySelector('.size-option') || target.querySelector('button'); if (control) control.focus({ preventScroll: true });
   });
   if (root && root.document) root.document.addEventListener('keydown', function (event) {
     if (!root.document.body.classList.contains('product-landing') || ['Enter',' '].indexOf(event.key) < 0) return;
