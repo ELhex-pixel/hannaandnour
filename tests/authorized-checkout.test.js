@@ -6,7 +6,7 @@ function fixture(options={}){
   const order={id,status:'pending',payment_flow:'authorize_capture',total_cents:1000,currency:'eur',stripe_session_id:'cs_local',inventory_reserved:false,...options.order};
   const session={id:'cs_local',client_reference_id:id,metadata:{order_id:id,lang:'fr'},mode:'payment',amount_total:order.total_cents,currency:order.currency,status:'complete',payment_status:'unpaid',payment_intent:'pi_local',...options.session};
   const intent={id:'pi_local',metadata:{order_id:id},amount:order.total_cents,currency:order.currency,capture_method:'manual',amount_capturable:order.total_cents,amount_received:0,status:'requires_capture',...options.intent};
-  const state={stock:options.stock??1,claims:0,finishes:[],captures:[],cancels:[],notifications:0,providerReads:0,claim:null};
+  const state={stock:options.stock??1,claims:0,finishes:[],captures:[],captureSuccesses:0,cachedCaptureErrors:new Map(),cancels:[],notifications:0,providerReads:0,claim:null};
   const sb={
     from(table){return{select(){return this;},eq(){return this;},not(){return this;},lt(){return this;},order(){return this;},limit(){return this;},then(resolve){return Promise.resolve({data:options.unclaimed?[{id:order.id,stripe_session_id:session.id}]:[]}).then(resolve);},async maybeSingle(){return{data:table==='orders'?{...order}:state.claim?{...state.claim}:null};}};},
     async rpc(name,args){
@@ -28,7 +28,14 @@ function fixture(options={}){
   };
   const provider={checkout:{sessions:{retrieve:async()=>{state.providerReads++;return{...session};}}},paymentIntents:{
     retrieve:async()=>{state.providerReads++;return{...intent};},
-    capture:async(id,payload,request)=>{state.captures.push({id,payload,request});if(options.captureFailure){options.captureFailure=false;throw Error('provider failure');}intent.status='succeeded';intent.amount_received=intent.amount;intent.amount_capturable=0;session.payment_status='paid';if(options.lostCapture){options.lostCapture=false;throw Error('capture reply lost');}return{...intent};},
+    capture:async(id,payload,request)=>{
+      state.captures.push({id,payload,request});
+      if(state.cachedCaptureErrors.has(request.idempotencyKey))throw state.cachedCaptureErrors.get(request.idempotencyKey);
+      if(Object.hasOwn(payload,'final_capture')){const error=Object.assign(Error('This PaymentIntent does not support multi-capture; final_capture cannot be passed'),{type:'StripeInvalidRequestError',statusCode:400});state.cachedCaptureErrors.set(request.idempotencyKey,error);throw error;}
+      if(options.captureFailure){options.captureFailure=false;throw Error('provider failure');}
+      if(intent.status==='succeeded')throw Error('Already captured');
+      state.captureSuccesses++;intent.status='succeeded';intent.amount_received=intent.amount;intent.amount_capturable=0;session.payment_status='paid';if(options.lostCapture){options.lostCapture=false;throw Error('capture reply lost');}return{...intent};
+    },
     cancel:async(id,payload,request)=>{state.cancels.push({id,payload,request});if(options.cancelFailure){options.cancelFailure=false;throw Error('provider failure');}intent.status='canceled';if(options.lostCancel){options.lostCancel=false;throw Error('cancel reply lost');}return{...intent};}
   }};
   const module={exports:{}};
@@ -39,8 +46,22 @@ function fixture(options={}){
 
 test('après validation bancaire : allouer puis capturer exactement une fois, confirmation seulement après encaissement',async()=>{
   const f=fixture();assert.equal(f.state.stock,1);assert.equal((await f.run()).statusCode,200);assert.equal(f.state.stock,0);assert.equal(f.order.status,'paid');assert.equal(f.state.captures.length,1);assert.equal(f.state.notifications,1);
-  assert.equal(f.state.captures[0].payload.amount_to_capture,1000);assert.equal(f.state.captures[0].payload.final_capture,true);
+  assert.equal(f.state.captures[0].payload.amount_to_capture,1000);assert.equal(Object.hasOwn(f.state.captures[0].payload,'final_capture'),false);
   assert.equal((await f.run()).statusCode,200);assert.equal(f.state.captures.length,1);assert.equal(f.state.stock,0);assert.equal(f.state.notifications,1);
+});
+test('un ancien refus final_capture mémorisé est repris avec la requête v2 sur le même intent, sans nouvelle allocation ni double encaissement',async()=>{
+  const f=fixture();
+  await f.sb.rpc('claim_authorized_checkout',{});
+  const legacyKey='hn-capture-'+f.order.id;
+  await assert.rejects(f.provider.paymentIntents.capture('pi_local',{amount_to_capture:1000,final_capture:true},{idempotencyKey:legacyKey}),/multi-capture/);
+  // Merely dropping the parameter under the old key still gets the stored error.
+  await assert.rejects(f.provider.paymentIntents.capture('pi_local',{amount_to_capture:1000},{idempotencyKey:legacyKey}),/multi-capture/);
+  assert.equal(f.state.stock,0);assert.equal(f.state.captureSuccesses,0);
+  await f.recover();assert.equal(f.order.status,'paid');assert.equal(f.state.stock,0);assert.equal(f.state.captureSuccesses,1);assert.equal(f.state.notifications,1);
+  const capture=f.state.captures.at(-1);assert.equal(capture.id,'pi_local');assert.equal(capture.request.idempotencyKey,'hn-capture-v2-'+f.order.id);assert.equal(Object.hasOwn(capture.payload,'final_capture'),false);
+  await f.run();assert.equal(f.state.captureSuccesses,1);assert.equal(f.state.notifications,1);
+  const alreadyCaptured=fixture({intent:{status:'succeeded',amount_received:1000,amount_capturable:0}});
+  await alreadyCaptured.sb.rpc('claim_authorized_checkout',{});await alreadyCaptured.recover();assert.equal(alreadyCaptured.state.captures.length,0);assert.equal(alreadyCaptured.order.status,'paid');assert.equal(alreadyCaptured.state.stock,0);
 });
 test('dernière pièce déjà vendue : annuler uniquement l’autorisation, aucun encaissement ni stock inventé',async()=>{
   const f=fixture({stock:0,lostCancel:true});assert.equal((await f.run()).statusCode,200);assert.equal(f.order.status,'payment_failed');assert.equal(f.intent.status,'canceled');assert.equal(f.state.stock,0);assert.equal(f.state.captures.length,0);assert.equal(f.state.cancels.length,1);assert.equal(f.state.notifications,0);

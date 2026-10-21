@@ -62,7 +62,10 @@ async function settleCheckout(sb, input, notifyPaid, provider) {
   }
   if (!free && claim.state === 'capturing' && intent.status === 'requires_capture') {
     if (intent.amount_capturable !== order.total_cents) throw new Error('Authorization amount mismatch');
-    try { await stripe.paymentIntents.capture(intentId, { amount_to_capture: order.total_cents, final_capture: true }, { idempotencyKey: 'hn-capture-' + order.id }); }
+    // final_capture is rejected on non-multicapture intents (API 2024-06-20).
+    // This fixed request version avoids replaying the old cached 400. It still
+    // targets the same single-capture intent, read above and reconciled below.
+    try { await stripe.paymentIntents.capture(intentId, { amount_to_capture: order.total_cents }, { idempotencyKey: 'hn-capture-v2-' + order.id }); }
     catch { /* A capture never gets a new intent or new operation on retry. */ }
     intent = await stripe.paymentIntents.retrieve(intentId);
   }
