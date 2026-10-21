@@ -199,9 +199,7 @@ test('les cinq pages publiées commencent par des blocs neutres sans fiches, pan
       assert.equal($('.payment-method[data-method] strong').text(),'');
     }
     if (file === 'product.html') {
-      assert.equal($('[data-product-content][hidden][inert]').length,3);
-      assert($('#productLandingEditorial').is('[data-product-content][hidden][inert]'));
-      assert.equal($('#productLandingEditorial').text(),'');
+      assert.equal($('[data-product-content][hidden][inert]').length,2);
       assert.equal($('#mainImage').attr('src'),undefined);
       assert.equal($('.product-price, .product-short-desc, #tab-description ul, #tab-fabric ul').text(),'');
       assert.equal($('.color-option, .size-option').length,0);
