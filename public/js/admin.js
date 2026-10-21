@@ -1200,7 +1200,7 @@
   /* ---------------- Orders ---------------- */
 
   function statusLabel(s) {
-    return { pending: 'En attente', paid: 'Pay&eacute;e', abandoned: 'Abandonn&eacute;e', refunded: 'Rembours&eacute;e', cancelled: 'Annul&eacute;e' }[s] || s;
+    return { pending: 'En attente de paiement — non payée', paid: 'Pay&eacute;e', abandoned: 'Paiement abandonné — non payée', payment_failed: 'Paiement échoué', refunded: 'Rembours&eacute;e', cancelled: 'Annul&eacute;e' }[s] || s;
   }
   function shipLabel(s) {
     return { new: '&Agrave; exp&eacute;dier', shipped: 'expédiée', delivered: 'Livr&eacute;e' }[s] || s;
@@ -1242,7 +1242,7 @@
       '<td data-label="Total">' + money(o.total_cents, o.currency) + '</td>' +
       '<td data-label="Paiement"><span class="' + payClass(o.status) + '">' + statusLabel(o.status) + '</span>' +
       (o.refunded_cents>0&&o.refunded_cents<o.total_cents?'<br><small>Remboursement partiel : '+money(o.refunded_cents,o.currency)+'</small>':'')+'</td>' +
-      '<td data-label="Exp\u00e9dition"><span class="badge ' + shipClass(o.shipping_status) + '">' + shipLabel(o.shipping_status) + '</span>' +
+      '<td data-label="Exp\u00e9dition"><span class="badge ' + shipClass(o.shipping_status) + '">' + (['pending','abandoned','payment_failed'].includes(o.status) ? 'Aucune expédition — paiement non confirmé' : shipLabel(o.shipping_status)) + '</span>' +
       (o.tracking_number ? '<br><small style="color:#8a7d66;">' + esc(o.tracking_number) + '</small>' : '') + '</td>' +
       '<td data-label=""><span style="white-space:nowrap;"><button class="btn btn-secondary btn-small view-order" data-id="' + o.id + '">Voir</button> ' +
       '<button class="btn btn-danger btn-small del-order" data-id="' + o.id + '" data-number="' + esc(o.order_number) + '">Supprimer de la liste</button></span></td>' +
@@ -1324,6 +1324,7 @@
 
     document.getElementById('orderModalBody').innerHTML =
       (o.stock_issue ? '<p role="alert" class="badge badge-red">Paiement reçu mais stock insuffisant : vérifier avant expédition.</p>' : '') +
+      (o.status === 'pending' ? '<p class="admin-notice"><strong>Paiement non confirmé — aucune vente encaissée.</strong> ' + (o.inventory_reserved ? 'Une réservation temporaire réduit le stock disponible pendant le paiement. Elle sera libérée après annulation ou expiration vérifiée de la session Stripe.' : 'Aucune réservation de stock active.') + '</p>' : '') +
       '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; font-size:13px;">' +
       '<div><strong>Client</strong><br>' + esc(o.customer_name) + '<br>' + esc(o.email) + (o.phone ? '<br>' + esc(o.phone) : '') + '</div>' +
       '<div><strong>Livraison</strong><br>' + esc(o.shipping_method || 'standard') + '<br>' + addressBlock +
@@ -1334,7 +1335,7 @@
       (o.discount_cents > 0 ? '<tr><td>Remise</td><td>-' + money(o.discount_cents, o.currency) + '</td></tr>' : '') +
       '<tr><td>Livraison</td><td>' + money(o.shipping_cents, o.currency) + '</td></tr>' +
       (o.tax_cents > 0 ? '<tr><td>Taxe</td><td>' + money(o.tax_cents, o.currency) + '</td></tr>' : '') +
-      '<tr><td><strong>Total payé</strong></td><td><strong>' + money(o.total_cents, o.currency) + '</strong></td></tr>' +
+      '<tr><td><strong>' + (['paid','refunded'].includes(o.status) || o.paid_at ? 'Montant réglé' : 'Montant de la tentative') + '</strong></td><td><strong>' + money(o.total_cents, o.currency) + '</strong></td></tr>' +
       (o.refunded_cents > 0 ? '<tr><td>Remboursements confirmés</td><td>' + money(o.refunded_cents,o.currency) + '</td></tr><tr><td>Solde remboursable</td><td>' + money(Math.max(0,o.total_cents-o.refunded_cents),o.currency) + '</td></tr>' : '') + '</table>' +
       (canReturn ? returnFormHtml() : '') +
       (o.status === 'paid' ? '<div class="order-actions">' +

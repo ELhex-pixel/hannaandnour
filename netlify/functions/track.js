@@ -18,8 +18,9 @@ exports.handler = async (event) => {
     if (TYPES.indexOf(type) === -1) return json(400, { error: 'Unknown event type' });
 
     const slug = body.product_slug ? String(body.product_slug).slice(0, 120) : null;
-    const path = body.path ? String(body.path).slice(0, 255) : null;
-    const referrer = (event.headers && event.headers['referer']) ? String(event.headers['referer']).slice(0, 500) : null;
+    // Checkout return capabilities and account tokens must never enter analytics.
+    const path = body.path ? String(body.path).split(/[?#]/)[0].slice(0, 255) : null;
+    const referrer = (event.headers && event.headers['referer']) ? String(event.headers['referer']).split(/[?#]/)[0].slice(0, 500) : null;
 
     const sb = getSupabase();
     const limited = await rateLimit(sb, event, 'track', 90, 60);

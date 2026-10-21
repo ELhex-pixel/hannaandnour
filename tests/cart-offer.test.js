@@ -77,7 +77,7 @@ function payment(mock) {
   const exports = {}, stripeCalls = [];
   class Stripe { constructor() { this.checkout = { sessions: { create: async payload => { stripeCalls.push(payload); return { id: 'cs_test', url: 'https://checkout.stripe.com/local-test' }; }, expire: async () => {} } }; } }
   const shared = { json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }), getSupabase: () => mock.sb, isConfigured: () => true, readBody: event => JSON.parse(event.body), rateLimit: async () => null, getBearer: () => '', siteUrl: 'https://example.test', CORS_HEADERS: {} };
-  vm.runInNewContext(fs.readFileSync('netlify/functions/checkout.js', 'utf8'), { exports, process: { env: { STRIPE_SECRET_KEY: 'local-test-only' } }, console: { error() {} }, require: name => name === 'crypto' ? crypto : name === 'stripe' ? Stripe : name === './shared' ? shared : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : commerce });
+  vm.runInNewContext(fs.readFileSync('netlify/functions/checkout.js', 'utf8'), { exports, process: { env: { STRIPE_SECRET_KEY: 'local-test-only' } }, console: { error() {} }, require: name => name === 'crypto' ? crypto : name === 'stripe' ? Stripe : name === './shared' ? shared : name === './lib/checkout-cancellation' ? require('../netlify/functions/lib/checkout-cancellation') : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : commerce });
   return { stripeCalls, run: body => exports.handler({ httpMethod: 'POST', headers: {}, body: JSON.stringify(body) }) };
 }
 test('une offre désactivée ou modifiée impose la confirmation du nouveau total avant tout paiement', async () => {
@@ -181,7 +181,7 @@ test('le paiement en cours n’est pas doublé ni remplacé par un rafraîchisse
     acceptQuote: data => { confirmations.push(data); state.quote = data; button.disabled = false; }, totals: () => state.quote.totals, formatMoney: cents => String(cents), showPendingQuote() {} };
   const source = fs.readFileSync('public/js/checkout.js', 'utf8');
   vm.createContext(context);
-  vm.runInContext(source.slice(source.indexOf('  function refreshQuote()'), source.indexOf('  function renderSummary()')) + source.slice(source.indexOf('  function wirePlaceOrder()'), source.indexOf('  function showPendingQuote()')) + source.slice(source.indexOf("  document.addEventListener('hn:config'"), source.indexOf('  init();')) + '\nwirePlaceOrder();', context);
+  vm.runInContext(source.slice(source.indexOf('  function refreshQuote()'), source.indexOf('  function renderSummary()')) + source.slice(source.indexOf('  function wirePlaceOrder()'), source.indexOf('  function showPendingQuote()')) + source.slice(source.indexOf("  document.addEventListener('hn:config'"), source.indexOf('  Promise.resolve(window.HN_CHECKOUT_CANCEL')) + '\nwirePlaceOrder();', context);
   button.click(); button.click(); listeners['hn:config']();
   assert.equal(state.paying, true); assert.equal(calls.length, 1); assert.equal(quotes.length, 0);
   assert.equal(calls[0].lang, 'ar');

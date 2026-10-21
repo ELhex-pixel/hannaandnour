@@ -8,15 +8,15 @@ function checkout(overrides = {}, stripeError = false, pickupCheck = async () =>
   const exports = {};
   const state = { inserted: 0, stripe: 0, releases: 0, rows: [], pickupChecks: 0 };
   const value = { return_policy:{ version:'initial',days:30,withdrawal_payer:'customer',fault_payer:'store' }, items: [{ slug: 'veste', qty: 2, price_cents: 1000, color: '', size: '', variantId: null, product: { id: 'product', name_en: 'Jacket', image: 'images/hero.jpg' } }], totals: { subtotal: 2000, discount: 0, tax: 140, shipping: 699, total: 2839 }, currency: { code: 'eur', symbol: '€' }, method: 'standard', promo: null };
-  const query = { insert(row) { state.inserted++; state.rows.push(row); return Promise.resolve({ error: null }); }, update() { return this; }, delete() { return this; }, eq() { return this; }, then(resolve) { return Promise.resolve({ error: null }).then(resolve); } };
+  const query = { insert(row) { state.inserted++; state.rows.push(row); return Promise.resolve({ error: null }); }, update() { return this; }, delete() { return this; }, eq() { return this; }, is() { return this; }, then(resolve) { return Promise.resolve({ error: null }).then(resolve); } };
   const shared = {
     json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }), getSupabase: () => ({ from: () => query, rpc: async name => { if (name === 'release_order') state.releases++; return { data: true }; } }), isConfigured: () => true,
     readBody: event => JSON.parse(event.body || '{}'), requireUser: async () => ({ ok: true, user: { id: 'user' } }), getBearer: () => '', rateLimit: async () => null, siteUrl: 'https://example.test', CORS_HEADERS: {}, ...overrides
   };
   class Stripe {
-    constructor() { this.checkout = { sessions: { create: async payload => { state.stripe++; state.payload = payload; if (stripeError) throw new Error('Network timeout'); return { id: 'cs_test', url: 'https://checkout.stripe.com/test' }; }, expire: async () => {} } }; }
+    constructor() { this.checkout = { sessions: { create: async payload => { state.stripe++; state.payload = payload; if (stripeError) throw stripeError === true ? new Error('Network timeout') : stripeError; return { id: 'cs_test', url: 'https://checkout.stripe.com/test' }; }, expire: async () => {} } }; }
   }
-  vm.runInNewContext(fs.readFileSync('netlify/functions/checkout.js', 'utf8'), { exports, process: { env: { STRIPE_SECRET_KEY: 'test-key-not-a-secret' } }, require: name => name === 'crypto' ? crypto : name === 'stripe' ? Stripe : name === './shared' ? shared : name === './lib/sendcloud' ? {createClient:()=>({verifyCheckoutPoint:async selection=>{state.pickupChecks++;return pickupCheck(selection);}})} : name === '../../public/js/pickup-points' ? require('../public/js/pickup-points') : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : { ...require('../public/js/commerce'), quote: async () => value, publicQuote: data => data } });
+  vm.runInNewContext(fs.readFileSync('netlify/functions/checkout.js', 'utf8'), { exports, process: { env: { STRIPE_SECRET_KEY: 'test-key-not-a-secret' } }, require: name => name === 'crypto' ? crypto : name === 'stripe' ? Stripe : name === './shared' ? shared : name === './lib/checkout-cancellation' ? require('../netlify/functions/lib/checkout-cancellation') : name === './lib/sendcloud' ? {createClient:()=>({verifyCheckoutPoint:async selection=>{state.pickupChecks++;return pickupCheck(selection);}})} : name === '../../public/js/pickup-points' ? require('../public/js/pickup-points') : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : { ...require('../public/js/commerce'), quote: async () => value, publicQuote: data => data } });
   return { handler: exports.handler, state, value };
 }
 const event = payload => ({ httpMethod: 'POST', body: JSON.stringify(payload), headers: {} });
@@ -69,6 +69,31 @@ test('une réponse Stripe perdue ne libère pas aveuglément la réservation', a
   assert.equal(mock.state.releases, 0);
 });
 
+test('les petits montants sont refusés avant toute commande ou réservation, mais les devis restent lisibles', async () => {
+  for (const amount of [10, 25, 49]) {
+    const mock = checkout(); mock.value.totals.total = amount;
+    assert.equal((await mock.handler(event({ action: 'quote' }))).statusCode, 200);
+    const response = await mock.handler(event({ ...customer, expected_total_cents: amount }));
+    assert.equal(response.statusCode, 400); assert.equal(JSON.parse(response.body).error, 'checkout_minimum');
+    assert.equal(mock.state.inserted, 0); assert.equal(mock.state.stripe, 0); assert.equal(mock.state.releases, 0);
+  }
+  const boundary = checkout();
+  boundary.value.items[0].qty = 1; boundary.value.items[0].price_cents = 50;
+  boundary.value.totals = { subtotal: 50, shipping: 0, discount: 0, tax: 0, total: 50 };
+  assert.equal((await boundary.handler(event({ ...customer, expected_total_cents: 50 }))).statusCode, 200);
+});
+
+test('un refus Stripe certain libère la réservation, jamais une erreur serveur ou une réponse inconnue', async () => {
+  for (const [type, statusCode] of [['StripeInvalidRequestError',400], ['StripeAuthenticationError',401], ['StripePermissionError',403]]) {
+    const mock = checkout({}, Object.assign(new Error('private supplier detail'), { type, statusCode }));
+    const response = await mock.handler(event(customer));
+    assert.equal(response.statusCode, 500); assert.equal(mock.state.releases, 1); assert(!response.body.includes('private supplier detail'));
+  }
+  for (const error of [new Error('timeout'), Object.assign(new Error('server'), { type:'StripeAPIError',statusCode:500 }), Object.assign(new Error('in flight'), { type:'StripeInvalidRequestError',statusCode:400,code:'idempotency_key_in_use' })]) {
+    const mock = checkout({}, error); assert.equal((await mock.handler(event(customer))).statusCode,503); assert.equal(mock.state.releases,0);
+  }
+});
+
 test('le checkout garde la langue Stripe et les retours localisés sans changer les montants', async () => {
   for (const lang of ['fr','en','ar']) {
     const mock = checkout();
@@ -79,7 +104,10 @@ test('le checkout garde la langue Stripe et les retours localisés sans changer 
     assert.equal(payload.metadata.lang, lang);
     assert.equal(payload.payment_intent_data.metadata.lang, lang);
     assert.equal(payload.metadata.order_id, payload.client_reference_id);
-    assert.equal(payload.cancel_url, 'https://example.test/' + lang + '/cart.html');
+    const cancel = new URL(payload.cancel_url);
+    assert.equal(cancel.origin + cancel.pathname, 'https://example.test/' + lang + '/cart.html');
+    assert.equal(cancel.searchParams.get('checkout_cancel'), payload.client_reference_id);
+    assert.equal(cancel.searchParams.get('checkout_cancel_token'), require('../netlify/functions/lib/checkout-cancellation').cancellationToken(mock.state.rows[0].id, mock.state.rows[0].cart_restore_token));
     assert.equal(payload.success_url, 'https://example.test/' + lang + '/success.html?session_id={CHECKOUT_SESSION_ID}');
     assert.equal(payload.line_items[0].price_data.product_data.name, mock.value.items[0].product['name_' + lang]);
     assert.equal(payload.line_items.reduce((sum, line) => sum + line.quantity * line.price_data.unit_amount, 0) + payload.shipping_options[0].shipping_rate_data.fixed_amount.amount, mock.value.totals.total);

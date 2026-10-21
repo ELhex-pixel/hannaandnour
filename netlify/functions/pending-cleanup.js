@@ -1,13 +1,12 @@
 /**
  * Hanna & Nour — Pending-order lifecycle (Netlify Scheduled Function).
- * Runs hourly. For unpaid orders (status 'pending' or 'abandoned'):
+ * Runs every five minutes. For unpaid orders (status 'pending' or 'abandoned'):
  *   - 24 h after creation: sends ONE follow-up email with the cart restore
  *     link (single-send guarded by orders.reminder_24h_sent_at).
- *   - 72 h after creation: hard-deletes the order, which removes it from the
- *     admin order list. order_items / order_returns cascade; reviews keep
- *     their product link (order_id on delete set null).
- * Stripe Checkout Sessions expire after 24 h by default, so at 72 h no payment
- * can still be completed: deleting the draft can never orphan a charge.
+ *   - 72 h after creation: archives unreserved drafts, keeping their history.
+ * Checkout sessions expire after 30 minutes. A recovery pass checks Stripe
+ * after 35 minutes in case the expiration webhook was missed. Unknown or
+ * asynchronous payments are never assumed expired solely from their age.
  */
 const { schedule } = require('@netlify/functions');
 const { getSupabase, isConfigured, sendEmail, siteUrl } = require('./shared');
@@ -91,35 +90,40 @@ async function handler() {
   const sb = getSupabase();
   await sb.from('rate_limits').delete().lt('window_start', new Date(Date.now() - 48 * HOUR).toISOString());
   if (process.env.STRIPE_SECRET_KEY) {
-    const stripe = new (require('stripe'))(process.env.STRIPE_SECRET_KEY);
-    const { data: stale, error } = await sb.from('orders').select('id, stripe_session_id, stripe_creation_started, created_at').eq('inventory_reserved', true).eq('status', 'pending').lt('created_at', new Date(Date.now() - HOUR).toISOString()).limit(50);
+    const stripe = new (require('stripe'))(process.env.STRIPE_SECRET_KEY, { timeout: 5000, maxNetworkRetries: 0 });
+    const { data: stale, error } = await sb.from('orders').select('id, stripe_session_id, stripe_creation_started, created_at,total_cents,currency').eq('inventory_reserved', true).eq('status', 'pending').lt('created_at', new Date(Date.now() - 35 * 60 * 1000).toISOString()).limit(50);
     if (error) throw error;
     for (const order of stale || []) {
-      if (!order.stripe_session_id && order.stripe_creation_started) {
-        let cursor;
-        for (let page = 0; page < 10 && !order.stripe_session_id; page++) {
-          const sessions = await stripe.checkout.sessions.list({ limit: 100, created: { gte: Math.floor(new Date(order.created_at).getTime() / 1000) - 60 }, ...(cursor ? { starting_after: cursor } : {}) });
-          const match = sessions.data.find(session => session.client_reference_id === order.id);
-          if (match) {
-            order.stripe_session_id = match.id;
-            const { error: bindError } = await sb.from('orders').update({ stripe_session_id: match.id }).eq('id', order.id).is('stripe_session_id', null);
-            if (bindError) throw bindError;
+      try {
+        if (!order.stripe_session_id && order.stripe_creation_started) {
+          let cursor;
+          for (let page = 0; page < 10 && !order.stripe_session_id; page++) {
+            const sessions = await stripe.checkout.sessions.list({ limit: 100, created: { gte: Math.floor(new Date(order.created_at).getTime() / 1000) - 60 }, ...(cursor ? { starting_after: cursor } : {}) });
+            const match = sessions.data.find(session => session.client_reference_id === order.id);
+            if (match) {
+              order.stripe_session_id = match.id;
+              const { error: bindError } = await sb.from('orders').update({ stripe_session_id: match.id }).eq('id', order.id).is('stripe_session_id', null);
+              if (bindError) throw bindError;
+            }
+            if (!sessions.has_more) break;
+            cursor = sessions.data[sessions.data.length - 1].id;
           }
-          if (!sessions.has_more) break;
-          cursor = sessions.data[sessions.data.length - 1].id;
+          if (!order.stripe_session_id) { console.error('Unbound checkout needs manual reconciliation', order.id); continue; }
         }
-        if (!order.stripe_session_id) { console.error('Unbound checkout needs manual reconciliation', order.id); continue; }
-      }
-      if (order.stripe_session_id) {
-        const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
-        if (session.status === 'complete' && ['paid', 'no_payment_required'].includes(session.payment_status)) {
-          await require('./stripe-webhook').markPaid(session, sb);
-          continue;
+        if (order.stripe_session_id) {
+          const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
+          if (session.id !== order.stripe_session_id || session.client_reference_id !== order.id || session.metadata?.order_id !== order.id || session.amount_total !== order.total_cents || session.currency !== order.currency) continue;
+          if (session.status === 'complete' && ['paid', 'no_payment_required'].includes(session.payment_status)) {
+            await require('./stripe-webhook').markPaid(session, sb);
+            continue;
+          }
+          if (session.status !== 'expired' || session.payment_status !== 'unpaid') continue;
         }
-        if (session.status !== 'expired') continue;
+        const { error: releaseError } = await sb.rpc('release_order', { p_order_id: order.id, p_status: 'abandoned' });
+        if (releaseError) throw releaseError;
+      } catch {
+        console.error('Pending checkout recovery unconfirmed; reservation retained');
       }
-      const { error: releaseError } = await sb.rpc('release_order', { p_order_id: order.id, p_status: 'abandoned' });
-      if (releaseError) throw releaseError;
     }
   }
   const result = { emails: 0, deleted: 0 };
@@ -134,4 +138,4 @@ async function handler() {
   return { statusCode: 200, body: JSON.stringify({ ok: true, ...result }) };
 }
 
-exports.handler = schedule('0 * * * *', handler);
+exports.handler = schedule('*/5 * * * *', handler);

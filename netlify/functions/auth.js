@@ -48,7 +48,7 @@ exports.handler = async function (event) {
     const sb = getSupabase();
     const body = readBody(event);
     const action = String(body.action || '').trim();
-    if (!['signup', 'login', 'refresh', 'forgotPassword', 'updatePassword', 'me', 'orders', 'wishlist', 'requestOrderClaim', 'confirmOrderClaim'].includes(action)) return json(400, { error: 'Unknown action' });
+    if (!['signup', 'login', 'refresh', 'forgotPassword', 'updatePassword', 'me', 'orders', 'cancelCheckout', 'wishlist', 'requestOrderClaim', 'confirmOrderClaim'].includes(action)) return json(400, { error: 'Unknown action' });
     const limited = await rateLimit(sb, event, 'auth:' + action, ['login', 'signup', 'forgotPassword', 'requestOrderClaim', 'confirmOrderClaim'].includes(action) ? 10 : 120, 600, ['login', 'signup', 'forgotPassword'].includes(action) ? body.email : null);
     if (limited) return limited;
 
@@ -143,6 +143,14 @@ exports.handler = async function (event) {
         const auth = await requireUser(sb, bearerToken(event));
         if (!auth.ok) return json(401, { error: auth.error });
         return json(200, { user: publicUser(auth.user) });
+      }
+
+      case 'cancelCheckout': {
+        const auth = await requireUser(sb, bearerToken(event));
+        if (!auth.ok) return json(401, { error: 'Not authenticated' });
+        const limited = await rateLimit(sb, event, 'customer-cancel-checkout', 10, 600, auth.user.id);
+        if (limited) return limited;
+        return await require('./lib/checkout-cancellation').cancelCheckout(sb, body, auth.user.id);
       }
 
       case 'orders': {

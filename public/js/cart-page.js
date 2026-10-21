@@ -152,10 +152,11 @@
 
     var checkoutLink = summaryBox ? summaryBox.querySelector('.cart-checkout a') : null;
     if (checkoutLink) {
-      checkoutLink.style.pointerEvents = items.length ? '' : 'none';
-      checkoutLink.style.opacity = items.length ? '' : '0.5';
-      checkoutLink.setAttribute('aria-disabled', items.length ? 'false' : 'true');
-      if (items.length) checkoutLink.removeAttribute('tabindex'); else checkoutLink.setAttribute('tabindex', '-1');
+      var allowed = items.length && !(window.HN_CHECKOUT_CANCEL && HN_CHECKOUT_CANCEL.pending());
+      checkoutLink.style.pointerEvents = allowed ? '' : 'none';
+      checkoutLink.style.opacity = allowed ? '' : '0.5';
+      checkoutLink.setAttribute('aria-disabled', allowed ? 'false' : 'true');
+      if (allowed) checkoutLink.removeAttribute('tabindex'); else checkoutLink.setAttribute('tabindex', '-1');
     }
   }
 
@@ -274,7 +275,8 @@
       return slugs.length ? HN.loadProductSlugs(slugs) : [];
     }
     var configuration = HN.requireConfig(force).then(applyConfig);
-    var products = /[?&]restore=([0-9a-f]{40,64})/.test(window.location.search || '') ? configuration.then(restoreFromUrl).then(selectedProducts) : selectedProducts();
+    var cancellation = window.HN_CHECKOUT_CANCEL ? HN_CHECKOUT_CANCEL.ready : Promise.resolve();
+    var products = Promise.resolve(cancellation).then(function () { return /[?&]restore=([0-9a-f]{40,64})/.test(window.location.search || '') ? configuration.then(restoreFromUrl).then(selectedProducts) : selectedProducts(); });
     Promise.all([configuration, products]).then(function () {
       ready = true;
       if (apply) apply.disabled = false;
@@ -284,5 +286,7 @@
   wireEvents();
   seedPromoInput();
   init();
+  document.addEventListener('hn:checkout-cancelled', function () { if (ready) init(true); });
+  window.addEventListener('pageshow', function (event) { if (event.persisted) Promise.resolve(window.HN_CHECKOUT_CANCEL && HN_CHECKOUT_CANCEL.run()).then(function () { init(true); }); });
   document.addEventListener('hn:cart', HN.refreshBadge, false);
 })();

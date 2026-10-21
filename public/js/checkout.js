@@ -210,7 +210,7 @@
 
   function syncPickupButton() {
     var button = document.getElementById('placeOrderBtn');
-    if (button) button.disabled = state.paying || !state.quote || (state.method === 'pickup' && (!state.settings.pickup_enabled || !state.pickupSelector || !state.pickupSelector.value()));
+    if (button) button.disabled = state.paying || !state.quote || (window.HN_CHECKOUT_CANCEL && HN_CHECKOUT_CANCEL.pending()) || (state.method === 'pickup' && (!state.settings.pickup_enabled || !state.pickupSelector || !state.pickupSelector.value()));
   }
 
   function wireShippingMethods() {
@@ -356,6 +356,7 @@
         .then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
         .then(function (out) {
           if (out.status === 200 && out.data.url) {
+            if (window.HN_CHECKOUT_CANCEL) HN_CHECKOUT_CANCEL.remember(out.data.orderId, out.data.cancel_token);
             window.location.href = out.data.url;
           } else if (out.status === 409 && out.data.totals) {
             state.paying = false;
@@ -366,7 +367,7 @@
             var error = new Error(tr(out.data.code === 'pickup_changed' ? 'pickupChanged' : 'pickupUnavailable'));
             error.pickup = true; throw error;
           } else {
-            throw new Error(out.data.error || 'checkout failed');
+            throw new Error(out.data.error === 'checkout_minimum' ? tr('checkoutMinimum') : tr('checkoutUnavailable'));
           }
         })
         .catch(function (err) {
@@ -430,5 +431,9 @@
 
   document.addEventListener('langchange', function () { if (state.loaded) renderShippingMethodPrices(); renderSummary(); renderReturnPolicy(); syncPickupButton(); });
   document.addEventListener('hn:config', function () { if (state.loaded) refreshQuote(); });
-  init();
+  Promise.resolve(window.HN_CHECKOUT_CANCEL && HN_CHECKOUT_CANCEL.ready).then(function () { init(); });
+  document.addEventListener('hn:checkout-cancelled', function () { if (state.loaded && !state.paying) init(true); });
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) Promise.resolve(window.HN_CHECKOUT_CANCEL && HN_CHECKOUT_CANCEL.run()).then(function () { state.paying = false; if (state.pickupSelector) state.pickupSelector.lock(false); init(true); });
+  });
 })();

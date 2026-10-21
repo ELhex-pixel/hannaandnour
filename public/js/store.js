@@ -71,13 +71,13 @@
   function track(type, slug) {
     try {
       if (window.navigator && typeof window.navigator.sendBeacon === 'function') {
-        var payload = JSON.stringify({ type: type, product_slug: slug || null, path: window.location.pathname + window.location.search });
+        var payload = JSON.stringify({ type: type, product_slug: slug || null, path: window.location.pathname });
         window.navigator.sendBeacon(apiUrl('track'), new Blob([payload], { type: 'application/json' }));
       } else {
         fetch(apiUrl('track'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: type, product_slug: slug || null, path: window.location.pathname + window.location.search }),
+          body: JSON.stringify({ type: type, product_slug: slug || null, path: window.location.pathname }),
           keepalive: true
         }).catch(function () {});
       }

@@ -10,16 +10,19 @@ exports.handler = async function (event) {
   if (!isConfigured()) return json(503, { error: 'temporarily_unavailable' });
   const sb = getSupabase();
   const body = readBody(event);
-  if (body.action && body.action !== 'quote') return json(400, { error: 'Unknown action' });
+  if (body.action && !['quote', 'cancel'].includes(body.action)) return json(400, { error: 'Unknown action' });
   let orderId = null;
   let session = null;
   let stripe;
   let stripeAttempted = false;
+  let cancelToken = null;
   try {
     const limited = await rateLimit(sb, event, body.action === 'quote' ? 'quote' : 'checkout', body.action === 'quote' ? 60 : 10, 600);
     if (limited) return limited;
+    if (body.action === 'cancel') return await require('./lib/checkout-cancellation').cancelCheckout(sb, body);
     const value = await quote(sb, body);
     if (body.action === 'quote') return json(200, publicQuote(value));
+    if (['eur', 'usd'].includes(value.currency.code) && value.totals.total > 0 && value.totals.total < 50) return json(400, { error: 'checkout_minimum', minimum_cents: 50 });
     if (!process.env.STRIPE_SECRET_KEY) return json(503, { error: 'Stripe is not configured' });
     if (body.expected_total_cents !== value.totals.total || body.expected_currency !== value.currency.code || body.expected_policy_version !== value.return_policy.version) {
       return json(409, { error: 'quote_changed', ...publicQuote(value) });
@@ -59,8 +62,10 @@ exports.handler = async function (event) {
     const orderNumber = 'HN-' + randomBytes(8).toString('hex').toUpperCase();
     const t = value.totals;
     const allocation = discountedLines(value.items, t.discount);
+    const restoreToken = randomBytes(24).toString('hex');
+    cancelToken = require('./lib/checkout-cancellation').cancellationToken(orderId, restoreToken);
     const { error: orderError } = await sb.from('orders').insert({
-      ...fields, id: orderId, order_number: orderNumber, cart_restore_token: randomBytes(24).toString('hex'),
+      ...fields, id: orderId, order_number: orderNumber, cart_restore_token: restoreToken,
       shipping_method: value.method, delivery_type: value.method === 'pickup' ? 'pickup' : 'home', pickup_point_data: pickupPoint,
       subtotal_cents: t.subtotal, shipping_cents: t.shipping, tax_cents: t.tax, discount_cents: t.discount,
       total_cents: t.total, currency: value.currency.code, status: 'pending', promo_code: value.promo ? value.promo.code : null, user_id: userId, return_policy: value.return_policy
@@ -96,11 +101,12 @@ exports.handler = async function (event) {
       shipping_options: [{ shipping_rate_data: { type: 'fixed_amount', fixed_amount: { amount: t.shipping, currency: value.currency.code }, display_name: value.method } }],
       metadata: { order_id: orderId, lang }, payment_intent_data: { metadata: { order_id: orderId, lang } },
       locale: lang === 'ar' ? 'auto' : lang,
-      success_url: `${siteUrl}${pagePrefix}/success.html?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${siteUrl}${pagePrefix}/cart.html`
+      success_url: `${siteUrl}${pagePrefix}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}${pagePrefix}/cart.html?checkout_cancel=${orderId}&checkout_cancel_token=${cancelToken}`
     }, { idempotencyKey: 'checkout-' + orderId });
     const { error: bindError } = await sb.from('orders').update({ stripe_session_id: session.id }).eq('id', orderId);
     if (bindError) throw bindError;
-    return json(200, { url: session.url, orderId, total_cents: t.total });
+    return json(200, { url: session.url, orderId, cancel_token: cancelToken, total_cents: t.total });
   } catch (err) {
     if (!stripeAttempted && /policy_changed/.test(err.message || '')) {
       orderId = null;
@@ -109,11 +115,22 @@ exports.handler = async function (event) {
     }
     if (orderId) {
       try {
-        if (stripeAttempted && !session) {
+        const refused = !session && [
+          ['StripeInvalidRequestError', 400], ['StripeAuthenticationError', 401], ['StripePermissionError', 403]
+        ].some(([type, status]) => err.type === type && err.statusCode === status) && !['idempotency_key_in_use', 'idempotency_error'].includes(err.code);
+        if (stripeAttempted && !session && !refused) {
           console.error('Checkout session requires reconciliation', orderId);
           return json(503, { error: 'Checkout temporarily unavailable' });
         }
-        if (session) await stripe.checkout.sessions.expire(session.id);
+        if (session) {
+          const cancellation = await require('./lib/checkout-cancellation').cancelCheckout(sb, { order_id: orderId, cancel_token: cancelToken }, undefined, session.id);
+          if (cancellation.statusCode !== 200) console.error('Checkout recovery required');
+          return json(503, { error: 'Checkout temporarily unavailable' });
+        }
+        if (refused) {
+          const { error: clearError } = await sb.from('orders').update({ stripe_creation_started: false }).eq('id', orderId).is('stripe_session_id', null);
+          if (clearError) throw clearError;
+        }
         const { error } = await sb.rpc('release_order', { p_order_id: orderId, p_status: 'abandoned' });
         if (error) console.error('Checkout reservation release failed');
       } catch (releaseError) { console.error('Checkout recovery required', orderId); }
