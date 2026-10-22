@@ -6,6 +6,7 @@
 const { json, getSupabase, isConfigured, readBody, CORS_HEADERS, rateLimit } = require('./shared');
 
 const TYPES = ['pageview', 'product_view', 'add_to_cart', 'checkout_attempt'];
+const { internalPath } = require('./lib/analytics-path');
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS_HEADERS, body: '' };
@@ -20,16 +21,18 @@ exports.handler = async (event) => {
     const slug = body.product_slug ? String(body.product_slug).slice(0, 120) : null;
     // Checkout return capabilities and account tokens must never enter analytics.
     const path = body.path ? String(body.path).split(/[?#]/)[0].slice(0, 255) : null;
+    if (internalPath(path)) return json(202, { ok: true });
     const referrer = (event.headers && event.headers['referer']) ? String(event.headers['referer']).split(/[?#]/)[0].slice(0, 500) : null;
 
     const sb = getSupabase();
     const limited = await rateLimit(sb, event, 'track', 90, 60);
     if (limited) return limited;
-    await sb.from('analytics_events').insert({ event_type: type, product_slug: slug, path, referrer });
+    const { error } = await sb.from('analytics_events').insert({ event_type: type, product_slug: slug, path, referrer });
+    if (error) throw error;
 
     return json(202, { ok: true });
   } catch (err) {
-    console.error('track.js error:', err);
-    return json(500, { error: err.message || 'Internal error' });
+    console.error('Analytics event unavailable');
+    return json(503, { error: 'Tracking temporarily unavailable' });
   }
 };

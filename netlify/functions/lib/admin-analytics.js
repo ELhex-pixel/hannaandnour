@@ -1,5 +1,6 @@
 const { json } = require('../shared');
 const activity = require('./activity-periods');
+const { internalPath } = require('./analytics-path');
 const DAY = 86400000;
 function canonicalPath(raw) {
   if (typeof raw !== 'string' || !raw.startsWith('/') || raw.startsWith('//') || raw.length > 2000) return '(page non renseignée)';
@@ -21,6 +22,7 @@ function summarize(events, now = Date.now(), reporting) {
     const counts = {pageview:0,product_view:0,add_to_cart:0,checkout_attempt:0,purchase:0};
     const products = new Map(), paths = new Map();
     for (const event of events) {
+      if (event.event_type !== 'purchase' && internalPath(event.path)) continue;
       const date = Date.parse(event.created_at);
       if (!activity.includes(event.created_at,reporting)) continue;
       if (!Number.isFinite(date) || date > now || (days && date < now-days*DAY)) continue;

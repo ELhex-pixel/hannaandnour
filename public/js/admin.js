@@ -191,6 +191,7 @@
       call('login', { password: pw })
         .then(function (res) {
           try { sessionStorage.setItem(TOKEN_KEY, res.token); } catch (e) {}
+          if (window.HN_ANALYTICS) window.HN_ANALYTICS.exclude();
           document.getElementById('loginErr').style.display = 'none';
           document.getElementById('loginPassword').value = '';
           showApp(true);

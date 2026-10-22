@@ -45,6 +45,7 @@
       if (current !== revision || (action !== 'login' && token() !== auth)) throw Object.assign(new Error('Réponse d’une ancienne session ignorée.'),{stale:true});
       if (response.status === 401 && action !== 'login') { logout('Session expirée. Reconnecte-toi pour reprendre la même opération.'); throw Object.assign(new Error('Session expirée.'),{stale:true}); }
       if (!response.ok || data.error) throw Object.assign(new Error(data.error || 'Service indisponible.'),{code:data.code,status:response.status});
+      if (action === 'login' && data.token && window.HN_ANALYTICS) window.HN_ANALYTICS.exclude();
       return data;
     } finally { clearTimeout(timer); }
   }

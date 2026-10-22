@@ -81,7 +81,7 @@ test('annulation : POST protégé et quota avant la résolution, aucune mutation
 test('les jetons de retour ne sont pas conservés dans les chemins et référents analytiques',async()=>{
   const exports={},rows=[];const query={insert:async row=>rows.push(row)};
   const shared={json,isConfigured:()=>true,getSupabase:()=>({from:()=>query}),readBody:e=>JSON.parse(e.body),rateLimit:async()=>null};
-  vm.runInNewContext(fs.readFileSync('netlify/functions/track.js','utf8'),{exports,console:{error(){}},require:()=>shared});
+  vm.runInNewContext(fs.readFileSync('netlify/functions/track.js','utf8'),{exports,console:{error(){}},require:name=>name==='./lib/analytics-path'?require('../netlify/functions/lib/analytics-path'):shared});
   const result=await exports.handler({httpMethod:'POST',headers:{referer:'https://example.test/fr/cart?checkout_cancel_token=private#secret'},body:JSON.stringify({type:'pageview',path:'/fr/cart?checkout_cancel_token=private#secret'})});
   assert.equal(result.statusCode,202);assert.equal(rows[0].path,'/fr/cart');assert.equal(rows[0].referrer,'https://example.test/fr/cart');assert(!JSON.stringify(rows).includes('private'));
 });

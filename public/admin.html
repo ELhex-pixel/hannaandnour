@@ -829,6 +829,12 @@
         <button type="button" class="btn btn-secondary" data-start-activity-period>Remettre chiffres et visites à zéro</button>
       </div>
       <p data-activity-caption class="dashboard-caption"></p>
+      <section class="card dashboard-section" aria-labelledby="analyticsDeviceTitle">
+        <h3 id="analyticsDeviceTitle">Ne pas compter mes propres visites</h3>
+        <p id="analyticsDeviceStatus" class="dashboard-caption" role="status" aria-live="polite"></p>
+        <div class="dashboard-actions"><button type="button" class="btn btn-secondary" id="excludeAnalyticsDevice">Exclure ce navigateur des visites</button><button type="button" class="btn btn-secondary" id="includeAnalyticsDevice" hidden>Réactiver le comptage après déconnexion</button></div>
+        <details class="management-details"><summary>Comment lire des statistiques plus propres ?</summary><p>L’exclusion est activée automatiquement après connexion admin ou Stock, et reste enregistrée dans ce navigateur. Connectez-vous une fois à l’admin sur chaque téléphone ou navigateur que vous utilisez pour gérer la boutique. Un autre appareil ou la navigation privée n’est pas reconnu automatiquement.</p><p>Les anciennes visites ne permettent pas de savoir lesquelles venaient de vous. Elles restent dans l’historique. Les pages vues ne sont ni des visiteurs uniques, ni une liste nominative de clients. Vos commandes réellement payées restent dans les ventes, même pour un achat d’essai.</p></details>
+      </section>
       <p id="dashboardStatus" role="status" aria-live="polite" class="dashboard-caption"></p>
       <div id="statsList"><section class="card dashboard-section" id="dashboardFinance" aria-label="Chiffre d’affaires et coûts d’achat"><p class="empty">Ouvrez la rubrique pour charger les montants.</p></section><section class="card dashboard-section" id="dashboardTraffic" aria-label="Visites du site"><p class="empty">Ouvrez la rubrique pour charger les visites.</p></section></div>
       <details class="management-details dashboard-reset"><summary>Gestion de l’historique des visites</summary><p>La remise à zéro efface uniquement les événements de visite. Les commandes, ventes, coûts d’achat et stocks sont conservés.</p><button class="btn btn-danger" id="resetStatsBtn" type="button">Effacer l’historique des visites</button></details>
@@ -1204,7 +1210,9 @@
     <div class="admin-photo-actions"><button type="button" class="btn btn-secondary" id="adminPhotoPrevious">← Précédente</button><button type="button" class="btn btn-secondary" id="adminPhotoZoom" aria-pressed="false">Agrandir les détails</button><button type="button" class="btn btn-secondary" id="adminPhotoNext">Suivante →</button></div>
   </dialog>
   <script src="js/config.js"></script>
+  <script src="js/analytics-preferences.js"></script>
   <script src="js/admin-api.js"></script>
+  <script src="js/admin-analytics-preferences.js"></script>
   <script src="js/colors.js"></script>
   <script src="js/categories.js"></script>
   <script src="js/product-sizes.js"></script>

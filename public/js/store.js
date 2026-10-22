@@ -70,6 +70,9 @@
 
   function track(type, slug) {
     try {
+      if (window.HN_ANALYTICS && !window.HN_ANALYTICS.shouldTrack()) return;
+      // Source/offline preview fallback when the build bootstrap is not present.
+      if (!window.HN_ANALYTICS && (sessionStorage.getItem('hn-admin-token') || localStorage.getItem('hn-analytics-excluded') === '1' || /^\/(?:fr\/|en\/|ar\/)?(?:admin|stock|print)(?:\.html)?\/?$/i.test(window.location.pathname))) return;
       if (window.navigator && typeof window.navigator.sendBeacon === 'function') {
         var payload = JSON.stringify({ type: type, product_slug: slug || null, path: window.location.pathname });
         window.navigator.sendBeacon(apiUrl('track'), new Blob([payload], { type: 'application/json' }));
