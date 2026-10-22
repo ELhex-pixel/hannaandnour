@@ -9,6 +9,7 @@ const { loadPublicContent, cleanPublicLinks, renderContent, staticMetadata } = r
 const content = require('../public/js/content');
 const { compactAsset, optimizePage } = require('./performance');
 const { buildBrandAssets, brandIcons } = require('./brand-assets');
+const { loadReturnsPolicy, renderReturnsPage } = require('./returns-conditions');
 
 function prepareNetlifyImages(source) {
   const section = source.match(/^\[images\]\s*\n([\s\S]*?)(?=^\[|$(?![\s\S]))/m);
@@ -90,7 +91,7 @@ async function build() {
   if ((preview || process.env.STAGING_MODE === 'true') && (!process.env.EXPECTED_STAGING_SUPABASE_URL || !process.env.PRODUCTION_SUPABASE_URL || process.env.SUPABASE_URL === process.env.PRODUCTION_SUPABASE_URL || process.env.SUPABASE_URL !== process.env.EXPECTED_STAGING_SUPABASE_URL || !String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_test_'))) throw new Error('Le staging exige sa propre base Supabase, une PRODUCTION_SUPABASE_URL distincte et une clé Stripe test.');
   await preflight();
   const sb = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY ? require('../netlify/functions/shared').getSupabase() : null;
-  const catalog = await loadPublicContent(sb);
+  const [catalog, returnsPolicy] = await Promise.all([loadPublicContent(sb),loadReturnsPolicy(sb)]);
   const imageConfig = prepareNetlifyImages(await fs.readFile('netlify.toml', 'utf8'));
   const routeConfig = prepareNetlifyRoutes(await fs.readFile('public/_redirects', 'utf8'));
   await fs.mkdir('.netlify/v1', { recursive: true });
@@ -166,6 +167,7 @@ async function build() {
       $('head').prepend('<base href="/">');
       if($('script[src="js/store.js"]').length)$('base').after('<script src="'+assets['/js/early-data.js']+'" data-page="'+file+'"></script>');
       $('html').attr('lang', language).attr('dir', language === 'ar' ? 'rtl' : 'ltr');
+      if (file === 'terms.html') renderReturnsPage($, returnsPolicy, language);
       if (language === 'ar') $('.logo, .footer-logo').text(translations.ar.brandName);
       $('.lang-switcher').val(language).attr('aria-label', translations[language].languageLabel);
       $('[data-i18n]').each((_, node) => { const key = $(node).attr('data-i18n'); if (translations[language][key]) $(node).text(translations[language][key]); });
