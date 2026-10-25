@@ -361,7 +361,7 @@
       payApple: 'Apple Pay',
       payAppleD: 'Fast and secure payment with Apple',
       payKlarna: 'Klarna',
-      payKlarnaD: 'Buy now, pay in 4 interest-free installments',
+      payKlarnaD: 'Pay in 3 interest-free installments in France, subject to eligibility. Options shown at checkout.',
       placeOrder: 'Place Order',
 
       /* Account */
@@ -871,7 +871,7 @@
       payApple: 'Apple Pay',
       payAppleD: 'Paiement rapide et sécurisé avec Apple',
       payKlarna: 'Klarna',
-      payKlarnaD: 'Achetez maintenant, payez en 4 fois sans frais',
+      payKlarnaD: 'Payez en 3 fois sans frais en France, sous réserve d’éligibilité. Options proposées lors du paiement.',
       placeOrder: 'Passer la commande',
       accountTitle: 'Mon compte',
       crumbAccount: 'Compte',
@@ -1379,7 +1379,7 @@
       payApple: 'آبل باي',
       payAppleD: 'دفع سريع وآمن عبر آبل',
       payKlarna: 'كلارنا',
-      payKlarnaD: 'اشترِ الآن وادفعي على 4 دفعات بدون فوائد',
+      payKlarnaD: 'ادفعي على 3 دفعات بدون فوائد في فرنسا، حسب الأهلية. تظهر الخيارات عند الدفع.',
       placeOrder: 'إتمام الطلب',
       accountTitle: 'حسابي',
       crumbAccount: 'الحساب',

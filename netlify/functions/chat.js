@@ -232,10 +232,10 @@ const RULES = [
     },
     reply: (ctx) => {
       const text = ctx.lang === 'fr'
-        ? 'Paiement 100 % s\u00e9curis\u00e9 via Stripe : Visa, Mastercard, American Express, PayPal, Apple Pay et Klarna (paiement en 4 fois sans frais). Vos donn\u00e9es bancaires ne sont jamais stock\u00e9es sur le site.'
+        ? 'Le paiement est sécurisé via Stripe. Klarna peut proposer le paiement en 3 fois sans frais en France, sous réserve d’éligibilité. Les moyens de paiement et les échéanciers disponibles dépendent notamment du pays et du montant ; les options exactes sont affichées lors du paiement. Vos données bancaires ne sont jamais stockées sur le site.'
         : ctx.lang === 'en'
-          ? '100% secure payments via Stripe: Visa, Mastercard, American Express, PayPal, Apple Pay and Klarna (pay in 4 interest-free installments). Your bank details are never stored on the site.'
-          : 'دفع آمن 100% عبر Stripe: فيزا، ماستركارد، أمريكان إكسبريس، بايبال، أبل باي وكلارنا (ادفع على 4 دفعات بدون فوائد). بياناتك البنكية لا تُحفظ أبدًا في الموقع.';
+          ? 'Payment is secured through Stripe. Klarna may offer 3 interest-free installments in France, subject to eligibility. Available payment methods and schedules depend on factors including country and amount; the exact options are shown at checkout. Your bank details are never stored on the site.'
+          : 'الدفع آمن عبر Stripe. قد تتيح كلارنا الدفع على 3 دفعات بدون فوائد في فرنسا حسب الأهلية. تعتمد وسائل الدفع والجداول المتاحة على البلد والمبلغ وعوامل أخرى، وتظهر الخيارات الدقيقة عند الدفع. لا تُحفظ بياناتك البنكية على الموقع.';
       return { text };
     }
   },
@@ -480,7 +480,7 @@ function systemPrompt(ctx) {
   const promo = ctx.promo ? 'Code ' + ctx.promo.code + ' = ' + ctx.promo.percent_off + '% de réduction.' : 'Aucun code actif pour le moment.';
   const products = ctx.products.map((p) => (ctx.lang === 'fr' ? p.name_fr : p.name_en) + ' — ' + moneyStr(p.price_cents, cur, ctx.lang)).join(' ; ') || 'N/A';
   const lines = [
-    'Tu es l\u2019assistant de la boutique en ligne Hanna & Nour : vêtements et accessoires, style, confort et élégance. Présente la marque de façon générale, sans présumer la religion ou le genre de la personne. Site : hannanour.com. Paiement sécurisé via Stripe (Visa, Mastercard, Amex, PayPal, Apple Pay, Klarna).',
+    'Tu es l’assistant de la boutique en ligne Hanna & Nour : vêtements et accessoires, style, confort et élégance. Présente la marque de façon générale, sans présumer la religion ou le genre de la personne. Site : hannanour.com. Paiement sécurisé via Stripe ; seuls les moyens effectivement proposés dans Stripe Checkout sont disponibles. Klarna peut proposer 3 fois sans frais en France, selon éligibilité, pays et montant. Ne promets jamais un échéancier ou une disponibilité universels.',
     shippingReply(ctx).text,
     'Retours sous ' + days + ' jours : ' + CONTACT_EMAIL + '.',
     'Promo : ' + promo,
