@@ -47,14 +47,14 @@ test('le bandeau avec promo, le footer et la fiche produit suivent exclusivement
   rules.countries.NL.standard.fee_cents=1599;rules.countries.NL.pickup.fee_cents=712;rules.countries.NL.pickup.free_threshold_cents=12000;
   for(const lang of ['fr','en','ar']){
     const ui=translator(lang);ui.setShippingRules(rules,'FR');
-    const fr=ui.t('trustFree');assert(fr.includes(dict[lang].pickupCountryFR));assert(fr.includes('5.99'));assert(fr.includes('80'));assert.equal(ui.t('metaShipText'),fr);
+    const fr=ui.t('trustFree');assert(!fr.includes(dict[lang].pickupCountryFR));assert(!fr.includes('5.99'));assert(fr.includes('80'));assert(ui.t('metaShipText').includes(dict[lang].pickupCountryFR));assert(ui.t('metaShipText').includes('5.99'));assert(ui.t('metaShipText').includes('80'));
     const promo=ui.t('announcePromo',{code:'WELCOME2026',pct:15});assert(promo.includes(fr));assert(promo.includes('WELCOME2026'));assert(promo.includes('15'));assert(!promo.includes('{shipping}'));
-    ui.setShippingRules(rules,'NL');const nl=ui.t('trustFree');assert(nl.includes(dict[lang].pickupCountryNL));assert(nl.includes('15.99'));assert(nl.includes('120'));assert(!nl.includes('80'));assert(ui.t('announcePromo',{code:'WELCOME2026',pct:15}).includes(nl));
-    const disabled=JSON.parse(JSON.stringify(rules));disabled.countries.NL.pickup.free_enabled=false;ui.setShippingRules(disabled,'NL');assert(ui.t('trustFree').includes('7.12'));assert(!ui.t('trustFree').includes('120'));
-    disabled.countries.NL.pickup.enabled=false;ui.setShippingRules(disabled,'NL');assert(ui.t('trustFree').includes('15.99'));assert(!ui.t('trustFree').includes('7.12'));
-    disabled.countries.NL.enabled=false;ui.setShippingRules(disabled,'NL');assert.equal(ui.t('trustFree'),dict[lang].shippingCountryUnavailable.replace('{country}',dict[lang].pickupCountryNL));
+    ui.setShippingRules(rules,'NL');const nl=ui.t('trustFree');assert(!nl.includes(dict[lang].pickupCountryNL));assert(!nl.includes('15.99'));assert(ui.t('metaShipText').includes(dict[lang].pickupCountryNL));assert(ui.t('metaShipText').includes('15.99'));assert(nl.includes('120'));assert(!nl.includes('80'));assert(ui.t('announcePromo',{code:'WELCOME2026',pct:15}).includes(nl));
+    const disabled=JSON.parse(JSON.stringify(rules));disabled.countries.NL.pickup.free_enabled=false;ui.setShippingRules(disabled,'NL');assert.equal(ui.t('trustFree'),dict[lang].shippingCountryPaidShort.replace('{country}',dict[lang].pickupCountryNL));assert(ui.t('metaShipText').includes('7.12'));assert(!ui.t('trustFree').includes('120'));
+    disabled.countries.NL.pickup.enabled=false;ui.setShippingRules(disabled,'NL');assert(ui.t('metaShipText').includes('15.99'));assert(!ui.t('metaShipText').includes('7.12'));
+    disabled.countries.NL.enabled=false;ui.setShippingRules(disabled,'NL');assert.equal(ui.t('trustFree'),dict[lang].shippingCountryUnavailableShort.replace('{country}',dict[lang].pickupCountryNL));
     ui.setShippingRules(rules,'US');assert(!ui.t('announcePromo',{code:'WELCOME2026',pct:15}).includes('80'));
-    ui.setShippingRules(rules,null);assert.equal(ui.t('trustFree'),dict[lang].shippingCountryGeneric);
-    ui.setShippingRules(null,'FR');assert.equal(ui.t('trustFree'),dict[lang].shippingCountryGeneric);
+    ui.setShippingRules(rules,null);assert.equal(ui.t('trustFree'),dict[lang].shippingCountryGenericShort);
+    ui.setShippingRules(null,'FR');assert.equal(ui.t('trustFree'),dict[lang].shippingCountryGenericShort);
   }
 });

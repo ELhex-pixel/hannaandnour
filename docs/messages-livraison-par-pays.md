@@ -23,4 +23,6 @@ Le bandeau, même lorsqu’un code promo y figure, le pied de page et les inform
 
 Le cas `announcePromo` compose désormais le résumé de livraison et la promotion, au lieu de réutiliser l’ancienne promesse générale « Livraison gratuite dès 80 € ». Les textes changent avec le choix du pays, la langue et les nouvelles réponses de configuration. FR/EN/AR restent cohérents.
 
+Le propriétaire a ensuite demandé la formulation courte **« Livraison offerte dès 80 € avant réduction »**, sans nom de pays ni liste de tarifs dans le bandeau et le pied de page. Le seuil reste calculé à partir des règles du pays courant. Si la gratuité relais est désactivée, ils indiquent « Livraison payante ». La fiche produit et les choix de livraison au paiement conservent les détails des modes, tarifs et conditions avant confirmation de commande. Les règles commerciales et la sélection du pays restent les mêmes.
+
 Les tarifs restent exclusivement dans `settings.shipping_rules`. Les devis et paiements relisent et contrôlent toujours la destination réelle côté serveur. Aucune migration SQL ni mutation de réglages n’est nécessaire pour cette évolution d’affichage.

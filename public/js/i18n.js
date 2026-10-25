@@ -539,6 +539,10 @@
       shippingCountryPickup: 'Relay/locker: {amount}',
       shippingCountryFree: 'Relay/locker free from {amount} before discounts',
       shippingCountryOptions: 'See available delivery options in the cart',
+      shippingCountryGenericShort: 'Delivery by destination',
+      shippingCountryUnavailableShort: 'Delivery unavailable for this destination',
+      shippingCountryFreeShort: 'Free delivery from {amount} before discounts',
+      shippingCountryPaidShort: 'Paid delivery',
       trackingN: 'Tracking: {n}',
       shipPending: 'Pending shipment',
       shipShipped: 'Shipped',
@@ -1053,6 +1057,10 @@
       shippingCountryPickup: 'Relais/locker : {amount}',
       shippingCountryFree: 'Relais/lockers offerts dès {amount} avant réduction',
       shippingCountryOptions: 'Consultez les modes disponibles dans le panier',
+      shippingCountryGenericShort: 'Livraison selon destination',
+      shippingCountryUnavailableShort: 'Livraison indisponible pour cette destination',
+      shippingCountryFreeShort: 'Livraison offerte dès {amount} avant réduction',
+      shippingCountryPaidShort: 'Livraison payante',
       trackingN: 'Suivi : {n}',
       shipPending: 'En attente d\u2019expédition',
       shipShipped: 'Expédiée',
@@ -1567,6 +1575,10 @@
       shippingCountryPickup: 'نقطة الاستلام أو الخزانة: {amount}',
       shippingCountryFree: 'نقاط الاستلام والخزائن مجانية ابتداءً من {amount} قبل التخفيضات',
       shippingCountryOptions: 'راجعي خيارات التوصيل المتاحة في السلة',
+      shippingCountryGenericShort: 'التوصيل حسب الوجهة',
+      shippingCountryUnavailableShort: 'التوصيل غير متاح لهذه الوجهة',
+      shippingCountryFreeShort: 'توصيل مجاني ابتداءً من {amount} قبل التخفيضات',
+      shippingCountryPaidShort: 'التوصيل مدفوع',
       trackingN: 'التتبع: {n}',
       shipPending: 'في انتظار الشحن',
       shipShipped: 'تم الشحن',
@@ -1715,8 +1727,8 @@
   function t(key, params) {
     var dict = DICT[lang] || DICT.en;
     var str = dict[key] !== undefined ? dict[key] : (DICT.en[key] !== undefined ? DICT.en[key] : key);
-    if (['announce','metaShipText','trustFree'].indexOf(key)>=0) str=shippingSummary(dict);
-    if (key==='announcePromo') str=str.split('{shipping}').join(shippingSummary(dict));
+    if (['announce','metaShipText','trustFree'].indexOf(key)>=0) str=shippingSummary(dict,key!=='metaShipText');
+    if (key==='announcePromo') str=str.split('{shipping}').join(shippingSummary(dict,true));
     if (params) {
       Object.keys(params).forEach(function(p) {
         str = str.split('{' + p + '}').join(params[p]);
@@ -1735,11 +1747,15 @@
     SHIP_RULES=null;SHIP_COUNTRY=typeof country==='string'&&/^[A-Z]{2}$/i.test(country)?country.toUpperCase():'';
     try{if(window.HN_SHIPPING&&value)SHIP_RULES=window.HN_SHIPPING.clean(value);}catch(e){}
   }
-  function shippingSummary(dict){
-    if(!SHIP_RULES||!SHIP_COUNTRY||!window.HN_SHIPPING)return dict.shippingCountryGeneric;
+  function shippingSummary(dict,compact){
+    if(!SHIP_RULES||!SHIP_COUNTRY||!window.HN_SHIPPING)return compact?dict.shippingCountryGenericShort:dict.shippingCountryGeneric;
     var R=window.HN_SHIPPING,row=SHIP_RULES.countries[SHIP_COUNTRY],name=dict['pickupCountry'+SHIP_COUNTRY]||SHIP_COUNTRY;
     try{if(!dict['pickupCountry'+SHIP_COUNTRY]&&typeof Intl!=='undefined'&&Intl.DisplayNames)name=new Intl.DisplayNames([lang],{type:'region'}).of(SHIP_COUNTRY)||name;}catch(e){}
-    if(!row||!row.enabled||!R.methods.some(function(method){return R.enabled(SHIP_RULES,SHIP_COUNTRY,method);}))return dict.shippingCountryUnavailable.replace('{country}',name);
+    if(!row||!row.enabled||!R.methods.some(function(method){return R.enabled(SHIP_RULES,SHIP_COUNTRY,method);}))return (compact?dict.shippingCountryUnavailableShort:dict.shippingCountryUnavailable).replace('{country}',name);
+    if(compact){
+      var free=R.enabled(SHIP_RULES,SHIP_COUNTRY,'pickup')&&row.pickup.free_enabled;
+      return (free?dict.shippingCountryFreeShort:dict.shippingCountryPaidShort).replace('{amount}',free?shipStr(row.pickup.free_threshold_cents):'').replace('{country}',name);
+    }
     var parts=[];
     if(R.enabled(SHIP_RULES,SHIP_COUNTRY,'standard'))parts.push(dict.shippingCountryStandard.replace('{amount}',shipStr(row.standard.fee_cents)));
     if(R.enabled(SHIP_RULES,SHIP_COUNTRY,'pickup'))parts.push((row.pickup.free_enabled?dict.shippingCountryFree:dict.shippingCountryPickup).replace('{amount}',shipStr(row.pickup.free_enabled?row.pickup.free_threshold_cents:row.pickup.fee_cents)));
