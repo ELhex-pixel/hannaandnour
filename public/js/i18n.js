@@ -50,6 +50,7 @@
       scrollTopLabel: 'Back to top',
       socialInstagram: 'Instagram',
       socialFacebook: 'Facebook',
+      socialTiktok: 'TikTok',
       socialX: 'X (Twitter)',
       socialYoutube: 'YouTube',
 
@@ -567,6 +568,7 @@
       scrollTopLabel: 'Retour en haut',
       socialInstagram: 'Instagram',
       socialFacebook: 'Facebook',
+      socialTiktok: 'TikTok',
       socialX: 'X (Twitter)',
       socialYoutube: 'YouTube',
       footerCopyright: '\u00A9 2026 Hanna & Nour. Tous droits réservés.',
@@ -1065,6 +1067,7 @@
       scrollTopLabel: 'العودة إلى الأعلى',
       socialInstagram: 'إنستغرام',
       socialFacebook: 'فيسبوك',
+      socialTiktok: 'تيك توك',
       socialX: 'إكس (تويتر)',
       socialYoutube: 'يوتيوب',
       footerCopyright: '© 2026 هناء و نور. جميع الحقوق محفوظة.',
