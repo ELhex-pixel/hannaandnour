@@ -116,6 +116,14 @@ async function buildContext(sb) {
 // ---------- FAQ par règles ----------
 
 const link = (text, url) => ({ text, url });
+function shippingReply(ctx) {
+  const text=ctx.lang==='fr'
+    ?'La livraison standard à domicile est payante à tarif fixe selon le pays. Les relais/lockers Mondial Relay peuvent être offerts au seuil prévu pour les pays éligibles, calculé avant les réductions. Les modes disponibles et les tarifs à jour sont indiqués dans le panier puis vérifiés au paiement. Les délais dépendent du service de transport choisi.'
+    :ctx.lang==='en'
+      ?'Standard home delivery has a fixed paid rate by country. Mondial Relay pickup points/lockers may be free at the threshold set for eligible countries, calculated before discounts. Available methods and current prices are shown in the cart and checked again at checkout. Delivery times depend on the selected transport service.'
+      :'التوصيل العادي إلى المنزل مدفوع بسعر ثابت حسب البلد. قد يكون التوصيل إلى نقاط الاستلام وخزائن Mondial Relay مجانياً عند بلوغ الحد المحدد للبلدان المؤهلة قبل التخفيضات. تظهر الخيارات والأسعار الحالية في السلة ويعاد التحقق منها عند الدفع. تعتمد المواعيد على خدمة النقل المختارة.';
+  return{text,links:[link(ctx.lang==='fr'?'Panier et livraison':ctx.lang==='en'?'Cart and delivery':'السلة والتوصيل','cart.html')]};
+}
 
 const RULES = [
   {
@@ -141,21 +149,7 @@ const RULES = [
       ar: ['توصيل مجاني', 'شحن مجاني', 'التوصيل مجانا', 'الشحن مجاني']
     },
     reply: (ctx) => {
-      const s = ctx.shipping;
-      if (s.free_threshold_cents > 0) {
-        const text = ctx.lang === 'fr'
-          ? 'Livraison offerte d\u00e8s ' + moneyStr(s.free_threshold_cents, ctx.currency, 'fr') + ' d\u2019achat (hors retrait en point relais, factur\u00e9 \u00e0 part).'
-          : ctx.lang === 'en'
-            ? 'Free shipping on all orders over ' + moneyStr(s.free_threshold_cents, ctx.currency, 'en') + ' (relay-point pickup is billed separately).'
-            : 'توصيل مجاني للطلبات التي تزيد عن ' + moneyStr(s.free_threshold_cents, ctx.currency, 'ar') + ' (الاستلام من نقطة التوصيل يُدفع بشكل منفصل).';
-        return { text };
-      }
-      const text = ctx.lang === 'fr'
-        ? 'Actuellement, la livraison est payante mais le seuil de gratuit\u00e9 peut \u00e9voluer : regardez le bandeau en haut du site.'
-        : ctx.lang === 'en'
-          ? 'At the moment standard shipping applies, keep an eye on the banner at the top of the site for free-shipping offers.'
-          : 'حاليًا يشمل التوصيل رسومًا، لكن قد يتغير حد التوصيل المجاني: تابع الشريط أعلى الموقع.';
-      return { text };
+      return shippingReply(ctx);
     }
   },
   {
@@ -166,26 +160,7 @@ const RULES = [
       ar: ['التوصيل', 'الشحن', 'توصيل', 'شحن', 'كيفية الشحن']
     },
     reply: (ctx) => {
-      const s = ctx.shipping;
-      const free = s.free_threshold_cents > 0;
-      const text = ctx.lang === 'fr'
-        ? 'Livraison \u2014 Standard : ' + moneyStr(s.standard_cents, ctx.currency, 'fr') + ' (5\u20137 jours ouvr\u00e9s)' +
-          (s.express_cents > 0 ? ', Express : ' + moneyStr(s.express_cents, ctx.currency, 'fr') + ' (2\u20133 jours)' : '') +
-          (s.nextday_cents > 0 ? ', Lendemain avant 21h : ' + moneyStr(s.nextday_cents, ctx.currency, 'fr') : '') +
-          (free ? '. Et c\u2019est gratuit d\u00e8s ' + moneyStr(s.free_threshold_cents, ctx.currency, 'fr') + ' d\u2019achat !' : '.') +
-          (s.pickup_enabled ? ' Retrait en point relais : ' + pickupCostStr(ctx) + '.' : '')
-        : ctx.lang === 'en'
-          ? 'Shipping \u2014 Standard: ' + moneyStr(s.standard_cents, ctx.currency, 'en') + ' (5\u20137 business days)' +
-            (s.express_cents > 0 ? ', Express: ' + moneyStr(s.express_cents, ctx.currency, 'en') + ' (2\u20133 days)' : '') +
-            (s.nextday_cents > 0 ? ', Next-day before 9pm: ' + moneyStr(s.nextday_cents, ctx.currency, 'en') : '') +
-            (free ? '. And it\u2019s free on orders over ' + moneyStr(s.free_threshold_cents, ctx.currency, 'en') + '!' : '.') +
-            (s.pickup_enabled ? ' Relay-point pickup: ' + pickupCostStr(ctx) + '.' : '')
-          : 'التوصيل — العادي: ' + moneyStr(s.standard_cents, ctx.currency, 'ar') + ' (5–7 أيام عمل)' +
-            (s.express_cents > 0 ? '، السريع: ' + moneyStr(s.express_cents, ctx.currency, 'ar') + ' (2–3 أيام)' : '') +
-            (s.nextday_cents > 0 ? '، التوصيل في اليوم التالي قبل ٩ مساءً: ' + moneyStr(s.nextday_cents, ctx.currency, 'ar') : '') +
-            (free ? '. والتوصيل مجاني للطلبات فوق ' + moneyStr(s.free_threshold_cents, ctx.currency, 'ar') + '!' : '.') +
-            (s.pickup_enabled ? ' الاستلام من نقطة التوصيل: ' + pickupCostStr(ctx) + '.' : '');
-      return { text, links: [link(ctx.lang === 'fr' ? 'Livraison & retours' : ctx.lang === 'en' ? 'Shipping & returns' : 'التوصيل والإرجاع', 'terms.html')] };
+      return shippingReply(ctx);
     }
   },
   {
@@ -196,16 +171,7 @@ const RULES = [
       ar: ['مدة', 'كم من الوقت', 'متى', 'يصل', 'وصول الطلب', 'أيام عمل']
     },
     reply: (ctx) => {
-      const s = ctx.shipping;
-      const text = ctx.lang === 'fr'
-        ? 'D\u00e9lais indicatifs : Standard 5\u20137 jours ouvr\u00e9s, Express 2\u20133 jours, Lendemain avant 21h' +
-          (s.pickup_enabled ? ' Retrait en point relais : pr\u00eat sous 24\u201348 h (vous \u00eates pr\u00e9venu par email).' : '.')
-        : ctx.lang === 'en'
-          ? 'Estimated times: Standard 5\u20137 business days, Express 2\u20133 days, Next-day before 9pm' +
-            (s.pickup_enabled ? ' Relay-point pickup: ready within 24\u201348h (you\u2019ll get an email).' : '.')
-          : 'المدد التقريبية: العادي 5–7 أيام عمل، السريع 2–3 أيام، اليوم التالي قبل ٩ مساءً' +
-            (s.pickup_enabled ? ' الاستلام من نقطة التوصيل: جاهز خلال 24–48 ساعة (ستصلك رسالة).' : '.');
-      return { text };
+      return shippingReply(ctx);
     }
   },
   {
@@ -305,21 +271,7 @@ const RULES = [
       ar: ['استلام', 'استلام من المتجر', 'نقطة التوصيل', 'نقطة استلام', 'نقطة', 'المتجر', 'عنوان المتجر']
     },
     reply: (ctx) => {
-      if (!ctx.shipping.pickup_enabled) {
-        const text = ctx.lang === 'fr'
-          ? 'Le retrait n\u2019est pas propos\u00e9 pour le moment ; nous livrons \u00e0 domicile.'
-          : ctx.lang === 'en'
-            ? 'Pickup is not available right now; we deliver to your door.'
-            : 'الاستلام غير متاح حاليًا؛ نوصّل إلى باب منزلك.';
-        return { text };
-      }
-      const cost = pickupCostStr(ctx);
-      const text = ctx.lang === 'fr'
-        ? 'Nous n\u2019avons pas de boutique physique : nous livrons \u00e0 domicile et proposons le retrait en point relais. \u00c0 l\u2019\u00e9tape livraison, choisissez \u00ab Retrait \u2014 point relais \u00bb et indiquez le point de votre choix. Co\u00fbt : ' + cost + '.'
-        : ctx.lang === 'en'
-          ? 'We don\u2019t have a physical store: we ship to your door and offer relay-point pickup. At the delivery step, choose \u201cPickup \u2014 relay point\u201d and select your point. Cost: ' + cost + '.'
-          : 'ليس لدينا متجر فعلي: نوصّل إلى باب منزلك ونوفر الاستلام من نقطة التوصيل. في خطوة التوصيل اختاري «استلام — نقطة التوصيل» وحددي النقطة. التكلفة: ' + cost + '.';
-      return { text };
+      return shippingReply(ctx);
     }
   },
   {
@@ -529,8 +481,7 @@ function systemPrompt(ctx) {
   const products = ctx.products.map((p) => (ctx.lang === 'fr' ? p.name_fr : p.name_en) + ' — ' + moneyStr(p.price_cents, cur, ctx.lang)).join(' ; ') || 'N/A';
   const lines = [
     'Tu es l\u2019assistant de la boutique en ligne Hanna & Nour : vêtements et accessoires, style, confort et élégance. Présente la marque de façon générale, sans présumer la religion ou le genre de la personne. Site : hannanour.com. Paiement sécurisé via Stripe (Visa, Mastercard, Amex, PayPal, Apple Pay, Klarna).',
-    'Livraison : standard ' + std + ' (5–7 j ouvrés), express ' + exp + ' (2–3 j), lendemain avant 21h ' + next + (s.pickup_enabled ? ', retrait gratuit en boutique.' : '.'),
-    'Livraison gratuite dès ' + free + '.',
+    shippingReply(ctx).text,
     'Retours sous ' + days + ' jours : ' + CONTACT_EMAIL + '.',
     'Promo : ' + promo,
     'Produits (aprox.) : ' + products,

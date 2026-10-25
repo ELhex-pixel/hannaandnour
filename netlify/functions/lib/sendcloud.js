@@ -159,7 +159,8 @@ function createClient({ env = process.env, fetchImpl = globalThis.fetch } = {}) 
     return { points, geocoding_status: ['matched', 'partially_matched', 'not_found'].includes(data.geocoding?.status) ? data.geocoding.status : null };
   }
 
-  // Checkout uses the four agreed destinations. Keep the original admin probe
+  // Checkout supports six European destinations, subject to admin availability.
+  // Keep the original admin probe
   // limited to France; all provider URLs/methods remain explicitly allowlisted.
   function checkoutPoint(point, country) {
     const a = point?.address;

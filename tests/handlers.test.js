@@ -493,7 +493,7 @@ test('la configuration lit trois sources en parallèle, sans double lecture mon�
   const mock=publicConfig(rows), promise=mock.handler({httpMethod:'GET'});
   await Promise.resolve();await Promise.resolve();
   assert.equal(mock.state.reads.length,3);
-  assert.deepEqual(mock.state.keys,['shipping','currency','return_policy','catalog','reviews','home','story','cart_offer']);
+  assert.deepEqual(mock.state.keys,['shipping','shipping_rules','currency','return_policy','catalog','reviews','home','story','cart_offer']);
   mock.state.release();const response=await promise, body=JSON.parse(response.body);
   assert.equal(response.statusCode,200);assert.equal(response.headers['Cache-Control'],'no-store');
   const authoritative=await require('../netlify/functions/lib/commerce').settings({from(){throw new Error('Une quatrième lecture est interdite');}},rows);

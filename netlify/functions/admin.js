@@ -215,6 +215,11 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     // ---- Everything below requires a valid admin session ----
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (['getShippingRules','saveShippingRules'].includes(action)) {
+      const limited=await rateLimit(sb,event,'admin-shipping-rules',60,600,'admin');
+      if(limited)return limited;
+      return await require('./lib/shipping-rules').adminShippingRules(sb,action,body);
+    }
     if (['listPromos', 'savePromo', 'deletePromo'].includes(action)) {
       const limited = await rateLimit(sb, event, 'admin-promos', 60, 600, 'admin');
       if (limited) return limited;

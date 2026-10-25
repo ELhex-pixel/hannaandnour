@@ -3,7 +3,7 @@
   var HN = window.HN, rules = window.HN_PICKUP;
   if (!HN || !rules) return;
   window.HN_PICKUP_SELECTOR = function (root, onChange) {
-    var selected = null, revision = 0, active = false, locked = false, busy = false;
+    var selected = null, revision = 0, active = false, locked = false, busy = false, fixedCountry = false;
     root.className = 'pickup-selector';
     root.innerHTML = '<form id="pickupSearchForm"><div class="form-row"><div class="form-group"><label class="form-label" for="pickupCountry" data-i18n="countryLabel"></label><select class="form-select" id="pickupCountry"></select></div>' +
       '<div class="form-group"><label class="form-label" for="pickupPostalCode" data-i18n="postalLabel"></label><input class="form-input" id="pickupPostalCode" autocomplete="postal-code" maxlength="12" dir="ltr" required></div></div>' +
@@ -15,11 +15,11 @@
     rules.countries.forEach(function (code) { var option = document.createElement('option'); option.value = code; option.setAttribute('data-i18n', 'pickupCountry' + code); country.appendChild(option); });
     function translate() {
       root.querySelectorAll('[data-i18n]').forEach(function (el) { el.textContent = HN.tr(el.getAttribute('data-i18n')); });
-      postal.placeholder = { FR: '75001', BE: '1000', ES: '28001', NL: '1234 AB' }[country.value];
+      postal.placeholder = { FR: '75001', BE: '1000', ES: '28001', NL: '1234 AB', DE: '10115', IT: '00118' }[country.value] || '';
       postal.inputMode = country.value === 'NL' ? 'text' : 'numeric';
     }
     function controls() {
-      country.disabled = locked; postal.disabled = locked; button.disabled = locked || busy || !active;
+      country.disabled = locked || fixedCountry; postal.disabled = locked; button.disabled = locked || busy || !active || !rules.country(country.value);
       options.querySelectorAll('input').forEach(function (input) { input.disabled = locked; });
       results.setAttribute('aria-busy', busy ? 'true' : 'false');
     }
@@ -68,6 +68,7 @@
     translate(); results.hidden = true; controls();
     return {
       value: function () { return active ? selected : null; },
+      setCountry: function (code) { fixedCountry = true; if (country.value !== code) { country.value = rules.country(code); postal.value = ''; clear(); translate(); } controls(); },
       setActive: function (value) { var next = !!value; root.hidden = !next; if (active !== next) { active = next; clear(); } },
       lock: function (value) { locked = !!value; controls(); },
       invalidate: function (message) { clear(message || 'pickupChoose'); },

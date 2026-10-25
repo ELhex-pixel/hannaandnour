@@ -18,7 +18,7 @@
       navStory: 'Our Story',
       navBlog: 'Blog',
       menuSearch: 'Search',
-      announce: 'Free shipping on orders over {ship} | New styles every week',
+      announce: 'Delivery options and prices depend on the destination',
       announcePromo: 'Free shipping on orders over {ship} | Use code {code} for {pct}% off',
 
       /* Footer */
@@ -135,7 +135,7 @@
       tLoc3: 'Paris, France',
       emailPlaceholder: 'Enter your email address',
       viewAllProducts: 'View All Products',
-      trustFree: 'Free shipping over {ship}',
+      trustFree: 'Delivery options and prices by country',
       trustReturns: 'Returns within {n} days',
       returnPolicyLink: 'Return policy',
       photoColorUnassigned: 'No photo is assigned to {color}. General views do not confirm this colour.',
@@ -178,8 +178,8 @@
       addToCart: 'Add to Cart',
       buyNow: 'Buy Now',
       sizeGuideBtn: 'Size Guide',
-      metaShipTitle: 'Free Shipping',
-      metaShipText: 'On all orders over {ship}. Ships within 24 hours.',
+      metaShipTitle: 'Delivery',
+      metaShipText: 'Choose your country and delivery method at checkout.',
       metaReturnTitle: 'Return policy',
       metaReturnText: 'See the return conditions. Statutory rights remain applicable.',
       metaReturnTitleN: '{n}-Day Returns',
@@ -347,11 +347,11 @@
       emailPlaceholder2: 'you@example.com',
       step3: '3. Shipping Method',
       shipStandard: 'Standard Shipping',
-      shipStandardD: 'Delivery in 5-7 business days',
+      shipStandardD: 'Fixed paid rate for the selected country',
       shipExpress: 'Express Shipping',
-      shipExpressD: 'Delivery in 2-3 business days',
+      shipExpressD: 'Available according to the selected destination and service',
       shipNext: 'Next Day Delivery',
-      shipNextD: 'Arrives tomorrow by 9pm',
+      shipNextD: 'Available according to the selected destination and service',
       free: 'Free',
       step4: '4. Payment Method',
       payCard: 'Card Payment',
@@ -521,10 +521,18 @@
       pickupChanged: 'The pickup point details have changed. Search and select your pickup point again.',
       pickupLocker: 'Locker',
       pickupShop: 'Parcel shop',
-      pickupCountryFR: 'France',
+      pickupCountryFR: 'Metropolitan France',
       pickupCountryBE: 'Belgium',
       pickupCountryES: 'Spain',
       pickupCountryNL: 'Netherlands',
+      pickupCountryDE: 'Germany',
+      pickupCountryIT: 'Italy',
+      pickupCountryDZ: 'Algeria',
+      shippingChooseCountry: 'Choose a delivery country',
+      shippingChooseMethod: 'Choose a delivery method',
+      shippingEstimate: 'Shipping estimate; destination and availability are checked again at checkout.',
+      shippingUnavailable: 'This destination or delivery method is unavailable. Choose another available option.',
+      shippingRelayOffer: 'Relay/locker delivery free from {ship} before discounts, in eligible countries',
       trackingN: 'Tracking: {n}',
       shipPending: 'Pending shipment',
       shipShipped: 'Shipped',
@@ -540,7 +548,7 @@
       navStory: 'Notre histoire',
       navBlog: 'Blog',
       menuSearch: 'Recherche',
-      announce: 'Livraison gratuite dès {ship} | Nouveautés chaque semaine',
+      announce: 'Modes et tarifs de livraison selon le pays de destination',
       announcePromo: 'Livraison gratuite dès {ship} | Utilisez le code {code} pour -{pct} %',
       footerTagline: 'Des vêtements et accessoires qui allient confort, élégance et simplicité, pour un style qui vous ressemble.',
       footerShop: 'Boutique',
@@ -651,7 +659,7 @@
       tLoc3: 'Bruxelles, Belgique',
       emailPlaceholder: 'Votre adresse email',
       viewAllProducts: 'Voir tous les produits',
-      trustFree: 'Livraison offerte dès {ship}',
+      trustFree: 'Modes et tarifs de livraison par pays',
       trustReturns: 'Retours sous {n} jours',
       returnPolicyLink: 'Politique de retours',
       photoColorUnassigned: 'Aucune photo associée à {color}. Les vues générales ne garantissent pas ce coloris.',
@@ -690,8 +698,8 @@
       addToCart: 'Ajouter au panier',
       buyNow: 'Acheter maintenant',
       sizeGuideBtn: 'Guide des tailles',
-      metaShipTitle: 'Livraison gratuite',
-      metaShipText: 'Pour toute commande de plus de {ship}. Expédition sous 24 h.',
+      metaShipTitle: 'Livraison',
+      metaShipText: 'Choisissez votre pays et votre mode de livraison au paiement.',
       metaReturnTitle: 'Politique de retours',
       metaReturnText: 'Consultez les conditions de retour. Vos droits légaux restent applicables.',
       metaReturnTitleN: 'Retours sous {n} jours',
@@ -849,11 +857,11 @@
       emailPlaceholder2: 'vous@exemple.com',
       step3: '3. Mode de livraison',
       shipStandard: 'Livraison standard',
-      shipStandardD: 'Livraison sous 5 à 7 jours ouvrables',
+      shipStandardD: 'Tarif fixe payant pour le pays sélectionné',
       shipExpress: 'Livraison express',
-      shipExpressD: 'Livraison sous 2 à 3 jours ouvrables',
+      shipExpressD: 'Disponibilité selon la destination et le service choisi',
       shipNext: 'Livraison le lendemain',
-      shipNextD: 'Arrive demain avant 21 h',
+      shipNextD: 'Disponibilité selon la destination et le service choisi',
       free: 'Gratuit',
       step4: '4. Mode de paiement',
       payCard: 'Paiement par carte',
@@ -1021,10 +1029,18 @@
       pickupChanged: 'Les coordonnées du relais ont changé. Relancez la recherche et sélectionnez à nouveau votre relais.',
       pickupLocker: 'Locker',
       pickupShop: 'Point relais',
-      pickupCountryFR: 'France',
+      pickupCountryFR: 'France métropolitaine',
       pickupCountryBE: 'Belgique',
       pickupCountryES: 'Espagne',
       pickupCountryNL: 'Pays-Bas',
+      pickupCountryDE: 'Allemagne',
+      pickupCountryIT: 'Italie',
+      pickupCountryDZ: 'Algérie',
+      shippingChooseCountry: 'Choisissez un pays de livraison',
+      shippingChooseMethod: 'Choisissez un mode de livraison',
+      shippingEstimate: 'Estimation des frais ; le pays et les modes disponibles sont revérifiés au paiement.',
+      shippingUnavailable: 'Ce pays ou ce mode de livraison est indisponible. Choisissez une autre option disponible.',
+      shippingRelayOffer: 'Relais/lockers offerts dès {ship} avant réduction, dans les pays éligibles',
       trackingN: 'Suivi : {n}',
       shipPending: 'En attente d\u2019expédition',
       shipShipped: 'Expédiée',
@@ -1040,7 +1056,7 @@
       navStory: 'قصتنا',
       navBlog: 'المدونة',
       menuSearch: 'بحث',
-      announce: 'شحن مجاني للطلبات فوق {ship} | تشكيلة جديدة كل أسبوع',
+      announce: 'طرق التوصيل وأسعارها حسب بلد الوجهة',
       announcePromo: 'شحن مجاني للطلبات فوق {ship} | استخدمي كود {code} لخصم {pct}%',
       footerTagline: 'ملابس وإكسسوارات تجمع الراحة والأناقة والبساطة، لأسلوب يعكس شخصيتكم.',
       footerShop: 'المتجر',
@@ -1151,7 +1167,7 @@
       tLoc3: 'بروكسل، بلجيكا',
       emailPlaceholder: 'أدخلي بريدك الإلكتروني',
       viewAllProducts: 'عرض جميع المنتجات',
-      trustFree: 'شحن مجاني ابتداءً من {ship}',
+      trustFree: 'طرق التوصيل وأسعارها حسب البلد',
       trustReturns: 'إرجاع خلال {n} يومًا',
       returnPolicyLink: 'سياسة الإرجاع',
       photoColorUnassigned: 'لا توجد صورة مرتبطة بلون {color}. الصور العامة لا تؤكد هذا اللون.',
@@ -1190,8 +1206,8 @@
       addToCart: 'أضيفي إلى السلة',
       buyNow: 'اشترِ الآن',
       sizeGuideBtn: 'دليل المقاسات',
-      metaShipTitle: 'شحن مجاني',
-      metaShipText: 'لجميع الطلبات فوق {ship}، الشحن خلال 24 ساعة.',
+      metaShipTitle: 'التوصيل',
+      metaShipText: 'اختاري البلد وطريقة التوصيل عند إتمام الطلب.',
       metaReturnTitle: 'سياسة الإرجاع',
       metaReturnText: 'راجع شروط الإرجاع. تبقى الحقوق القانونية سارية.',
       metaReturnTitleN: 'إرجاع خلال {n} يومًا',
@@ -1349,11 +1365,11 @@
       emailPlaceholder2: 'you@example.com',
       step3: '3. طريقة الشحن',
       shipStandard: 'الشحن القياسي',
-      shipStandardD: 'التوصيل خلال 5-7 أيام عمل',
+      shipStandardD: 'سعر ثابت مدفوع للبلد المختار',
       shipExpress: 'الشحن السريع',
-      shipExpressD: 'التوصيل خلال 2-3 أيام عمل',
+      shipExpressD: 'التوفر حسب الوجهة والخدمة المختارة',
       shipNext: 'التوصيل في اليوم التالي',
-      shipNextD: 'يصل غدًا قبل 9 مساءً',
+      shipNextD: 'التوفر حسب الوجهة والخدمة المختارة',
       free: 'مجاني',
       step4: '4. طريقة الدفع',
       payCard: 'الدفع بالبطاقة',
@@ -1521,10 +1537,18 @@
       pickupChanged: 'تغيّرت بيانات نقطة الاستلام. أعد البحث واختر النقطة مجددًا.',
       pickupLocker: 'خزانة طرود',
       pickupShop: 'نقطة استلام',
-      pickupCountryFR: 'فرنسا',
+      pickupCountryFR: 'فرنسا المتروبولية',
       pickupCountryBE: 'بلجيكا',
       pickupCountryES: 'إسبانيا',
       pickupCountryNL: 'هولندا',
+      pickupCountryDE: 'ألمانيا',
+      pickupCountryIT: 'إيطاليا',
+      pickupCountryDZ: 'الجزائر',
+      shippingChooseCountry: 'اختاري بلد التوصيل',
+      shippingChooseMethod: 'اختاري طريقة التوصيل',
+      shippingEstimate: 'تقدير لرسوم التوصيل؛ يتم التحقق مجدداً من الوجهة والخيارات عند الدفع.',
+      shippingUnavailable: 'هذا البلد أو طريقة التوصيل غير متاح. اختاري خياراً آخر متاحاً.',
+      shippingRelayOffer: 'توصيل مجاني لنقاط الاستلام والخزائن ابتداءً من {ship} قبل التخفيضات في البلدان المؤهلة',
       trackingN: 'التتبع: {n}',
       shipPending: 'في انتظار الشحن',
       shipShipped: 'تم الشحن',
@@ -1673,6 +1697,7 @@
   function t(key, params) {
     var dict = DICT[lang] || DICT.en;
     var str = dict[key] !== undefined ? dict[key] : (DICT.en[key] !== undefined ? DICT.en[key] : key);
+    if (SHIP_OFFER && ['announce','metaShipText','trustFree'].indexOf(key)>=0) str=dict.shippingRelayOffer;
     if (params) {
       Object.keys(params).forEach(function(p) {
         str = str.split('{' + p + '}').join(params[p]);
@@ -1686,6 +1711,16 @@
   }
 
   var SHIP_THRESHOLD = 75;
+  var SHIP_OFFER = false;
+  function setShippingRules(value) {
+    SHIP_OFFER=false;
+    try {
+      if(!window.HN_SHIPPING||!value)return;
+      var rules=window.HN_SHIPPING.clean(value),thresholds=[];
+      window.HN_SHIPPING.countries.forEach(function(code){var p=rules.countries[code].pickup;if(window.HN_SHIPPING.enabled(rules,code,'pickup')&&p.free_enabled)thresholds.push(p.free_threshold_cents);});
+      if(thresholds.length){SHIP_THRESHOLD=Math.min.apply(Math,thresholds)/100;SHIP_OFFER=true;}
+    }catch(e){}
+  }
 
   // Sets the "free shipping from" amount (in currency units) from /api/config,
   // e.g. 80 for a 8000-cents threshold.
@@ -1799,6 +1834,7 @@
     apply: applyTranslations,
     refreshCurrency: refreshCurrencyLabels,
     setShipThreshold: setShipThreshold,
+    setShippingRules: setShippingRules,
     pageUrl: pageUrl
   };
 

@@ -77,7 +77,7 @@ function payment(mock) {
   const exports = {}, stripeCalls = [];
   class Stripe { constructor() { this.checkout = { sessions: { create: async payload => { stripeCalls.push(payload); return { id: 'cs_test', url: 'https://checkout.stripe.com/local-test' }; }, expire: async () => {} } }; } }
   const shared = { json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }), getSupabase: () => mock.sb, isConfigured: () => true, readBody: event => JSON.parse(event.body), rateLimit: async () => null, getBearer: () => '', siteUrl: 'https://example.test', CORS_HEADERS: {} };
-  vm.runInNewContext(fs.readFileSync('netlify/functions/checkout.js', 'utf8'), { exports, process: { env: { STRIPE_SECRET_KEY: 'local-test-only' } }, console: { error() {} }, require: name => name === 'crypto' ? crypto : name === 'stripe' ? Stripe : name === './shared' ? shared : name === './lib/checkout-cancellation' ? require('../netlify/functions/lib/checkout-cancellation') : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : commerce });
+  vm.runInNewContext(fs.readFileSync('netlify/functions/checkout.js', 'utf8'), { exports, process: { env: { STRIPE_SECRET_KEY: 'local-test-only' } }, console: { error() {} }, require: name => name === 'crypto' ? crypto : name === 'stripe' ? Stripe : name === './shared' ? shared : name === './lib/checkout-cancellation' ? require('../netlify/functions/lib/checkout-cancellation') : name === './lib/customer-email' ? require('../netlify/functions/lib/customer-email') : name === '../../public/js/pickup-points' ? require('../public/js/pickup-points') : commerce });
   return { stripeCalls, run: body => exports.handler({ httpMethod: 'POST', headers: {}, body: JSON.stringify(body) }) };
 }
 test('une offre désactivée ou modifiée impose la confirmation du nouveau total avant tout paiement', async () => {
@@ -175,7 +175,7 @@ test('le paiement en cours n’est pas doublé ni remplacé par un rafraîchisse
   let release;
   const button = { disabled: false, addEventListener(type, handler) { this.click = handler; } };
   const quote = { totals: { total: 2859 }, currency: { code: 'eur', symbol: '€' }, return_policy: { version: 'fixture' } };
-  const state = { quote, method: 'standard', loaded: true, paying: false };
+  const state = { quote, method: 'standard', settings: {}, loaded: true, paying: false };
   const context = { state, window: { location: {} }, document: { getElementById: () => button, addEventListener(type, handler) { listeners[type] = handler; } },
     HN: { lang: () => 'ar', api: name => '/api/' + name, cart: { list: () => items }, request: () => { quotes.push(true); return Promise.resolve(quote); } },
     tr: key => key, getPromo: () => '', val: id => ({ contactEmail: 'client@example.test', fullName: 'Test', address1: 'Rue test', city: 'Paris', postalCode: '75000', country: 'FR' })[id] || '',

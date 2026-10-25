@@ -3,8 +3,8 @@
   else root.HN_PICKUP = factory();
 })(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
-  var countries = ['FR', 'BE', 'ES', 'NL'];
-  var patterns = { FR: /^(?:0[1-9]|[1-8]\d|9[0-5])\d{3}$/, BE: /^[1-9]\d{3}$/, ES: /^(?:0[1-9]|[1-4]\d|5[0-2])\d{3}$/, NL: /^[1-9]\d{3} [A-Z]{2}$/ };
+  var countries = ['FR', 'BE', 'ES', 'NL', 'DE', 'IT'];
+  var patterns = { FR: /^(?:0[1-9]|[1-8]\d|9[0-5])\d{3}$/, BE: /^[1-9]\d{3}$/, ES: /^(?:0[1-9]|[1-4]\d|5[0-2])\d{3}$/, NL: /^[1-9]\d{3} [A-Z]{2}$/, DE: /^(?!00000)\d{5}$/, IT: /^(?!00000)\d{5}$/ };
   function country(value) { return typeof value === 'string' && countries.indexOf(value.toUpperCase()) >= 0 ? value.toUpperCase() : ''; }
   function postal(code, value) {
     code = country(code);

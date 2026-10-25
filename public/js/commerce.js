@@ -1,7 +1,7 @@
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.HN_COMMERCE = factory();
-})(typeof window !== 'undefined' ? window : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./shipping-rules'));
+  else root.HN_COMMERCE = factory(root.HN_SHIPPING);
+})(typeof window !== 'undefined' ? window : this, function (shippingRules) {
   'use strict';
   var defaults = { standard_cents: 699, express_cents: 1200, nextday_cents: 2500, pickup_cents: 0, free_threshold_cents: 7500, tax_rate: 0.07, show_tax: true, pickup_enabled: true };
 
@@ -32,7 +32,7 @@
     return Object.keys(grouped).map(function (key) { return grouped[key]; });
   }
 
-  function calculate(items, settings, method, percent) {
+  function calculate(items, settings, method, percent, country) {
     var s = Object.assign({}, defaults, settings || {});
     var subtotal = items.reduce(function (sum, item) {
       if (!Number.isSafeInteger(item.price_cents) || item.price_cents < 1 || !Number.isSafeInteger(item.qty) || item.qty < 1 || item.qty > 10) throw new Error('Invalid price or quantity');
@@ -42,8 +42,9 @@
     var discount = Math.round(subtotal * pct / 100);
     var fees = { standard: s.standard_cents, express: s.express_cents, next_day: s.nextday_cents, pickup: s.pickup_cents };
     if (!Object.prototype.hasOwnProperty.call(fees, method)) throw new Error('Invalid shipping method');
-    if (method === 'pickup' && !s.pickup_enabled) throw new Error('Pickup unavailable');
+    if (method === 'pickup' && !s.shipping_rules && !s.pickup_enabled) throw new Error('Pickup unavailable');
     var shipping = method === 'standard' && subtotal >= s.free_threshold_cents ? 0 : fees[method];
+    if (s.shipping_rules) shipping = shippingRules.price(shippingRules.clean(s.shipping_rules), country, method, subtotal);
     var taxRate = Number(s.tax_rate);
     if (!Number.isSafeInteger(shipping) || shipping < 0 || !Number.isFinite(taxRate) || taxRate < 0 || taxRate > 1) throw new Error('Invalid shipping settings');
     var tax = Math.round((subtotal - discount) * taxRate);

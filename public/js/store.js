@@ -202,6 +202,7 @@
         window.I18n.setShipThreshold(CONFIG_DATA.free_threshold_cents);
       }
       if (window.I18n && typeof window.I18n.refreshCurrency === 'function') {
+        if (typeof window.I18n.setShippingRules === 'function') window.I18n.setShippingRules(configOnline ? CONFIG_DATA.shipping_rules : null);
         window.I18n.refreshCurrency();
         if (typeof refreshPromoAnnounce === 'function') refreshPromoAnnounce();
       }

@@ -6,13 +6,13 @@ const {PGlite}=require('@electric-sql/pglite');
 const rules=require('../public/js/pickup-points');
 
 test('les pays et codes postaux relais sont bornés sans confondre identifiant et adresse libre',()=>{
-  assert.deepEqual(rules.countries,['FR','BE','ES','NL']);assert.equal(rules.postal('NL','1234ab'),'1234 AB');assert.equal(rules.postal('FR','97100'),'');assert.equal(rules.postal('BE','1000'),'1000');
+  assert.deepEqual(rules.countries,['FR','BE','ES','NL','DE','IT']);assert.equal(rules.postal('NL','1234ab'),'1234 AB');assert.equal(rules.postal('FR','97100'),'');assert.equal(rules.postal('BE','1000'),'1000');assert.equal(rules.postal('DE','10115'),'10115');assert.equal(rules.postal('IT','00118'),'00118');
   for(const value of [null,{},'Relais texte',{id:1,country_code:'NL'},{id:1,country_code:'US',fingerprint:'a'.repeat(64)}])assert.equal(rules.selection(value),false);
 });
 function publicHandler({limited=false,disabled=false,failed=false}={}){
   const exports={},state={provider:0,limits:0,reads:0};
-  const shared={json:(statusCode,body)=>({statusCode,body:JSON.stringify(body)}),CORS_HEADERS:{},isConfigured:()=>true,getSupabase:()=>({from:()=>({select(){return this;},eq(){return this;},async maybeSingle(){state.reads++;return{data:{value:{pickup_enabled:!disabled}}};}})}),rateLimit:async(_,event,scope)=>{state.limits++;assert.equal(scope,'service-points');return limited?{statusCode:429}:null;}};
-  vm.runInNewContext(fs.readFileSync('netlify/functions/service-points.js','utf8'),{exports,require:name=>name==='./shared'?shared:name==='../../public/js/pickup-points'?rules:{createClient:()=>({checkoutPoints:async body=>{state.provider++;if(failed)throw new Error('private-secret');return{points:[],country:body.country_code};}})}});
+  const shared={json:(statusCode,body)=>({statusCode,body:JSON.stringify(body)}),CORS_HEADERS:{},isConfigured:()=>true,getSupabase:()=>({from:()=>({select(){return this;},eq(k,v){this.setting=v;return this;},async maybeSingle(){state.reads++;return{data:this.setting==='shipping_rules'?null:{value:{pickup_enabled:!disabled,pickup_cents:599}}};}})}),rateLimit:async(_,event,scope)=>{state.limits++;assert.equal(scope,'service-points');return limited?{statusCode:429}:null;}};
+  vm.runInNewContext(fs.readFileSync('netlify/functions/service-points.js','utf8'),{exports,require:name=>name==='./shared'?shared:name==='../../public/js/pickup-points'?rules:name==='../../public/js/shipping-rules'?require('../public/js/shipping-rules'):{createClient:()=>({checkoutPoints:async body=>{state.provider++;if(failed)throw new Error('private-secret');return{points:[],country:body.country_code};}})}});
   return{handler:exports.handler,state};
 }
 test('la recherche publique respecte méthode, pays, activation et quota avant Sendcloud, sans données privées',async()=>{

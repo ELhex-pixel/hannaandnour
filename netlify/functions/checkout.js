@@ -36,8 +36,14 @@ exports.handler = async function (event) {
       if (fields[name].length > limit) return json(400, { error: 'Invalid customer details' });
     }
     fields.email = fields.email.toLowerCase();
+    fields.country = fields.country.toUpperCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email) || !fields.customer_name) return json(400, { error: 'Invalid customer details' });
     if (value.method !== 'pickup' && (!fields.address1 || !fields.city || !fields.postal_code || !/^[A-Za-z]{2}$/.test(fields.country))) return json(400, { error: 'Missing shipping details' });
+    if(value.shipping&&value.method!=='pickup'){
+      const postal=fields.country==='DZ'?(/^(?!00000)\d{5}$/.test(fields.postal_code)?fields.postal_code:''):require('../../public/js/pickup-points').postal(fields.country,fields.postal_code);
+      if(fields.country!==value.shipping.country||!postal)return json(400,{error:'Shipping unavailable'});
+      fields.postal_code=postal;
+    }
     let userId = null;
     if (getBearer(event)) {
       const auth = await requireUser(sb, getBearer(event));

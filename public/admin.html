@@ -886,12 +886,13 @@
       </div>
       <div class="card">
         <h3>Frais de livraison &amp; taxes</h3>
+        <p class="admin-muted">Les tarifs et la gratuité se règlent dans « Livraison par pays » ci-dessous. La livraison standard reste payante ; seuls les relais/lockers cochés peuvent être offerts au seuil enregistré.</p>
         <div class="form-grid">
-          <div class="field"><label>Standard ($)</label><input type="number" step="0.01" min="0" id="setStd"></div>
-          <div class="field"><label>Express ($)</label><input type="number" step="0.01" min="0" id="setExpr"></div>
-          <div class="field"><label>J+1 ($)</label><input type="number" step="0.01" min="0" id="setNext"></div>
-          <div class="field"><label>Retrait / point relais ($)</label><input type="number" step="0.01" min="0" id="setPickup"></div>
-          <div class="field"><label>Livraison gratuite &agrave; partir de</label><input type="number" step="0.01" min="0" id="setFree"></div>
+          <div class="field" hidden><label>Ancien tarif standard</label><input type="number" step="0.01" min="0" id="setStd"></div>
+          <div class="field" hidden><label>Ancien tarif express</label><input type="number" step="0.01" min="0" id="setExpr"></div>
+          <div class="field" hidden><label>Ancien tarif J+1</label><input type="number" step="0.01" min="0" id="setNext"></div>
+          <div class="field" hidden><label>Ancien tarif relais</label><input type="number" step="0.01" min="0" id="setPickup"></div>
+          <div class="field" hidden><label>Ancien seuil</label><input type="number" step="0.01" min="0" id="setFree"></div>
           <div class="field"><label for="setTax">TVA / taxe (%)</label><input type="number" step="0.1" min="0" max="100" id="setTax"></div>
           <div class="field"><label for="setReturns">Délai actuel sur le site (lecture seule)</label><input type="number" id="setReturns" readonly><small>Synchronisé avec la politique de retours ci-dessus ; les anciennes commandes gardent leur propre délai.</small></div>
           <div class="field">
@@ -907,10 +908,21 @@
           <label class="check" for="setShowTax"><input type="checkbox" id="setShowTax" checked aria-describedby="setShowTaxHelp"> Afficher la TVA sur le site</label>
           <p class="admin-muted" id="setShowTaxHelp">Décochez pour masquer la ligne TVA dans le panier et le récapitulatif de paiement. Le taux, le calcul et le total à payer restent identiques. Cliquez sur Enregistrer pour appliquer votre choix.</p>
         </div>
-        <div style="margin-top:14px;">
+        <div style="margin-top:14px;" hidden>
           <label class="check"><input type="checkbox" id="setPickupEnabled"> Activer l&rsquo;option &laquo; Retrait / point relais &raquo; au checkout</label>
         </div>
-        <div style="margin-top:16px;"><button class="btn btn-primary" id="saveSettingsBtn">Enregistrer</button></div>
+        <div style="margin-top:16px;"><button class="btn btn-primary" id="saveSettingsBtn">Enregistrer la taxe et la devise</button></div>
+      </div>
+      <div class="card" id="shippingRulesCard">
+        <h3>Livraison par pays</h3>
+        <p>Choisissez les pays et les modes proposés, puis leurs tarifs dans la devise de la boutique. Le standard, l’express et le J+1 restent payants. Les relais et lockers Mondial Relay partagent le même tarif et peuvent être gratuits au seuil choisi, calculé avant les réductions.</p>
+        <p class="admin-muted">Les nouveaux pays sont préparés mais désactivés jusqu’à votre choix. Aucun montant du CSV transporteur n’est importé. L’Algérie propose uniquement les modes à domicile. L’express et le J+1 sont à activer selon vos services de transport réellement disponibles.</p>
+        <button type="button" class="btn btn-secondary" id="refreshShippingRules">Charger / actualiser les réglages</button>
+        <form id="shippingRulesForm">
+          <fieldset id="shippingRulesFields" disabled><div id="shippingRulesCountries"></div></fieldset>
+          <p id="shippingRulesStatus" role="status" aria-live="polite"></p>
+          <button type="submit" class="btn btn-primary" id="saveShippingRules" disabled>Enregistrer les livraisons par pays</button>
+        </form>
       </div>
     </div>
     </main>
@@ -1213,6 +1225,8 @@
   <script src="js/config.js"></script>
   <script src="js/analytics-preferences.js"></script>
   <script src="js/admin-api.js"></script>
+  <script src="js/shipping-rules.js"></script>
+  <script src="js/admin-shipping-rules.js"></script>
   <script src="js/admin-analytics-preferences.js"></script>
   <script src="js/colors.js"></script>
   <script src="js/categories.js"></script>

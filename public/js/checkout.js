@@ -17,7 +17,16 @@
   };
   var PROMO_LOCAL = { WELCOME15: 0.15 };
 
-  var state = { method: 'standard', settings: DEFAULTS, loaded: false, quote: null, revision: 0, paying: false };
+  var state = { method: 'standard', country: 'FR', settings: DEFAULTS, loaded: false, quote: null, revision: 0, configRevision: 0, paying: false };
+  try{var choice=JSON.parse(window.sessionStorage.getItem('hn-shipping-choice')||'null');if(choice){state.country=choice.country;state.method=choice.method;}}catch(e){}
+  function methodAvailable(method){return state.settings.shipping_rules ? window.HN_SHIPPING.enabled(state.settings.shipping_rules,state.country,method) : method!=='pickup'||state.settings.pickup_enabled;}
+  function configureCountry(){
+    if(!state.settings.shipping_rules)return;
+    var select=document.getElementById('country'),R=window.HN_SHIPPING;
+    select.innerHTML='<option value="">'+esc(tr('shippingChooseCountry'))+'</option>'+R.destinations(state.settings.shipping_rules).map(function(c){return '<option value="'+c+'">'+esc(tr('pickupCountry'+c))+'</option>';}).join('');
+    select.value=state.country;state.country=select.value;
+    if(!methodAvailable(state.method))state.method='';
+  }
 
   function getPromo() {
     try { return window.sessionStorage.getItem('hn-promo') || ''; } catch (e) { return ''; }
@@ -52,6 +61,7 @@
 
   function acceptQuote(data) {
     if (!data.return_policy || typeof data.return_policy.version !== 'string' || !Number.isInteger(data.return_policy.days) || !['customer','store'].includes(data.return_policy.withdrawal_payer)) throw new Error(tr('quoteUnavailable'));
+    if(data.shipping&&(data.shipping.country!==state.country||data.shipping.method!==state.method))throw new Error(tr('quoteUnavailable'));
     state.quote = data;
     renderReturnPolicy();
     HN.rememberProducts(data.items);
@@ -82,11 +92,11 @@
     showPendingQuote();
     var btn = document.getElementById('placeOrderBtn');
     if (btn) { btn.disabled = true; btn.textContent = tr('processing'); }
-    return Promise.all([HN.request(HN.api('checkout'), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'quote', items: HN.cart.list(), shipping_method: state.method, promo: getPromo() })
-    }), state.configuration])
-      .then(function (results) { if (revision === state.revision) acceptQuote(results[0]); })
+    return Promise.resolve(state.configuration).then(function(){
+      if(revision!==state.revision)return null;
+      if(state.settings.shipping_rules&&(!state.country||!state.method||!methodAvailable(state.method)))throw new Error(tr(state.country?'shippingChooseMethod':'shippingChooseCountry'));
+      return HN.request(HN.api('checkout'), {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'quote',items:HN.cart.list(),shipping_method:state.method,country:state.country,promo:getPromo()})});
+    }).then(function (data) { if (revision === state.revision) acceptQuote(data); })
       .catch(function (err) {
         if (revision !== state.revision) return;
         if (btn) { btn.textContent = tr('quoteUnavailable'); btn.disabled = true; }
@@ -152,6 +162,12 @@
   }
 
   function renderShippingMethodPrices() {
+    if(state.settings.shipping_rules){
+      document.querySelectorAll('.payment-method[data-method]').forEach(function(node){var method=node.getAttribute('data-method'),enabled=methodAvailable(method),price=state.quote&&state.quote.shipping?state.quote.shipping.methods[method]:null;
+        node.hidden=!enabled;node.setAttribute('aria-disabled',enabled?'false':'true');node.classList.toggle('selected',state.method===method&&enabled);node.setAttribute('aria-pressed',state.method===method&&enabled?'true':'false');
+        var strong=node.querySelector('strong');if(strong)strong.textContent=price===null?'…':price===0?tr('free'):formatMoney(price);
+      });return;
+    }
     var s = state.settings || DEFAULTS;
     var rates = {
       standard: s.standard_cents || 0,
@@ -175,7 +191,7 @@
   }
 
   function injectPickupMethod() {
-    if (!state.settings.pickup_enabled) return;
+    if (!state.settings.shipping_rules && !state.settings.pickup_enabled) return;
     var container = document.querySelector('.payment-methods');
     if (!container) return;
     if (document.querySelector('.payment-method[data-method="pickup"]')) return;
@@ -210,7 +226,7 @@
 
   function syncPickupButton() {
     var button = document.getElementById('placeOrderBtn');
-    if (button) button.disabled = state.paying || !state.quote || (window.HN_CHECKOUT_CANCEL && HN_CHECKOUT_CANCEL.pending()) || (state.method === 'pickup' && (!state.settings.pickup_enabled || !state.pickupSelector || !state.pickupSelector.value()));
+    if (button) button.disabled = state.paying || !state.quote || !methodAvailable(state.method) || (window.HN_CHECKOUT_CANCEL && HN_CHECKOUT_CANCEL.pending()) || (state.method === 'pickup' && (!state.pickupSelector || !state.pickupSelector.value() || (state.settings.shipping_rules && state.pickupSelector.value().country_code!==state.country)));
   }
 
   function wireShippingMethods() {
@@ -221,7 +237,7 @@
       m.setAttribute('aria-pressed', m.classList.contains('selected') ? 'true' : 'false');
       m.addEventListener('keydown', function (event) { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); m.click(); } });
       m.addEventListener('click', function () {
-        if (state.paying) return;
+        if (state.paying || !methodAvailable(m.getAttribute('data-method'))) return;
         methods.forEach(function (x) { x.classList.remove('selected'); x.setAttribute('aria-pressed', 'false'); });
         m.classList.add('selected');
         m.setAttribute('aria-pressed', 'true');
@@ -230,6 +246,8 @@
         refreshQuote();
       });
     });
+    var country=document.getElementById('country');
+    if(country)country.addEventListener('change',function(){if(state.paying)return;state.country=country.value;state.quote=null;try{window.sessionStorage.setItem('hn-shipping-choice',JSON.stringify({country:state.country,method:state.method}));}catch(e){}init(true);});
 
     // Keep payment-step methods purely visual.
     document.querySelectorAll('.checkout-section').forEach(function (section) {
@@ -248,7 +266,7 @@
   function updateDeliveryUI() {
     var box = ensurePickupField();
     if (!box) return;
-    if (state.pickupSelector) state.pickupSelector.setActive(state.method === 'pickup');
+    if (state.pickupSelector) { if(state.settings.shipping_rules&&state.pickupSelector.setCountry)state.pickupSelector.setCountry(state.country);state.pickupSelector.setActive(state.method === 'pickup'); }
     else box.hidden = state.method !== 'pickup';
     syncPickupButton();
   }
@@ -316,7 +334,7 @@
         city: isPickup ? 'Retrait' : val('city'),
         state: isPickup ? '' : val('state'),
         postal_code: isPickup ? '' : val('postalCode'),
-        country: isPickup ? 'FR' : val('country'),
+        country: state.settings.shipping_rules ? state.country : isPickup ? 'FR' : val('country'),
         shipping_method: isPickup ? 'pickup' : state.method,
         pickup: pickup,
         delivery_type: isPickup ? 'pickup' : 'home',
@@ -367,7 +385,7 @@
             var error = new Error(tr(out.data.code === 'pickup_changed' ? 'pickupChanged' : 'pickupUnavailable'));
             error.pickup = true; throw error;
           } else {
-            throw new Error(out.data.error === 'promo_customer_limit' ? tr('promoCustomerLimit') : out.data.error === 'checkout_minimum' ? tr('checkoutMinimum') : tr('checkoutUnavailable'));
+            throw new Error(out.data.error === 'Shipping unavailable' ? tr('shippingUnavailable') : out.data.error === 'promo_customer_limit' ? tr('promoCustomerLimit') : out.data.error === 'checkout_minimum' ? tr('checkoutMinimum') : tr('checkoutUnavailable'));
           }
         })
         .catch(function (err) {
@@ -394,6 +412,7 @@
   }
 
   function init(force) {
+    var configRequest=++state.configRevision;
     var items = HN.cart.list();
     if (!items.length) {
       setEmptyCartButton();
@@ -406,16 +425,20 @@
     var button = document.getElementById('placeOrderBtn'); if (button) button.disabled = true;
     state.configuration = HN.requireConfig(force)
       .then(function (data) {
+        if(configRequest!==state.configRevision)return;
         if (data && data.settings) {
           state.settings = {};
           Object.keys(DEFAULTS).forEach(function (k) {
             state.settings[k] = data.settings[k] !== undefined ? data.settings[k] : DEFAULTS[k];
           });
+          if(data.settings.shipping_rules)state.settings.shipping_rules=window.HN_SHIPPING.clean(data.settings.shipping_rules);
         } else {
           state.settings = DEFAULTS;
         }
       })
       .then(function () {
+        if(configRequest!==state.configRevision)return;
+        configureCountry();
         state.loaded = true;
         if (!state.wired) {
           wireShippingMethods();
@@ -429,8 +452,10 @@
     refreshQuote();
   }
 
-  document.addEventListener('langchange', function () { if (state.loaded) renderShippingMethodPrices(); renderSummary(); renderReturnPolicy(); syncPickupButton(); });
-  document.addEventListener('hn:config', function () { if (state.loaded) refreshQuote(); });
+  document.addEventListener('langchange', function () { if (state.loaded) { configureCountry();renderShippingMethodPrices(); } renderSummary(); renderReturnPolicy(); syncPickupButton(); });
+  document.addEventListener('hn:config', function () { if (state.loaded && !state.paying) init(true); });
+  if(typeof window.setInterval==='function')window.setInterval(function(){if(!document.hidden&&state.loaded&&!state.paying)init(true);},30000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&state.loaded&&!state.paying)init(true);});
   Promise.resolve(window.HN_CHECKOUT_CANCEL && HN_CHECKOUT_CANCEL.ready).then(function () { init(); });
   document.addEventListener('hn:checkout-cancelled', function () { if (state.loaded && !state.paying) init(true); });
   window.addEventListener('pageshow', function (event) {

@@ -41,7 +41,7 @@ function productRows(product, metadata, config) {
   if (!name || name.length > 254 || !description || description.length > 32000) throw new Error('Nom FR (1–254 caractères) et description FR (maximum 32 000 caractères) requis');
   const variants = (product.product_variants || []).filter(v => v.active !== false);
   if (!variants.length) throw new Error('Stock par variante requis : le stock illimité du site ne peut pas être exporté');
-  const totals = commerce.calculate([{ price_cents: product.price_cents, qty: 1 }], { ...config.shipping, standard_cents: 0 }, 'standard', 0);
+  const totals = commerce.calculate([{ price_cents: product.price_cents, qty: 1 }], { ...config.shipping, shipping_rules: null, standard_cents: 0 }, 'standard', 0);
   const price = totals.subtotal + totals.tax;
   if (price < 1 || price > 630000) throw new Error('Prix TTC hors limite TikTok (0,01–6 300 EUR)');
   const gallery = (product.gallery || []).map(photo => typeof photo === 'string' ? photo : photo && photo.src);

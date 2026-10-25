@@ -46,6 +46,8 @@ async function preflight(env = process.env, client) {
     if(authorizedCheckout.error||authorizedCheckout.data!==1)throw new Error('schema');
     const promoLimits=await client.rpc('promo_customer_limits_schema_version');
     if(promoLimits.error||promoLimits.data!==1)throw new Error('schema');
+    const shippingCountries=await client.rpc('shipping_country_rules_schema_version');
+    if(shippingCountries.error||shippingCountries.data!==1)throw new Error('supabase/migration_shipping_country_rules.sql');
     for (const [table, columns] of [
       ['promo_codes','max_uses_per_customer'],
       ['orders', 'inventory_reserved,stock_issue,confirmation_claimed_at,admin_archived,payment_intent_id,refunded_cents,carrier,stripe_creation_started,refund_restock,prepared_at,return_policy,sale_channel,external_payment_method,pickup_point_data,payment_flow,checkout_lang,relance_sent_at,reminder_24h_sent_at'],
@@ -74,6 +76,7 @@ async function preflight(env = process.env, client) {
       if (tableError) throw new Error('schema');
     }
   } catch (error) {
+    if(error.message==='supabase/migration_shipping_country_rules.sql')throw new Error('Publication bloquée : exécuter et confirmer supabase/migration_shipping_country_rules.sql. Aucune migration distante automatique.');
     throw new Error('Publication bloquée : vérifier les migrations existantes, dont supabase/migration_integrity_features.sql, supabase/migration_admin_inventory.sql, supabase/migration_admin_operations.sql, supabase/migration_return_policy_editor.sql, supabase/migration_catalog_cleanup.sql, supabase/migration_inventory_journal.sql, supabase/migration_partial_refunds.sql, supabase/migration_catalog_categories.sql, supabase/migration_catalog_return_cleanup.sql, supabase/migration_physical_sales.sql, supabase/migration_admin_maintenance.sql, supabase/migration_physical_prices.sql, supabase/migration_checkout_pickup.sql, supabase/migration_activity_periods.sql, supabase/migration_order_shipping.sql, supabase/migration_blog_community.sql, supabase/migration_authorized_checkout.sql et supabase/migration_promo_customer_limits.sql. Aucune migration distante n’a été exécutée automatiquement.');
   }
   console.log('Compatibilité Supabase vérifiée en lecture seule.');

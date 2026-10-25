@@ -150,6 +150,7 @@ async function build() {
     for (const lang of (file === 'stock.html' ? [null] : [null, 'fr', 'en', 'ar'])) {
       const language = ['admin.html','stock.html'].includes(file) ? 'fr' : lang || 'fr';
       const $ = cheerio.load(source);
+      if ($('script[src="js/i18n.js"]').length && !$('script[src="js/shipping-rules.js"]').length) $('script[src="js/i18n.js"]').before('<script src="js/shipping-rules.js"></script>');
       $('script[src="js/stock-codes.js"]').attr('data-engine-src',assets['/js/stock-codes-engine.js']);
       prepareLivePage($, file);
       if(['about.html','blog.html','blog-post.html','contact.html','privacy.html','terms.html','size-guide.html','reset.html','success.html','404.html','account.html'].includes(file))$('body').attr('data-catalog-on-demand','');

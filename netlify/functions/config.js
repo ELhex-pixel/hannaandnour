@@ -27,7 +27,7 @@ exports.handler = async function (event) {
     const options = { log: entry => console.warn(JSON.stringify(entry)) };
     const [configuration, color_swatches, demo] = await Promise.all([
       publicRead('configuration', async signal => {
-        const query = sb.from('settings').select('key, value').in('key', ['shipping', 'currency', 'return_policy', 'catalog', 'reviews', 'home', 'story', 'cart_offer']);
+        const query = sb.from('settings').select('key, value').in('key', ['shipping', 'shipping_rules', 'currency', 'return_policy', 'catalog', 'reviews', 'home', 'story', 'cart_offer']);
         return queryResult(await query.abortSignal(signal));
       }, options),
       publicRead('color_swatches', signal => loadColorSwatches(sb, signal), options),

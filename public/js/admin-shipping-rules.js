@@ -1,0 +1,32 @@
+(function () {
+  'use strict';
+  var api=window.HN_ADMIN,R=window.HN_SHIPPING,form=document.getElementById('shippingRulesForm');
+  if(!api||!R||!form)return;
+  var fields=document.getElementById('shippingRulesFields'),box=document.getElementById('shippingRulesCountries'),status=document.getElementById('shippingRulesStatus'),save=document.getElementById('saveShippingRules'),refresh=document.getElementById('refreshShippingRules');
+  var revision=null,loaded=false,busy=false,serial=0,pending=null,key='hn-admin-shipping-rules-operation';
+  var names={FR:'France métropolitaine',BE:'Belgique',NL:'Pays-Bas',DE:'Allemagne',ES:'Espagne',IT:'Italie',DZ:'Algérie'},methods={standard:'Domicile standard',pickup:'Relais / locker Mondial Relay',express:'Express',next_day:'J+1'};
+  function call(action,body){var timer;return Promise.race([Promise.resolve().then(function(){return api.call(action,body);}),new Promise(function(resolve,reject){timer=setTimeout(function(){reject(new Error('Délai dépassé. Reprenez la même tentative.'));},20000);})]).finally(function(){clearTimeout(timer);});}
+  function id(c,m,s){return 'ship-'+c+'-'+m+'-'+s;}
+  function controls(){fields.disabled=!loaded||busy||!!pending;save.disabled=busy||(!loaded&&!pending);save.textContent=pending?'Reprendre le même enregistrement':'Enregistrer les livraisons par pays';refresh.disabled=busy||!!pending;}
+  function render(rules){
+    box.innerHTML=R.countries.map(function(c){var row=rules.countries[c];return '<details class="card" style="margin-top:12px;"'+(c==='FR'?' open':'')+'><summary>'+names[c]+'</summary><label class="check" for="'+id(c,'country','enabled')+'"><input type="checkbox" id="'+id(c,'country','enabled')+'"'+(row.enabled?' checked':'')+'> Proposer ce pays</label><div class="form-grid">'+R.methods.map(function(m){var a=row[m],unsupported=c==='DZ'&&m==='pickup';return '<div class="field"><label class="check" for="'+id(c,m,'enabled')+'"><input type="checkbox" id="'+id(c,m,'enabled')+'"'+(a.enabled?' checked':'')+(unsupported?' disabled':'')+'> '+methods[m]+'</label><label for="'+id(c,m,'fee')+'">Tarif fixe — devise de la boutique</label><input type="text" inputmode="decimal" id="'+id(c,m,'fee')+'" value="'+(a.fee_cents==null?'':(a.fee_cents/100).toFixed(2))+'" placeholder="À renseigner"'+(unsupported?' disabled':'')+'></div>';}).join('')+'</div>'+(c==='DZ'?'<p>Pas de relais / locker Mondial Relay pour cette destination.</p>':'<div class="field"><label class="check" for="'+id(c,'pickup','free')+'"><input type="checkbox" id="'+id(c,'pickup','free')+'"'+(row.pickup.free_enabled?' checked':'')+'> Offrir les relais / lockers à partir du seuil</label><label for="'+id(c,'pickup','threshold')+'">Seuil avant réduction, hors frais de livraison</label><input type="text" inputmode="decimal" id="'+id(c,'pickup','threshold')+'" value="'+(row.pickup.free_threshold_cents/100).toFixed(2)+'"></div>')+'</details>';}).join('');
+  }
+  function money(raw){raw=String(raw).trim();if(raw==='')return null;if(!/^\d+(?:[.,]\d{1,2})?$/.test(raw))throw Error('Saisissez un montant positif avec au maximum deux décimales.');var parts=raw.replace(',','.').split('.'),n=Number(parts[0])*100+Number((parts[1]||'').padEnd(2,'0'));if(!Number.isSafeInteger(n)||n>100000000)throw Error('Montant trop élevé.');return n;}
+  function read(){var value={version:1,countries:{}};R.countries.forEach(function(c){var row={enabled:document.getElementById(id(c,'country','enabled')).checked};R.methods.forEach(function(m){row[m]={enabled:document.getElementById(id(c,m,'enabled')).checked,fee_cents:money(document.getElementById(id(c,m,'fee')).value)};if(m==='pickup'){row[m].free_enabled=c!=='DZ'&&document.getElementById(id(c,m,'free')).checked;row[m].free_threshold_cents=c==='DZ'?8000:money(document.getElementById(id(c,m,'threshold')).value);}});value.countries[c]=row;});return R.clean(value);}
+  function clearPending(){window.localStorage.removeItem(key);pending=null;}
+  function load(){
+    if(busy||pending||!api.token())return;var token=api.token(),request=++serial;busy=true;loaded=false;controls();status.textContent='Chargement…';
+    call('getShippingRules').then(function(data){if(request===serial&&token===api.token()){render(R.clean(data.rules));revision=data.revision;loaded=true;status.textContent='Réglages chargés. Les montants restent modifiables par pays.';}}).catch(function(e){if(request===serial&&token===api.token())status.textContent=e.message;}).finally(function(){if(request===serial){busy=false;controls();}});
+  }
+  refresh.addEventListener('click',load);
+  form.addEventListener('submit',function(e){
+    e.preventDefault();if(busy||(!loaded&&!pending)||!api.token())return;
+    try{if(!pending){pending={operation_id:window.crypto.randomUUID(),expected_revision:revision,rules:read()};window.localStorage.setItem(key,JSON.stringify(pending));}}catch(error){pending=null;status.textContent='Chaque mode coché doit avoir un tarif strictement positif ; les seuils doivent être renseignés. Vérifiez aussi le stockage du navigateur.';controls();return;}
+    var token=api.token(),request=++serial,payload=pending;busy=true;status.textContent='Enregistrement…';controls();
+    call('saveShippingRules',payload).then(function(data){if(request!==serial||token!==api.token())return;if(data.revision!==payload.operation_id||JSON.stringify(R.clean(data.rules))!==JSON.stringify(payload.rules))throw Error('Enregistrement non confirmé.');clearPending();revision=data.revision;render(data.rules);loaded=true;status.textContent='Livraisons par pays enregistrées.';}).catch(function(error){if(request!==serial||token!==api.token())return;if(error.status===400||error.status===409){clearPending();if(error.status===409)loaded=false;}status.textContent=error.message+(pending?' Réessayez la même tentative.':'');}).finally(function(){if(request===serial){busy=false;controls();}});
+  });
+  document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('[data-tab="settings"]'))load();});
+  document.addEventListener('hn:admin-logout',function(){serial++;busy=false;loaded=false;box.textContent='';status.textContent='';controls();});
+  try{var stored=window.localStorage.getItem(key);if(stored){pending=JSON.parse(stored);R.clean(pending.rules);status.textContent='Un enregistrement est à reprendre avec les mêmes réglages.';}}catch(e){pending=null;status.textContent='Impossible de restaurer l’enregistrement précédent.';}
+  controls();if(api.token()&&!pending)load();
+})();

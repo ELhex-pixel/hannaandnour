@@ -101,3 +101,8 @@ test('la limite promo par client exige sa migration et sa colonne avant publicat
   assert.equal(calls.at(-1),'promo_customer_limits_schema_version');
   await assert.rejects(preflight(env,{rpc:async()=>({data:1}),from:table=>({select:columns=>({limit:async()=>({error:table==='promo_codes'&&columns==='max_uses_per_customer'?{code:'42703'}:null})})})}),/migration_promo_customer_limits/);
 });
+test('les nouveaux pays relais exigent la migration des snapshots avant publication, sans changer de commande',async()=>{
+  const calls=[];
+  await assert.rejects(preflight(env,{rpc:async name=>{calls.push(name);return name==='shipping_country_rules_schema_version'?{error:{}}:{data:1};}}),/migration_shipping_country_rules/);
+  assert.equal(calls.at(-1),'shipping_country_rules_schema_version');
+});

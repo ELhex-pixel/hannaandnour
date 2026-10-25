@@ -110,3 +110,10 @@ html[data-theme="dark"] .management-page { --mg-bg:#181612; --mg-surface:#25211b
 }
 @media (max-width:359px) { .management-shortcuts { grid-template-columns:1fr; } .management-shortcut { min-height:0; } }
 @media (prefers-reduced-motion:reduce) { .management-shortcut { transition:none; } }
+#shippingRulesFields { border:0; padding:0; margin:16px 0 0; min-inline-size:0; }
+#shippingRulesCountries details { min-width:0; }
+#shippingRulesCountries summary { cursor:pointer; font-weight:700; margin-bottom:14px; }
+#shippingRulesCountries .check { display:flex; align-items:flex-start; gap:8px; }
+#shippingRulesCountries input[type="checkbox"] { width:auto; flex:0 0 auto; margin-top:4px; }
+#shippingRulesCountries .form-grid { margin-top:12px; }
+#shippingRulesStatus { overflow-wrap:anywhere; }
