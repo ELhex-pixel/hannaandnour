@@ -215,6 +215,10 @@ const action = body.action || (event.queryStringParameters && event.queryStringP
     // ---- Everything below requires a valid admin session ----
     const auth = await requireAdmin(event, sb);
     if (!auth.ok) return json(401, { error: auth.error || 'Not authorized' });
+    if (['listPromos', 'savePromo', 'deletePromo'].includes(action)) {
+      const limited = await rateLimit(sb, event, 'admin-promos', 60, 600, 'admin');
+      if (limited) return limited;
+    }
     if (['listMaintenanceTargets','quoteMaintenance','runMaintenance','listMaintenanceHistory'].includes(action)) {
       const limited=await rateLimit(sb,event,'admin-maintenance',30,600,'admin');
       if(limited)return limited;
@@ -893,18 +897,24 @@ case 'deleteMessage': {
         const percent = parseInt(body.percent_off, 10);
         if (!(percent >= 1 && percent <= 100)) return json(400, { error: 'Pourcentage invalide (1-100)' });
         const original = body.original_code ? String(body.original_code).trim().toUpperCase() : null;
-        if (original && original !== code) {
-          await sb.from('promo_codes').delete().eq('code', original);
-        }
+        if (original && original !== code) return json(400, { error: 'Le code ne peut pas être renommé : créez un nouveau code pour conserver le suivi des utilisations.' });
+        const hasLimit = Object.hasOwn(body, 'max_uses_per_customer');
+        const customerLimit = body.max_uses_per_customer;
+        if (hasLimit && customerLimit !== null && (!Number.isInteger(customerLimit) || customerLimit < 1 || customerLimit > 1000000)) return json(400, { error: 'Limite par client invalide : entier de 1 à 1 000 000 ou null pour illimité.' });
         const fields = {
           code,
           percent_off: percent,
           active: body.active !== false,
-          single_use: !!body.single_use,
           expires_at: body.expires_at ? String(body.expires_at) : null
         };
+        // Older admin clients must not clear an existing limit or single-use rule.
+        if (hasLimit) fields.max_uses_per_customer = customerLimit;
+        if (Object.hasOwn(body, 'single_use')) {
+          if (typeof body.single_use !== 'boolean') return json(400, { error: 'Usage unique invalide' });
+          fields.single_use = body.single_use;
+        }
         const { error } = await sb.from('promo_codes').upsert(fields);
-        if (error) throw error;
+        if (error) return json(503, { error: 'Enregistrement du code promo indisponible.' });
         return json(200, { ok: true, promo: fields });
       }
 

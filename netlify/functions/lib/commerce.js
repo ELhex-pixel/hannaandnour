@@ -41,7 +41,7 @@ async function quote(sb, body) {
   });
   let promo = null;
   if (body.promo) {
-    const { data, error: pErr } = await sb.from('promo_codes').select('code, percent_off, active, expires_at, single_use, used_count').eq('code', String(body.promo).trim().toUpperCase().slice(0, 60)).maybeSingle();
+    const { data, error: pErr } = await sb.from('promo_codes').select('code, percent_off, active, expires_at, single_use, used_count, max_uses_per_customer').eq('code', String(body.promo).trim().toUpperCase().slice(0, 60)).maybeSingle();
     if (pErr) throw pErr;
     if (!data || !data.active || (data.expires_at && new Date(data.expires_at) <= new Date()) || (data.single_use && data.used_count > 0)) throw new Error('Invalid promo code');
     promo = data;

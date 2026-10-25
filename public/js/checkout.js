@@ -367,7 +367,7 @@
             var error = new Error(tr(out.data.code === 'pickup_changed' ? 'pickupChanged' : 'pickupUnavailable'));
             error.pickup = true; throw error;
           } else {
-            throw new Error(out.data.error === 'checkout_minimum' ? tr('checkoutMinimum') : tr('checkoutUnavailable'));
+            throw new Error(out.data.error === 'promo_customer_limit' ? tr('promoCustomerLimit') : out.data.error === 'checkout_minimum' ? tr('checkoutMinimum') : tr('checkoutUnavailable'));
           }
         })
         .catch(function (err) {

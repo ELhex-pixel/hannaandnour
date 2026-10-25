@@ -928,8 +928,9 @@
         <div class="field"><label>R&eacute;duction (%) *</label><input type="number" min="1" max="100" id="p-percent"></div>
         <div class="field"><label>Expiration (optionnel)</label><input type="date" id="p-expires"></div>
         <div class="field"><label>&nbsp;</label><label class="check"><input type="checkbox" id="p-active" checked> Actif</label></div>
+        <div class="field full"><label for="p-customer-limit">Nombre maximal d’utilisations par client</label><input type="number" id="p-customer-limit" min="1" max="1000000" step="1" inputmode="numeric" placeholder="Illimité" aria-describedby="p-customer-limit-help"><small id="p-customer-limit-help">Exemples : 1 ou 2 commandes par client. Laissez vide pour un usage illimité. Le compte client et l’adresse e-mail de la commande servent à identifier le client.</small></div>
       </div>
-      <div style="font-size:12px;color:#8a7d66;margin-top:8px;">Un code actif est utilisable par tous les clients ; usage non limit&eacute;.</div>
+      <p class="admin-muted">Les commandes déjà payées comptent dans cette limite, même après un remboursement. Une utilisation est temporairement retenue pendant la finalisation du paiement, puis libérée si le paiement échoue.</p>
       <div class="editor-actions">
         <button class="btn btn-danger" id="deletePromoBtn" style="display:none;">Supprimer</button>
         <button class="btn btn-primary" id="savePromoBtn">Enregistrer</button>

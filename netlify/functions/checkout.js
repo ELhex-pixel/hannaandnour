@@ -44,6 +44,15 @@ exports.handler = async function (event) {
       if (!auth.ok) return json(401, { error: 'Not authenticated' });
       userId = auth.user.id;
     }
+    if (value.promo && value.promo.max_uses_per_customer != null) {
+      const limit = value.promo.max_uses_per_customer;
+      if (!Number.isInteger(limit) || limit < 1 || limit > 1000000) return json(503, { error: 'Checkout temporarily unavailable' });
+      // Identity comes from the verified session and the validated order email,
+      // never a customer ID or a usage counter supplied by the browser.
+      const usage = await sb.rpc('promo_customer_can_use', { p_code: value.promo.code, p_user_id: userId, p_email: fields.email });
+      if (usage.error || typeof usage.data !== 'boolean') return json(503, { error: 'Checkout temporarily unavailable' });
+      if (!usage.data) return json(409, { error: 'promo_customer_limit' });
+    }
     let pickupPoint = null;
     if (value.method === 'pickup') {
       if (!require('../../public/js/pickup-points').selection(body.pickup) || !fields.phone) return json(400, { error: 'pickup_invalid', code: 'pickup_invalid' });

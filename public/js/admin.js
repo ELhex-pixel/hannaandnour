@@ -2730,12 +2730,13 @@
     var box = document.getElementById('promosList');
     if (!box) return;
     if (!promosAll.length) { box.innerHTML = '<p class="empty">Aucun code promo. Créez le premier !</p>'; return; }
-    box.innerHTML = '<table class="admin-table"><thead><tr><th>Code</th><th>Réduction</th><th>Expiration</th><th>Statut</th><th></th></tr></thead><tbody>' +
+    box.innerHTML = '<table class="admin-table"><thead><tr><th>Code</th><th>Réduction</th><th>Expiration</th><th>Limite par client</th><th>Statut</th><th></th></tr></thead><tbody>' +
       promosAll.map(function (p) {
         return '<tr>' +
           '<td data-label="Code"><strong>' + esc(p.code) + '</strong></td>' +
           '<td data-label="R\u00e9duction">' + (parseInt(p.percent_off, 10) || 0) + ' %</td>' +
           '<td data-label="Expiration">' + (p.expires_at ? fmtDate(p.expires_at) : '\u2014') + '</td>' +
+          '<td data-label="Limite par client">' + (p.max_uses_per_customer == null ? 'Illimitée' : esc(p.max_uses_per_customer) + ' utilisation(s)') + (p.single_use ? '<br><small>Également à usage unique au total</small>' : '') + '</td>' +
           '<td data-label="Statut"><span class="badge ' + (p.active ? 'badge-green' : 'badge-red') + '">' + (p.active ? 'Actif' : 'Inactif') + '</span></td>' +
           '<td data-label=""><span style="white-space:nowrap;">' +
           '<button class="btn btn-secondary btn-small edit-promo" data-code="' + esc(p.code) + '">Modifier</button> ' +
@@ -2920,12 +2921,14 @@
   var editingPromo = null;
 
   function openPromoEditor(p) {
-    editingPromo = p || { code: '', percent_off: '', expires_at: '', active: true };
+    editingPromo = p || { code: '', percent_off: '', expires_at: '', active: true, max_uses_per_customer: null };
     document.getElementById('promoEditorTitle').textContent = p ? 'Modifier : ' + p.code : 'Nouveau code promo';
     setVal('p-code', editingPromo.code);
+    document.getElementById('p-code').readOnly = !!p;
     setVal('p-percent', editingPromo.percent_off === '' ? '' : editingPromo.percent_off);
     setVal('p-expires', editingPromo.expires_at ? String(editingPromo.expires_at).slice(0, 10) : '');
     document.getElementById('p-active').checked = editingPromo.active !== false;
+    setVal('p-customer-limit', editingPromo.max_uses_per_customer == null ? '' : editingPromo.max_uses_per_customer);
     document.getElementById('deletePromoBtn').style.display = p ? '' : 'none';
     document.getElementById('promoEditor').classList.add('open');
   }
@@ -2941,10 +2944,14 @@
 
     document.getElementById('savePromoBtn').addEventListener('click', function () {
       var btn = this;
+      if (btn.disabled) return;
       var code = getVal('p-code').toUpperCase();
       var percent = parseInt(getVal('p-percent'), 10);
       if (!code) { toast('Code requis', 'err'); return; }
       if (!(percent >= 1 && percent <= 100)) { toast('Pourcentage invalide (1-100)', 'err'); return; }
+      var limitRaw = getVal('p-customer-limit');
+      var customerLimit = limitRaw === '' ? null : Number(limitRaw);
+      if (limitRaw !== '' && (!/^\d+$/.test(limitRaw) || customerLimit < 1 || customerLimit > 1000000)) { toast('La limite par client doit être un nombre entier entre 1 et 1 000 000, ou rester vide.', 'err'); return; }
       var expires = getVal('p-expires');
       btn.disabled = true;
       call('savePromo', {
@@ -2952,6 +2959,7 @@
         original_code: editingPromo && editingPromo.code ? editingPromo.code : null,
         percent_off: percent,
         active: document.getElementById('p-active').checked,
+        max_uses_per_customer: customerLimit,
         expires_at: expires ? new Date(expires + 'T23:59:59').toISOString() : null
       })
         .then(function () {
