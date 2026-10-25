@@ -5,7 +5,7 @@ const { spawnSync } = require('node:child_process');
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
     const file = path.join(dir, entry.name);
-    return entry.isDirectory() ? walk(file) : file.endsWith('.js') ? [file] : [];
+    return entry.isDirectory() ? walk(file) : /\.m?js$/.test(file) ? [file] : [];
   });
 }
 let failed = false;

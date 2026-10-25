@@ -19,7 +19,7 @@
   var PROMO_KEY = 'hn-promo';
   var ready = false;
   var cartOffer = { enabled: false, percent_off: 0 };
-  var shippingSettings = null, shippingCountry = 'FR', shippingMethod = 'standard';
+  var shippingSettings = null, shippingCountry = window.HN_SHIPPING_COUNTRY?(window.HN_SHIPPING_COUNTRY.current()||''):'FR', shippingMethod = 'standard';
   try { var pref=JSON.parse(window.sessionStorage.getItem('hn-shipping-choice')||'null');if(pref){shippingCountry=pref.country;shippingMethod=pref.method;} } catch(e) {}
 
   function applyConfig(cfg) {
@@ -40,6 +40,7 @@
   var summaryBox = document.querySelector('.cart-summary');
 
   function renderShippingOptions() {
+    if(window.HN_SHIPPING_COUNTRY&&!window.HN_SHIPPING_COUNTRY.isReady())return;
     var R=window.HN_SHIPPING,country=document.getElementById('cartShippingCountry'),method=document.getElementById('cartShippingMethod');
     if(!R||!shippingSettings||!shippingSettings.shipping_rules||!country||!method)return;
     var rules=R.clean(shippingSettings.shipping_rules);
@@ -54,6 +55,7 @@
     shippingMethod=document.getElementById('cartShippingMethod').value;
     renderShippingOptions();
     try{window.sessionStorage.setItem('hn-shipping-choice',JSON.stringify({country:shippingCountry,method:shippingMethod}));}catch(e){}
+    if(window.HN_SHIPPING_COUNTRY)window.HN_SHIPPING_COUNTRY.choose(shippingCountry);
     renderSummary();
   }
 
@@ -251,6 +253,7 @@
     document.addEventListener('langchange', function(){if(shippingSettings&&shippingSettings.shipping_rules)renderShippingOptions();renderItems();});
     document.addEventListener('hn:config', function (event) { applyConfig(event.detail); if (ready) renderSummary(); });
     document.addEventListener('hn:promos', function () { if (ready) renderSummary(); });
+    document.addEventListener('hn:shipping-country',function(){shippingCountry=window.HN_SHIPPING_COUNTRY?window.HN_SHIPPING_COUNTRY.current()||'':shippingCountry;if(shippingSettings&&shippingSettings.shipping_rules)renderShippingOptions();if(ready)renderSummary();});
   }
 
   function showToast(t, m, type) {

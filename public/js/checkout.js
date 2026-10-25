@@ -18,6 +18,7 @@
   var PROMO_LOCAL = { WELCOME15: 0.15 };
 
   var state = { method: 'standard', country: 'FR', settings: DEFAULTS, loaded: false, quote: null, revision: 0, configRevision: 0, paying: false };
+  if(window.HN_SHIPPING_COUNTRY)state.country=window.HN_SHIPPING_COUNTRY.current()||'';
   try{var choice=JSON.parse(window.sessionStorage.getItem('hn-shipping-choice')||'null');if(choice){state.country=choice.country;state.method=choice.method;}}catch(e){}
   function methodAvailable(method){return state.settings.shipping_rules ? window.HN_SHIPPING.enabled(state.settings.shipping_rules,state.country,method) : method!=='pickup'||state.settings.pickup_enabled;}
   function configureCountry(){
@@ -247,7 +248,7 @@
       });
     });
     var country=document.getElementById('country');
-    if(country)country.addEventListener('change',function(){if(state.paying)return;state.country=country.value;state.quote=null;try{window.sessionStorage.setItem('hn-shipping-choice',JSON.stringify({country:state.country,method:state.method}));}catch(e){}init(true);});
+    if(country)country.addEventListener('change',function(){if(state.paying)return;state.country=country.value;state.quote=null;try{window.sessionStorage.setItem('hn-shipping-choice',JSON.stringify({country:state.country,method:state.method}));}catch(e){}if(window.HN_SHIPPING_COUNTRY)window.HN_SHIPPING_COUNTRY.choose(state.country);init(true);});
 
     // Keep payment-step methods purely visual.
     document.querySelectorAll('.checkout-section').forEach(function (section) {
@@ -423,8 +424,9 @@
     showPendingQuote();
     state.loaded = false;
     var button = document.getElementById('placeOrderBtn'); if (button) button.disabled = true;
-    state.configuration = HN.requireConfig(force)
-      .then(function (data) {
+    state.configuration = Promise.all([HN.requireConfig(force),window.HN_SHIPPING_COUNTRY?window.HN_SHIPPING_COUNTRY.ready:Promise.resolve()])
+      .then(function (results) {
+        var data=results[0];
         if(configRequest!==state.configRevision)return;
         if (data && data.settings) {
           state.settings = {};
@@ -456,6 +458,7 @@
   document.addEventListener('hn:config', function () { if (state.loaded && !state.paying) init(true); });
   if(typeof window.setInterval==='function')window.setInterval(function(){if(!document.hidden&&state.loaded&&!state.paying)init(true);},30000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden&&state.loaded&&!state.paying)init(true);});
+  document.addEventListener('hn:shipping-country',function(){if(state.paying||!window.HN_SHIPPING_COUNTRY)return;var next=window.HN_SHIPPING_COUNTRY.current()||'';if(next!==state.country){state.country=next;if(state.loaded)init(true);}});
   Promise.resolve(window.HN_CHECKOUT_CANCEL && HN_CHECKOUT_CANCEL.ready).then(function () { init(); });
   document.addEventListener('hn:checkout-cancelled', function () { if (state.loaded && !state.paying) init(true); });
   window.addEventListener('pageshow', function (event) {

@@ -19,7 +19,7 @@
       navBlog: 'Blog',
       menuSearch: 'Search',
       announce: 'Delivery options and prices depend on the destination',
-      announcePromo: 'Free shipping on orders over {ship} | Use code {code} for {pct}% off',
+      announcePromo: '{shipping} | Use code {code} for {pct}% off',
 
       /* Footer */
       footerTagline: 'Clothing and accessories that bring together comfort, elegance and simplicity, for a style that feels like you.',
@@ -533,6 +533,12 @@
       shippingEstimate: 'Shipping estimate; destination and availability are checked again at checkout.',
       shippingUnavailable: 'This destination or delivery method is unavailable. Choose another available option.',
       shippingRelayOffer: 'Relay/locker delivery free from {ship} before discounts, in eligible countries',
+      shippingCountryGeneric: 'Choose your delivery country to see available shipping options',
+      shippingCountryUnavailable: '{country} — delivery is not offered to this destination; choose another delivery country',
+      shippingCountryStandard: 'Standard: {amount}',
+      shippingCountryPickup: 'Relay/locker: {amount}',
+      shippingCountryFree: 'Relay/locker free from {amount} before discounts',
+      shippingCountryOptions: 'See available delivery options in the cart',
       trackingN: 'Tracking: {n}',
       shipPending: 'Pending shipment',
       shipShipped: 'Shipped',
@@ -549,7 +555,7 @@
       navBlog: 'Blog',
       menuSearch: 'Recherche',
       announce: 'Modes et tarifs de livraison selon le pays de destination',
-      announcePromo: 'Livraison gratuite dès {ship} | Utilisez le code {code} pour -{pct} %',
+      announcePromo: '{shipping} | Utilisez le code {code} pour -{pct} %',
       footerTagline: 'Des vêtements et accessoires qui allient confort, élégance et simplicité, pour un style qui vous ressemble.',
       footerShop: 'Boutique',
       footerHelp: 'Aide & Support',
@@ -1041,6 +1047,12 @@
       shippingEstimate: 'Estimation des frais ; le pays et les modes disponibles sont revérifiés au paiement.',
       shippingUnavailable: 'Ce pays ou ce mode de livraison est indisponible. Choisissez une autre option disponible.',
       shippingRelayOffer: 'Relais/lockers offerts dès {ship} avant réduction, dans les pays éligibles',
+      shippingCountryGeneric: 'Choisissez votre pays de livraison pour voir les modes disponibles',
+      shippingCountryUnavailable: '{country} — livraison non proposée vers cette destination ; choisissez un autre pays de livraison',
+      shippingCountryStandard: 'Standard : {amount}',
+      shippingCountryPickup: 'Relais/locker : {amount}',
+      shippingCountryFree: 'Relais/lockers offerts dès {amount} avant réduction',
+      shippingCountryOptions: 'Consultez les modes disponibles dans le panier',
       trackingN: 'Suivi : {n}',
       shipPending: 'En attente d\u2019expédition',
       shipShipped: 'Expédiée',
@@ -1057,7 +1069,7 @@
       navBlog: 'المدونة',
       menuSearch: 'بحث',
       announce: 'طرق التوصيل وأسعارها حسب بلد الوجهة',
-      announcePromo: 'شحن مجاني للطلبات فوق {ship} | استخدمي كود {code} لخصم {pct}%',
+      announcePromo: '{shipping} | استخدمي كود {code} لخصم {pct}%',
       footerTagline: 'ملابس وإكسسوارات تجمع الراحة والأناقة والبساطة، لأسلوب يعكس شخصيتكم.',
       footerShop: 'المتجر',
       footerHelp: 'مساعدة ودعم',
@@ -1549,6 +1561,12 @@
       shippingEstimate: 'تقدير لرسوم التوصيل؛ يتم التحقق مجدداً من الوجهة والخيارات عند الدفع.',
       shippingUnavailable: 'هذا البلد أو طريقة التوصيل غير متاح. اختاري خياراً آخر متاحاً.',
       shippingRelayOffer: 'توصيل مجاني لنقاط الاستلام والخزائن ابتداءً من {ship} قبل التخفيضات في البلدان المؤهلة',
+      shippingCountryGeneric: 'اختاري بلد التوصيل لعرض الخيارات المتاحة',
+      shippingCountryUnavailable: '{country} — التوصيل غير متاح لهذه الوجهة؛ اختاري بلد توصيل آخر',
+      shippingCountryStandard: 'العادي: {amount}',
+      shippingCountryPickup: 'نقطة الاستلام أو الخزانة: {amount}',
+      shippingCountryFree: 'نقاط الاستلام والخزائن مجانية ابتداءً من {amount} قبل التخفيضات',
+      shippingCountryOptions: 'راجعي خيارات التوصيل المتاحة في السلة',
       trackingN: 'التتبع: {n}',
       shipPending: 'في انتظار الشحن',
       shipShipped: 'تم الشحن',
@@ -1697,7 +1715,8 @@
   function t(key, params) {
     var dict = DICT[lang] || DICT.en;
     var str = dict[key] !== undefined ? dict[key] : (DICT.en[key] !== undefined ? DICT.en[key] : key);
-    if (SHIP_OFFER && ['announce','metaShipText','trustFree'].indexOf(key)>=0) str=dict.shippingRelayOffer;
+    if (['announce','metaShipText','trustFree'].indexOf(key)>=0) str=shippingSummary(dict);
+    if (key==='announcePromo') str=str.split('{shipping}').join(shippingSummary(dict));
     if (params) {
       Object.keys(params).forEach(function(p) {
         str = str.split('{' + p + '}').join(params[p]);
@@ -1711,15 +1730,20 @@
   }
 
   var SHIP_THRESHOLD = 75;
-  var SHIP_OFFER = false;
-  function setShippingRules(value) {
-    SHIP_OFFER=false;
-    try {
-      if(!window.HN_SHIPPING||!value)return;
-      var rules=window.HN_SHIPPING.clean(value),thresholds=[];
-      window.HN_SHIPPING.countries.forEach(function(code){var p=rules.countries[code].pickup;if(window.HN_SHIPPING.enabled(rules,code,'pickup')&&p.free_enabled)thresholds.push(p.free_threshold_cents);});
-      if(thresholds.length){SHIP_THRESHOLD=Math.min.apply(Math,thresholds)/100;SHIP_OFFER=true;}
-    }catch(e){}
+  var SHIP_RULES=null,SHIP_COUNTRY='';
+  function setShippingRules(value, country) {
+    SHIP_RULES=null;SHIP_COUNTRY=typeof country==='string'&&/^[A-Z]{2}$/i.test(country)?country.toUpperCase():'';
+    try{if(window.HN_SHIPPING&&value)SHIP_RULES=window.HN_SHIPPING.clean(value);}catch(e){}
+  }
+  function shippingSummary(dict){
+    if(!SHIP_RULES||!SHIP_COUNTRY||!window.HN_SHIPPING)return dict.shippingCountryGeneric;
+    var R=window.HN_SHIPPING,row=SHIP_RULES.countries[SHIP_COUNTRY],name=dict['pickupCountry'+SHIP_COUNTRY]||SHIP_COUNTRY;
+    try{if(!dict['pickupCountry'+SHIP_COUNTRY]&&typeof Intl!=='undefined'&&Intl.DisplayNames)name=new Intl.DisplayNames([lang],{type:'region'}).of(SHIP_COUNTRY)||name;}catch(e){}
+    if(!row||!row.enabled||!R.methods.some(function(method){return R.enabled(SHIP_RULES,SHIP_COUNTRY,method);}))return dict.shippingCountryUnavailable.replace('{country}',name);
+    var parts=[];
+    if(R.enabled(SHIP_RULES,SHIP_COUNTRY,'standard'))parts.push(dict.shippingCountryStandard.replace('{amount}',shipStr(row.standard.fee_cents)));
+    if(R.enabled(SHIP_RULES,SHIP_COUNTRY,'pickup'))parts.push((row.pickup.free_enabled?dict.shippingCountryFree:dict.shippingCountryPickup).replace('{amount}',shipStr(row.pickup.free_enabled?row.pickup.free_threshold_cents:row.pickup.fee_cents)));
+    return name+' — '+(parts.length?parts.join(' · '):dict.shippingCountryOptions);
   }
 
   // Sets the "free shipping from" amount (in currency units) from /api/config,
@@ -1730,9 +1754,9 @@
   }
 
   // Formats the ship threshold for the current language + currency symbol.
-  function shipStr() {
+  function shipStr(cents) {
     var sym = window.HN && typeof window.HN.symbol === 'function' ? window.HN.symbol() : '$';
-    var v = Math.round(SHIP_THRESHOLD * 100) / 100;
+    var v = typeof cents==='number'?cents/100:Math.round(SHIP_THRESHOLD * 100) / 100;
     var amount = (v % 1 === 0) ? String(v) : v.toFixed(2);
     if (lang === 'fr') return amount + ' ' + sym;
     if (lang === 'ar') return amount + ' ' + (sym === '$' ? 'دولارًا' : sym);

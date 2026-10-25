@@ -202,7 +202,7 @@
         window.I18n.setShipThreshold(CONFIG_DATA.free_threshold_cents);
       }
       if (window.I18n && typeof window.I18n.refreshCurrency === 'function') {
-        if (typeof window.I18n.setShippingRules === 'function') window.I18n.setShippingRules(configOnline ? CONFIG_DATA.shipping_rules : null);
+        if (typeof window.I18n.setShippingRules === 'function') window.I18n.setShippingRules(configOnline ? CONFIG_DATA.shipping_rules : null,window.HN_SHIPPING_COUNTRY?window.HN_SHIPPING_COUNTRY.current():null);
         window.I18n.refreshCurrency();
         if (typeof refreshPromoAnnounce === 'function') refreshPromoAnnounce();
       }
@@ -699,6 +699,11 @@
     loadPromos();
     // Re-announce the promo after a language switch (i18n resets [data-i18n]).
     document.addEventListener('langchange', function () { refreshPromoAnnounce(promosList); refreshFooterTrust(); });
+    document.addEventListener('hn:shipping-country',function(){
+      if(!window.I18n||typeof window.I18n.setShippingRules!=='function')return;
+      window.I18n.setShippingRules(configOnline?CONFIG_DATA.shipping_rules:null,window.HN_SHIPPING_COUNTRY?window.HN_SHIPPING_COUNTRY.current():null);
+      if(window.I18n.refreshCurrency)window.I18n.refreshCurrency();refreshPromoAnnounce(promosList);
+    });
     // Load the catalog in the background (rendering scripts call it too).
     if (!window.HN_CONFIG_SUPPRESS_AUTOLOAD && !document.body.hasAttribute('data-live-page') && !document.body.hasAttribute('data-catalog-on-demand')) {
       loadProducts().catch(function () { /* offline preview: static content remains */ });

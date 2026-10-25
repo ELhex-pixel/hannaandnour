@@ -135,10 +135,11 @@ test('le manifeste transmet les routes avant un ancien 404, sans forcer ni élar
   const source = fs.readFileSync('public/_redirects', 'utf8');
   const config = prepareNetlifyRoutes(source);
   assert.deepEqual(Object.keys(config), ['redirects!']);
-  assert.equal(config['redirects!'].length, 9);
+  assert.equal(config['redirects!'].length, 10);
   assert(config['redirects!'].every(rule => rule.status === 200 && rule.force === false));
   assert.deepEqual(config['redirects!'][0], { from: '/api/blog', to: '/.netlify/functions/blog', status: 200, force: false });
   assert.deepEqual(config['redirects!'][1], { from: '/api/service-points', to: '/.netlify/functions/service-points', status: 200, force: false });
+  assert.deepEqual(config['redirects!'][2], { from: '/api/shipping-country', to: '/.netlify/functions/shipping-country', status: 200, force: false });
   assert.deepEqual(prepareNetlifyRoutes(source.replace(/\n/g, '\r\n')), config);
   for (const invalid of ['/* /index.html 200', '/api/blog https://external.test 200', '/api/blog /.netlify/functions/blog 200!', '# empty']) assert.throws(() => prepareNetlifyRoutes(invalid));
 });
