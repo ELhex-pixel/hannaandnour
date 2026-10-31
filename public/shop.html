@@ -103,7 +103,7 @@
 
         <!-- Sidebar Filters -->
         <aside class="shop-sidebar" id="shopSidebar">
-          <div class="filter-group">
+          <div class="filter-group" data-filter-group="category" hidden>
             <h2 class="filter-title"><span data-i18n="filterTitleCategory">Category</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
             <div class="filter-options">
               <label class="filter-option active" data-group="category" data-value=""><span class="filter-checkbox"></span> <span data-i18n="allProducts">All Products</span> <span class="filter-count" data-cat-count=""></span></label>
@@ -134,17 +134,17 @@
             </div>
           </div>
 
-          <div class="filter-group">
+          <div class="filter-group" data-filter-group="size" hidden>
             <h2 class="filter-title"><span data-i18n="filterTitleSize">Size</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
             <div class="filter-options" id="sizeOptions"></div>
           </div>
 
-          <div class="filter-group">
+          <div class="filter-group" data-filter-group="occasion" hidden>
             <h2 class="filter-title"><span data-i18n="filterTitleOccasion">Occasion</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
             <div class="filter-options" id="occasionOptions"></div>
           </div>
 
-          <div class="filter-group">
+          <div class="filter-group" data-filter-group="price" hidden>
             <h2 class="filter-title"><span data-i18n="filterTitlePrice">Price Range</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"></polyline></svg></h2>
             <div class="price-range">
               <input type="number" class="price-input" name="minPrice" placeholder="Min" min="0" aria-label="Minimum price" data-i18n-placeholder="minPrice">

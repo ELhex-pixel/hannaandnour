@@ -19,7 +19,8 @@
     maxCents: null,
     sort: 'featured',
     page: 1,
-    filtersOpen: false
+    filtersOpen: false,
+    facetRevision: 0
   };
   state.ready = false;
   var initial = new URLSearchParams(window.location.search);
@@ -45,47 +46,11 @@
     return HN.catKey(cat);
   }
 
-  function readValue(list, value) {
-    if (!list) return false;
-    if (typeof list === 'string') list = [list];
-    if (!Array.isArray(list)) return false;
-    return list.some(function (v) {
-      return String(v || '').toLowerCase() === String(value || '').toLowerCase();
-    });
-  }
-
 /* Shared helpers: keep filter options in sync with the real catalog, so
       anything the admin stores in sizes/occasions appears here. */
 
   function escAttr(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  function collectValues(items, field) {
-    var out = [];
-    items.forEach(function (p) {
-      var list = p[field];
-      if (typeof list === 'string') list = [list];
-      if (!Array.isArray(list)) return;
-      list.forEach(function (v) {
-        var s = String(v || '').trim();
-        if (!s) return;
-        var low = s.toLowerCase();
-        for (var i = 0; i < out.length; i++) {
-          if (out[i].toLowerCase() === low) return;
-        }
-        out.push(s);
-      });
-    });
-    return out;
-  }
-
-  function countValue(items, field, value) {
-    var n = 0;
-    items.forEach(function (p) {
-      if (readValue(p[field], value)) n++;
-    });
-    return n;
   }
 
   // Canonical orders so the options stay tidy even with mixed admin data.
@@ -104,28 +69,42 @@
   }
 
   function buildFilterOptions() {
-    var items = state.items;
+    var facets=state.facets;
+    // Never offer hard-coded categories or options inferred from a partial page.
+    var categories=facets?facets.categories:[];
+    document.querySelectorAll('.filter-option[data-group="category"]').forEach(function(option){
+      var value=option.getAttribute('data-value')||'';
+      option.hidden=value!==''&&categories.indexOf(value)<0&&state.categories.indexOf(value)<0;
+    });
+    function selectedOptions(available,selected){var result=available.slice();selected.forEach(function(value){if(result.indexOf(value)<0)result.push(value);});return result;}
+    function showGroup(group,visible){var node=document.querySelector('[data-filter-group="'+group+'"]');if(node)node.hidden=!visible;}
+    showGroup('category',!!facets&&categories.length>1||state.categories.length>0);
 
-    var sizes = canonicalSort(state.facets ? state.facets.sizes : collectValues(items, 'sizes'), SIZE_ORDER);
+    var sizes = canonicalSort(selectedOptions(facets?facets.sizes:[],state.sizes), SIZE_ORDER);
+    showGroup('size',!!facets&&facets.sizes.length>1||state.sizes.length>0);
     var sizeEl = document.getElementById('sizeOptions');
     if (sizeEl) {
       sizeEl.innerHTML = sizes.map(function (s) {
         return '<label class="filter-option" data-group="size" data-value="' + escAttr(s) + '">' +
           '<span class="filter-checkbox"></span> <span>' + escAttr(s) + '</span>' +
-          '<span class="filter-count" style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">' + (state.facets ? '' : countValue(items, 'sizes', s)) + '</span></label>';
+          '</label>';
       }).join('');
     }
 
-    var occasions = canonicalSort(state.facets ? state.facets.occasions : collectValues(items, 'occasions'), OCC_ORDER);
+    var occasions = canonicalSort(selectedOptions(facets?facets.occasions:[],state.occasions), OCC_ORDER);
+    showGroup('occasion',!!facets&&facets.occasions.length>1||state.occasions.length>0);
     var occEl = document.getElementById('occasionOptions');
     if (occEl) {
       occEl.innerHTML = occasions.map(function (o) {
         return '<label class="filter-option" data-group="occasion" data-value="' + escAttr(o) + '">' +
           '<span class="filter-checkbox"></span> <span>' + escAttr(o) + '</span>' +
-          '<span class="filter-count" style="margin-left:auto; font-size:0.75rem; color:var(--color-gray-light);">' + (state.facets ? '' : countValue(items, 'occasions', o)) + '</span></label>';
+          '</label>';
       }).join('');
     }
 
+    showGroup('price',!!facets&&facets.min_price_cents!==null&&facets.min_price_cents<facets.max_price_cents||state.minCents!==null||state.maxCents!==null);
+    var hasFilters=Array.prototype.some.call(document.querySelectorAll('[data-filter-group]'),function(node){return !node.hidden;});
+    var toggle=document.getElementById('filterToggle');if(toggle)toggle.hidden=!hasFilters;
     document.querySelectorAll('.filter-count').forEach(function (node) { node.textContent = ''; });
     setFilterControls();
   }
@@ -135,14 +114,17 @@
   }
 
   function loadItems(force) {
+    var facetRevision=++state.facetRevision;
+    state.facets=null;buildFilterOptions();
     state.configuration = HN.requireConfig(force).then(function (config) {
       state.ready = true;
       return config;
     });
     HN.request(HN.api('products') + '?facets=true').then(function (facets) {
-      if (!Array.isArray(facets.sizes) || !Array.isArray(facets.occasions)) return;
+      if(facetRevision!==state.facetRevision)return;
+      if (!facets||!['categories','sizes','occasions'].every(function(key){return Array.isArray(facets[key])&&facets[key].every(function(v){return typeof v==='string'&&v.trim();});})||!Number.isSafeInteger(facets.total)||facets.total<0||!((facets.total===0&&facets.min_price_cents===null&&facets.max_price_cents===null)||(facets.total>0&&Number.isSafeInteger(facets.min_price_cents)&&facets.min_price_cents>0&&Number.isSafeInteger(facets.max_price_cents)&&facets.max_price_cents>=facets.min_price_cents)))throw new Error('Invalid facets');
       state.facets = facets; buildFilterOptions();
-    }).catch(function () { state.facets = null; });
+    }).catch(function () { if(facetRevision===state.facetRevision){state.facets = null;buildFilterOptions();} });
   }
 
   function render() {
@@ -186,7 +168,7 @@
         if (resultsEl) resultsEl.textContent = tr('showingResults', { visible: remoteItems.length, total: Number.isInteger(data.total) ? data.total : remoteItems.length });
         if (loadMoreBtn) { loadMoreBtn.hidden = !data.has_more; loadMoreBtn.disabled = false; loadMoreBtn.style.display = data.has_more ? '' : 'none'; }
         document.querySelectorAll('.filter-count').forEach(function (node) { node.textContent = ''; });
-        if (!state.facets) buildFilterOptions();
+        buildFilterOptions();
         updateActiveFilters();
       }).catch(function () {
         if (revision !== remoteRevision) return;
@@ -276,6 +258,7 @@
     document.addEventListener('click', function (e) {
       var opt = e.target.closest ? e.target.closest('.filter-option[data-group]') : null;
       if (opt) {
+        if(opt.hidden||(opt.closest('[data-filter-group]')&&opt.closest('[data-filter-group]').hidden))return;
         var group = opt.getAttribute('data-group');
         var val = opt.getAttribute('data-value') || '';
         if (group === 'category' && val === '') {

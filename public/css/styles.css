@@ -1381,6 +1381,8 @@ body[data-menu-open="true"] .nav-mobile {
   height: fit-content;
 }
 
+.filter-group[hidden], .filter-option[hidden], #filterToggle[hidden] { display: none !important; }
+
 .filter-group {
   margin-bottom: var(--spacing-xl);
   padding-bottom: var(--spacing-xl);

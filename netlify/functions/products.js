@@ -9,9 +9,7 @@ exports.handler = async function (event) {
     const q = event.queryStringParameters || {};
     const sb = getSupabase();
     if (q.facets === 'true') {
-      const { data, error } = await sb.rpc('catalog_facets');
-      if (error) throw error;
-      return json(200, data);
+      return json(200, await require('./lib/catalog-facets').catalogFacets(sb));
     }
     const page = Math.min(10000, Math.max(1, parseInt(q.page, 10) || 1));
     const limit = Math.min(48, Math.max(1, parseInt(q.limit, 10) || 48));
